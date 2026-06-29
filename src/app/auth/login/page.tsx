@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -27,7 +27,7 @@ const ROLE_HOME: Record<string, string> = {
   technician: '/dashboard/technician',
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -138,5 +138,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-navy-900"/>}>
+      <LoginForm />
+    </Suspense>
   )
 }
