@@ -1,0 +1,185 @@
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import { PLANS } from '@/lib/utils/plans'
+
+const t = {
+  en: {
+    step1: 'Choose a plan', step2: 'Your details', step3: 'Email sent!',
+    name: 'Full name', email: 'Email', pass: 'Password', org: 'Company / property name',
+    phone: 'Phone number', next: 'Continue', back: 'Back', submit: 'Create account',
+    haveAccount: 'Already have an account?', signin: 'Sign in',
+    sentTitle: 'Verify your email', sentBody: 'We sent a confirmation link to',
+    sentNote: 'Click the link to activate your account, then sign in.',
+    passWeak: 'Minimum 8 characters', lang: 'ع', loading: 'Creating account…',
+  },
+  ar: {
+    step1: 'اختر الخطة', step2: 'بياناتك', step3: 'تم الإرسال!',
+    name: 'الاسم الكامل', email: 'البريد الإلكتروني', pass: 'كلمة المرور',
+    org: 'اسم الشركة / العقار', phone: 'رقم الهاتف', next: 'التالي', back: 'رجوع',
+    submit: 'إنشاء حساب', haveAccount: 'لديك حساب بالفعل؟', signin: 'تسجيل الدخول',
+    sentTitle: 'تحقق من بريدك', sentBody: 'أرسلنا رابط تأكيد إلى',
+    sentNote: 'انقر على الرابط لتفعيل حسابك ثم سجّل الدخول.',
+    passWeak: '٨ أحرف على الأقل', lang: 'EN', loading: 'جاري الإنشاء…',
+  },
+}
+
+export default function RegisterPage() {
+  const [lang, setLang] = useState<'en'|'ar'>('en')
+  const [step, setStep] = useState(1)
+  const [plan, setPlan] = useState('basic')
+  const [form, setForm] = useState({ name:'', email:'', password:'', org:'', phone:'' })
+  const [showPass, setShowPass] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [sentEmail, setSentEmail] = useState('')
+  const T = t[lang]
+  const dir = lang === 'ar' ? 'rtl' : 'ltr'
+
+  function set(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (form.password.length < 8) { setError(T.passWeak); return }
+    setLoading(true); setError('')
+    const supabase = createClient()
+    const { error: err } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: { full_name: form.name, role: 'owner', lang_pref: lang },
+        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+      },
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    setSentEmail(form.email)
+    setStep(3)
+  }
+
+  const selectedPlan = PLANS.find(p => p.id === plan)
+
+  return (
+    <div dir={dir} className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-700 to-navy-800 flex items-center justify-center p-4">
+      <button onClick={() => setLang(l => l==='en'?'ar':'en')}
+        className="fixed top-4 left-4 text-white/70 hover:text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-white/20 transition-colors">
+        {T.lang}
+      </button>
+
+      <div className="w-full max-w-lg">
+        <div className="flex justify-center mb-8">
+          <div className="text-white font-black text-3xl">Get<span className="text-gold-400">Suitel</span></div>
+        </div>
+
+        {/* Progress dots */}
+        {step < 3 && (
+          <div className="flex items-center justify-center gap-3 mb-6">
+            {[1,2].map(s => (
+              <div key={s} className={`h-2 rounded-full transition-all ${s === step ? 'w-8 bg-gold-400' : s < step ? 'w-4 bg-gold-400' : 'w-4 bg-white/30'}`}/>
+            ))}
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+
+          {/* Step 3 — Sent */}
+          {step === 3 && (
+            <div className="text-center">
+              <CheckCircle size={52} className="text-green-500 mx-auto mb-4"/>
+              <h2 className="text-xl font-bold mb-2">{T.sentTitle}</h2>
+              <p className="text-slate-500 text-sm mb-1">{T.sentBody}</p>
+              <p className="text-navy-700 font-semibold text-sm mb-3">{sentEmail}</p>
+              <p className="text-slate-400 text-xs mb-6">{T.sentNote}</p>
+              <Link href="/auth/login" className="btn-primary">{T.signin}</Link>
+            </div>
+          )}
+
+          {/* Step 1 — Plan */}
+          {step === 1 && (
+            <>
+              <h2 className="text-xl font-bold mb-1">{T.step1}</h2>
+              <p className="text-slate-500 text-sm mb-5">30-day free trial on any plan</p>
+              <div className="space-y-3 mb-6">
+                {PLANS.map(p => (
+                  <button key={p.id} type="button" onClick={() => setPlan(p.id)}
+                    className={`w-full text-start p-4 rounded-xl border-2 transition-all ${plan===p.id ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900">{lang==='ar'?p.nameAr:p.nameEn}
+                          {p.popular && <span className="ml-2 text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full">{lang==='ar'?'الأكثر شعبية':'Popular'}</span>}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">{lang==='ar'?p.descAr:p.descEn}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-navy-700 text-lg">${p.price}<span className="text-xs font-normal text-slate-400">/mo</span></div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setStep(2)} className="btn-primary w-full py-3">{T.next}</button>
+              <p className="text-center text-sm text-slate-500 mt-4">
+                {T.haveAccount} <Link href="/auth/login" className="text-navy-700 font-semibold hover:underline">{T.signin}</Link>
+              </p>
+            </>
+          )}
+
+          {/* Step 2 — Details */}
+          {step === 2 && (
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setStep(1)} className="text-slate-400 hover:text-slate-600 text-sm">&larr;</button>
+                <h2 className="text-xl font-bold">{T.step2}</h2>
+                {selectedPlan && (
+                  <span className="ml-auto text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full font-medium">
+                    {lang==='ar'?selectedPlan.nameAr:selectedPlan.nameEn}
+                  </span>
+                )}
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name}</label>
+                    <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.org}</label>
+                    <input value={form.org} onChange={e=>set('org',e.target.value)} required className="input" placeholder={lang==='ar'?'شركة العقارات':'Real Estate Co.'}/>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.email}</label>
+                    <input type="email" value={form.email} onChange={e=>set('email',e.target.value)} required className="input" placeholder="you@example.com"/>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.phone}</label>
+                    <input value={form.phone} onChange={e=>set('phone',e.target.value)} className="input" placeholder="+968 9xxx xxxx"/>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.pass}</label>
+                    <div className="relative">
+                      <input type={showPass?'text':'password'} value={form.password} onChange={e=>set('password',e.target.value)}
+                        required className="input pr-10" placeholder="••••••••"/>
+                      <button type="button" onClick={()=>setShowPass(v=>!v)}
+                        className="absolute inset-y-0 right-3 flex items-center text-slate-400">
+                        {showPass?<EyeOff size={16}/>:<Eye size={16}/>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2.5 rounded-lg">{error}</div>}
+                <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+                  {loading ? <><Loader2 size={16} className="animate-spin"/>{T.loading}</> : T.submit}
+                </button>
+                <p className="text-xs text-slate-400 text-center">
+                  By signing up you agree to our <Link href="/terms" className="underline">Terms</Link> & <Link href="/privacy" className="underline">Privacy Policy</Link>
+                </p>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
