@@ -1,0 +1,28 @@
+import { createClient } from '@/lib/supabase/server'
+import OrgSettingsForm from './OrgSettingsForm'
+import ProfileSettingsForm from './ProfileSettingsForm'
+
+export const metadata = { title: 'Settings' }
+
+export default async function SettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const { data: org } = profile?.organization_id
+    ? await supabase.from('organizations').select('*').eq('id', profile.organization_id).single()
+    : { data: null }
+
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
+        <p className="text-slate-500 text-sm mt-0.5">Manage your profile and organization</p>
+      </div>
+
+      <ProfileSettingsForm profile={profile} />
+      <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} />
+    </div>
+  )
+}
