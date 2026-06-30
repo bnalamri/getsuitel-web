@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield,
+  ClipboardList, Calendar, Shield, AlertCircle,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -48,6 +48,7 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
+      { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
     ]},
@@ -192,6 +193,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     subscription: {en:'Subscription',ar:'الاشتراك'},
     owners:       {en:'Owners',ar:'الملاك'},
     subscriptions:{en:'Subscriptions',ar:'الاشتراكات'},
+    notices:      {en:'Notices',ar:'الإشعارات'},
     orders:       {en:'Work Orders',ar:'أوامر العمل'},
     schedule:     {en:'Schedule',ar:'الجدول'},
     contract:     {en:'My Contract',ar:'عقدي'},
