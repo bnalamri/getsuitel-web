@@ -28,8 +28,12 @@ const t = {
 
 export default function RegisterPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0) // 0=role select, 1=plan(owner only), 2=details, 3=sent
+  const [role, setRole] = useState<'owner'|'tenant'|'technician'>('owner')
   const [plan, setPlan] = useState('basic')
+  const [inviteCode, setInviteCode] = useState('')
+  const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
+  const [inviteErr, setInviteErr] = useState('')
   const [form, setForm] = useState({ name:'', email:'', password:'', org:'', phone:'' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -40,16 +44,41 @@ export default function RegisterPage() {
 
   function set(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
 
+  async function verifyInviteCode() {
+    if (!inviteCode.trim()) return
+    setLoading(true); setInviteErr('')
+    const res = await fetch('/api/org/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: inviteCode.trim() }),
+    })
+    const data = await res.json()
+    setLoading(false)
+    if (!res.ok) { setInviteErr(data.error || 'Invalid code'); return }
+    setInviteOrg(data.org)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (form.password.length < 8) { setError(T.passWeak); return }
+    if ((role === 'tenant' || role === 'technician') && !inviteOrg) {
+      setError('Please verify your organization invite code first'); return
+    }
     setLoading(true); setError('')
     const supabase = createClient()
     const { error: err } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.name, role: 'owner', lang_pref: lang },
+        data: {
+          full_name: form.name,
+          role,
+          lang_pref: lang,
+          organization_id: inviteOrg?.id ?? null,
+          plan: role === 'owner' ? plan : null,
+          org_name: role === 'owner' ? form.org : null,
+          phone: form.phone,
+        },
         emailRedirectTo: `${window.location.origin}/auth/verify-email`,
       },
     })
@@ -74,15 +103,45 @@ export default function RegisterPage() {
         </div>
 
         {/* Progress dots */}
-        {step < 3 && (
+        {step > 0 && step < 3 && (
           <div className="flex items-center justify-center gap-3 mb-6">
-            {[1,2].map(s => (
+            {(role === 'owner' ? [1,2] : [2]).map(s => (
               <div key={s} className={`h-2 rounded-full transition-all ${s === step ? 'w-8 bg-gold-400' : s < step ? 'w-4 bg-gold-400' : 'w-4 bg-white/30'}`}/>
             ))}
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
+
+          {/* Step 0 — Role selection */}
+          {step === 0 && (
+            <>
+              <h2 className="text-xl font-bold mb-1">I am a…</h2>
+              <p className="text-slate-500 text-sm mb-5">Choose your account type to get started</p>
+              <div className="space-y-3 mb-6">
+                {([
+                  { role: 'owner', emoji: '🏢', title: lang==='ar'?'مالك عقار':'Property Owner', desc: lang==='ar'?'أدر عقاراتك وعقودك وفواتيرك':'Manage your properties, contracts, and invoices' },
+                  { role: 'tenant', emoji: '🏠', title: lang==='ar'?'مستأجر':'Tenant', desc: lang==='ar'?'اعرض عقدك وادفع الإيجار وأبلغ عن الصيانة':'View your contract, pay rent, submit maintenance' },
+                  { role: 'technician', emoji: '🔧', title: lang==='ar'?'فني صيانة':'Technician', desc: lang==='ar'?'اعرض أوامر العمل وحدّث حالة الإصلاح':'View work orders and update repair status' },
+                ] as const).map(r => (
+                  <button key={r.role} type="button" onClick={() => setRole(r.role)}
+                    className={`w-full text-start p-4 rounded-xl border-2 transition-all flex items-start gap-3 ${role===r.role ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                    <span className="text-2xl">{r.emoji}</span>
+                    <div>
+                      <div className="font-semibold text-slate-900">{r.title}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{r.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setStep(role === 'owner' ? 1 : 2)} className="btn-primary w-full py-3">
+                {lang==='ar'?'التالي':'Continue'}
+              </button>
+              <p className="text-center text-sm text-slate-500 mt-4">
+                {T.haveAccount} <Link href="/auth/login" className="text-navy-700 font-semibold hover:underline">{T.signin}</Link>
+              </p>
+            </>
+          )}
 
           {/* Step 3 — Sent */}
           {step === 3 && (
@@ -130,24 +189,57 @@ export default function RegisterPage() {
           {step === 2 && (
             <>
               <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => setStep(1)} className="text-slate-400 hover:text-slate-600 text-sm">&larr;</button>
+                <button onClick={() => setStep(role === 'owner' ? 1 : 0)} className="text-slate-400 hover:text-slate-600 text-sm">&larr;</button>
                 <h2 className="text-xl font-bold">{T.step2}</h2>
-                {selectedPlan && (
+                {role === 'owner' && selectedPlan && (
                   <span className="ml-auto text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full font-medium">
                     {lang==='ar'?selectedPlan.nameAr:selectedPlan.nameEn}
                   </span>
                 )}
+                {role !== 'owner' && (
+                  <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-medium capitalize">{role}</span>
+                )}
               </div>
+
+              {/* Invite code for tenant/technician */}
+              {(role === 'tenant' || role === 'technician') && (
+                <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Organization Invite Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1 font-mono uppercase tracking-widest"
+                      placeholder="e.g. A1B2C3D4"
+                      value={inviteCode}
+                      onChange={e => { setInviteCode(e.target.value); setInviteOrg(null); setInviteErr('') }}
+                      maxLength={8}
+                    />
+                    <button type="button" onClick={verifyInviteCode} disabled={loading || !inviteCode}
+                      className="btn-secondary px-3 text-sm whitespace-nowrap">
+                      {loading ? '...' : 'Verify'}
+                    </button>
+                  </div>
+                  {inviteErr && <div className="text-red-600 text-xs mt-1">{inviteErr}</div>}
+                  {inviteOrg && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      <span>✓</span> <span className="font-semibold">{inviteOrg.name}</span>
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-400 mt-2">Ask your property manager for the invite code.</div>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name}</label>
                     <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
                   </div>
-                  <div className="col-span-2">
+                  {role === 'owner' && <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.org}</label>
                     <input value={form.org} onChange={e=>set('org',e.target.value)} required className="input" placeholder={lang==='ar'?'شركة العقارات':'Real Estate Co.'}/>
-                  </div>
+                  </div>}
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.email}</label>
                     <input type="email" value={form.email} onChange={e=>set('email',e.target.value)} required className="input" placeholder="you@example.com"/>

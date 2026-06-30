@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import PayNowButton from './PayNowButton'
 import { Receipt, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 
 export const metadata = { title: 'My Invoices' }
@@ -72,9 +73,12 @@ export default async function TenantInvoicesPage() {
                   </div>
                   {invoice.notes && <div className="text-xs text-slate-400 truncate mt-0.5">{invoice.notes}</div>}
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right flex-shrink-0 flex flex-col items-end gap-1.5">
                   <div className="font-bold text-slate-900">{Number(invoice.amount).toLocaleString()} {invoice.currency}</div>
-                  <span className={`badge text-xs mt-1 ${statusColor[invoice.status]}`}>{invoice.status}</span>
+                  <span className={`badge text-xs ${statusColor[invoice.status]}`}>{invoice.status}</span>
+                  {['sent', 'overdue'].includes(invoice.status) && (
+                    <PayNowButton invoiceId={invoice.id} />
+                  )}
                 </div>
               </div>
             )

@@ -91,6 +91,16 @@ export default function AddNoticeForm({
     const { error: err } = await supabase.from('notices').insert(rows)
     if (err) { setError(err.message); setLoading(false); return }
 
+    // Send emails
+    const recipients = sendToAll ? tenants : tenants.filter(t => t.id === tenantId)
+    await Promise.allSettled(
+      recipients.map(t => fetch('/api/email/notice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: t.email, subject, body, type, attachmentUrl }),
+      }))
+    )
+
     setOpen(false)
     setSubject(''); setBody(''); setAttachmentUrl(null); setAttachmentName(null)
     router.refresh()

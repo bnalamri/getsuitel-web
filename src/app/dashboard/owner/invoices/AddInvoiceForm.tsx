@@ -35,6 +35,25 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
       notes: form.notes || null,
     })
     if (err) { setError(err.message); setLoading(false); return }
+
+    // Send email to tenant
+    const tenant = tenants.find(t => t.id === form.tenant_id)
+    if (tenant && form.status !== 'draft') {
+      await fetch('/api/email/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: tenant.email,
+          tenantName: tenant.full_name,
+          amount: form.amount,
+          currency: form.currency,
+          dueDate: form.due_date,
+          type: form.type,
+          status: form.status,
+        }),
+      })
+    }
+
     setOpen(false)
     router.refresh()
     setLoading(false)
