@@ -63,6 +63,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/tenant/contract', icon:FileText, en:'My Contract', ar:'عقدي' },
       { href:'/dashboard/tenant/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/tenant/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
+      { href:'/dashboard/tenant/notices', icon:Bell, en:'Notices', ar:'الإشعارات' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/tenant/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
