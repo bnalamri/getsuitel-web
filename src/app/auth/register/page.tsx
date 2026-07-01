@@ -83,7 +83,7 @@ export default function RegisterPage() {
       },
     })
     setLoading(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(err.message || 'Registration failed. Please try again.'); return }
     // Supabase returns 200 for duplicate emails but identities will be empty
     if (data?.user?.identities?.length === 0) {
       setError('An account with this email already exists. Please sign in instead.')
