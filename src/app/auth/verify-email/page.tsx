@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, Loader2, XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -8,61 +8,40 @@ import Link from 'next/link'
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    const supabase = createClient()
-
-    // Primary: explicitly parse token from URL hash (#access_token=...&type=signup)
-    const hash = window.location.hash
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1))
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
-      const type = params.get('type')
-
-      if (accessToken && refreshToken && (type === 'signup' || type === 'email')) {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-          .then(({ data, error }) => {
-            if (error || !data.session) {
-              setStatus('error')
-            } else {
-              setStatus('success')
-              setTimeout(() => router.push('/dashboard'), 2000)
-            }
-          })
-        return
-      }
+    // If callback route redirected here with ?error=true
+    if (searchParams.get('error')) {
+      setStatus('error')
+      return
     }
 
-    // Fallback: listen for auth state change
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-        setStatus('success')
-        setTimeout(() => router.push('/dashboard'), 2000)
-      }
-    })
+    const supabase = createClient()
 
-    // Also check if already signed in
+    // Check if we already have a session (callback exchanged the code successfully)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setStatus('success')
         setTimeout(() => router.push('/dashboard'), 2000)
       } else {
+        // Listen for auth state in case it arrives slightly late
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+            setStatus('success')
+            setTimeout(() => router.push('/dashboard'), 2000)
+          }
+        })
+        // Timeout fallback
         setTimeout(() => {
           supabase.auth.getSession().then(({ data: { session: s } }) => {
-            if (s) {
-              setStatus('success')
-              setTimeout(() => router.push('/dashboard'), 2000)
-            } else {
-              setStatus('error')
-            }
+            if (!s) setStatus('error')
           })
-        }, 3000)
+          return () => subscription.unsubscribe()
+        }, 4000)
       }
     })
-
-    return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, searchParams])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-700 to-navy-800 flex items-center justify-center p-4">

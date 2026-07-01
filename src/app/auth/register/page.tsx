@@ -79,7 +79,7 @@ export default function RegisterPage() {
           org_name: role === 'owner' ? form.org : null,
           phone: form.phone,
         },
-        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/auth/verify-email`,
       },
     })
     setLoading(false)
