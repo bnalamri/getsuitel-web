@@ -11,24 +11,43 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    // Supabase handles the token from the URL hash automatically
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        setStatus('success')
-        setTimeout(() => router.push('/dashboard'), 2000)
-      } else if (event === 'TOKEN_REFRESHED') {
+
+    // Primary: explicitly parse token from URL hash (#access_token=...&type=signup)
+    const hash = window.location.hash
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1))
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      const type = params.get('type')
+
+      if (accessToken && refreshToken && (type === 'signup' || type === 'email')) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ data, error }) => {
+            if (error || !data.session) {
+              setStatus('error')
+            } else {
+              setStatus('success')
+              setTimeout(() => router.push('/dashboard'), 2000)
+            }
+          })
+        return
+      }
+    }
+
+    // Fallback: listen for auth state change
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         setStatus('success')
         setTimeout(() => router.push('/dashboard'), 2000)
       }
     })
 
-    // Also check current session in case already verified
+    // Also check if already signed in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setStatus('success')
         setTimeout(() => router.push('/dashboard'), 2000)
       } else {
-        // Give it a moment for the hash to be processed
         setTimeout(() => {
           supabase.auth.getSession().then(({ data: { session: s } }) => {
             if (s) {
@@ -41,6 +60,8 @@ export default function VerifyEmailPage() {
         }, 3000)
       }
     })
+
+    return () => subscription.unsubscribe()
   }, [router])
 
   return (
