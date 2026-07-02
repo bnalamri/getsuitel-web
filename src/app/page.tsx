@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen, CheckCircle, ArrowRight, Shield, HardHat, Home } from 'lucide-react'
 
@@ -87,6 +87,15 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
+  useEffect(() => {
+    const saved = localStorage.getItem('lang') as 'en'|'ar'
+    if (saved === 'ar') setLang('ar')
+  }, [])
+  function toggleLang() {
+    const next = lang === 'en' ? 'ar' : 'en'
+    setLang(next)
+    localStorage.setItem('lang', next)
+  }
   const C = content[lang]
 
   return (
@@ -102,7 +111,7 @@ export default function LandingPage() {
             <a href="#pricing" className="hover:text-white transition-colors">{C.nav.pricing}</a>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setLang(l => l==='en'?'ar':'en')}
+            <button onClick={toggleLang}
               className="text-xs font-bold text-white/70 hover:text-white px-3 py-1.5 rounded-lg border border-white/20 transition-colors">
               {C.lang}
             </button>

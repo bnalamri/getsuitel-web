@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
@@ -46,6 +46,15 @@ const t = {
 
 export default function RegisterPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
+  useEffect(() => {
+    const saved = localStorage.getItem('lang') as 'en'|'ar'
+    if (saved === 'ar') setLang('ar')
+  }, [])
+  function toggleLang() {
+    const next = lang === 'en' ? 'ar' : 'en'
+    setLang(next)
+    localStorage.setItem('lang', next)
+  }
   const [step, setStep] = useState(0) // 0=role select, 1=plan(owner only), 2=details, 3=sent
   const [role, setRole] = useState<'owner'|'tenant'|'technician'>('owner')
   const [plan, setPlan] = useState('basic')
@@ -145,7 +154,7 @@ export default function RegisterPage() {
 
   return (
     <div dir={dir} className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
-      <button onClick={() => setLang(l => l==='en'?'ar':'en')}
+      <button onClick={toggleLang}
         className={`fixed top-4 ${lang === 'ar' ? 'right-4' : 'left-4'} text-white/70 hover:text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition-colors`}>
         {T.lang}
       </button>
