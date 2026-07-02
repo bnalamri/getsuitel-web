@@ -44,7 +44,7 @@ const content = {
   ar: {
     dir: 'rtl', lang: 'EN',
     nav: { features: 'المميزات', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'ابدأ مجاناً' },
-    hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'٣٠', s:'', l:'يوم تجربة مجانية' },{ v:'٤', s:'', l:'أدوار مستخدمين' },{ v:'∞', s:'', l:'عقارات' }] },
+    hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'٣٠', s:'', l:'يوم تجربة مجانية' },{ v:'٤', s:'', l:'أدوار مستخدمين' },{ v:'لا محدود', s:'', l:'عقارات' }] },
     features: {
       title: 'كل ما تحتاجه لإدارة عقاراتك',
       sub: 'منصة واحدة تحل محل جداول البيانات ومجموعات واتساب والأوراق المبعثرة.',
@@ -146,7 +146,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto">
             {C.hero.stats.map((s, i) => (
               <div key={i} className="text-center">
-                <div className="text-3xl font-black text-white">{s.v}<span className="text-gold-400 text-lg">{s.s}</span></div>
+                <div className={`font-black text-white ${s.v.length > 4 ? 'text-xl' : 'text-3xl'}`}>{s.v}<span className="text-gold-400 text-lg">{s.s}</span></div>
                 <div className="text-white/50 text-sm mt-1">{s.l}</div>
               </div>
             ))}
