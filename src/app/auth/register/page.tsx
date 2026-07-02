@@ -7,22 +7,40 @@ import { PLANS } from '@/lib/utils/plans'
 
 const t = {
   en: {
-    step1: 'Choose a plan', step2: 'Your details', step3: 'Email sent!',
+    step0Title: 'I am a…', step0Sub: 'Choose your account type to get started',
+    step1: 'Choose a plan', step1Sub: '30-day free trial on any plan', step2: 'Your details', step3: 'Email sent!',
     name: 'Full name', email: 'Email', pass: 'Password', org: 'Company / property name',
     phone: 'Phone number', next: 'Continue', back: 'Back', submit: 'Create account',
     haveAccount: 'Already have an account?', signin: 'Sign in',
     sentTitle: 'Verify your email', sentBody: 'We sent a confirmation link to',
     sentNote: 'Click the link to activate your account, then sign in.',
     passWeak: 'Minimum 8 characters', lang: 'ع', loading: 'Creating account…',
+    perMonth: '/mo', popular: 'Popular',
+    inviteLabel: 'Organization Invite Code', inviteHint: 'Ask your property manager for the invite code.',
+    verify: 'Verify', inviteRequired: 'Please verify your organization invite code first',
+    invalidCode: 'Invalid code',
+    didntReceive: "Didn't receive it? Check your spam folder or",
+    resend: 'Resend verification email', resentOk: '✓ Sent!',
+    wrongEmail: 'Wrong email? Go back and fix it',
+    terms: 'By signing up you agree to our', termsLink: 'Terms', privacyLink: 'Privacy Policy',
   },
   ar: {
-    step1: 'اختر الخطة', step2: 'بياناتك', step3: 'تم الإرسال!',
+    step0Title: '…أنا', step0Sub: 'اختر نوع حسابك للبدء',
+    step1: 'اختر الخطة', step1Sub: 'تجربة مجانية لمدة 30 يوماً على أي خطة', step2: 'بياناتك', step3: 'تم الإرسال!',
     name: 'الاسم الكامل', email: 'البريد الإلكتروني', pass: 'كلمة المرور',
     org: 'اسم الشركة / العقار', phone: 'رقم الهاتف', next: 'التالي', back: 'رجوع',
     submit: 'إنشاء حساب', haveAccount: 'لديك حساب بالفعل؟', signin: 'تسجيل الدخول',
     sentTitle: 'تحقق من بريدك', sentBody: 'أرسلنا رابط تأكيد إلى',
     sentNote: 'انقر على الرابط لتفعيل حسابك ثم سجّل الدخول.',
     passWeak: '٨ أحرف على الأقل', lang: 'EN', loading: 'جاري الإنشاء…',
+    perMonth: '/شهر', popular: 'الأكثر شعبية',
+    inviteLabel: 'رمز دعوة المنظمة', inviteHint: 'اطلب رمز الدعوة من مدير العقار.',
+    verify: 'تحقق', inviteRequired: 'يرجى التحقق من رمز الدعوة أولاً',
+    invalidCode: 'رمز غير صالح',
+    didntReceive: 'لم يصل الإيميل؟ تحقق من مجلد الرسائل غير المرغوب فيها أو',
+    resend: 'إعادة إرسال رابط التحقق', resentOk: '✓ تم الإرسال!',
+    wrongEmail: 'بريد خاطئ؟ عدّل بياناتك',
+    terms: 'بالتسجيل توافق على', termsLink: 'الشروط', privacyLink: 'سياسة الخصوصية',
   },
 }
 
@@ -56,7 +74,7 @@ export default function RegisterPage() {
     })
     const data = await res.json()
     setLoading(false)
-    if (!res.ok) { setInviteErr(data.error || 'Invalid code'); return }
+    if (!res.ok) { setInviteErr(data.error || T.invalidCode); return }
     setInviteOrg(data.org)
   }
 
@@ -74,7 +92,7 @@ export default function RegisterPage() {
     e.preventDefault()
     if (form.password.length < 8) { setError(T.passWeak); return }
     if ((role === 'tenant' || role === 'technician') && !inviteOrg) {
-      setError('Please verify your organization invite code first'); return
+      setError(T.inviteRequired); return
     }
     setLoading(true); setError('')
 
@@ -128,7 +146,7 @@ export default function RegisterPage() {
   return (
     <div dir={dir} className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <button onClick={() => setLang(l => l==='en'?'ar':'en')}
-        className="fixed top-4 left-4 text-white/70 hover:text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
+        className={`fixed top-4 ${lang === 'ar' ? 'right-4' : 'left-4'} text-white/70 hover:text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition-colors`}>
         {T.lang}
       </button>
 
@@ -151,8 +169,8 @@ export default function RegisterPage() {
           {/* Step 0 — Role selection */}
           {step === 0 && (
             <>
-              <h2 className="text-xl font-bold mb-1">I am a…</h2>
-              <p className="text-slate-500 text-sm mb-5">Choose your account type to get started</p>
+              <h2 className="text-xl font-bold mb-1">{T.step0Title}</h2>
+              <p className="text-slate-500 text-sm mb-5">{T.step0Sub}</p>
               <div className="space-y-3 mb-6">
                 {([
                   { role: 'owner', emoji: '🏢', title: lang==='ar'?'مالك عقار':'Property Owner', desc: lang==='ar'?'أدر عقاراتك وعقودك وفواتيرك':'Manage your properties, contracts, and invoices' },
@@ -170,7 +188,7 @@ export default function RegisterPage() {
                 ))}
               </div>
               <button onClick={() => setStep(role === 'owner' ? 1 : 2)} className="btn-primary w-full py-3">
-                {lang==='ar'?'التالي':'Continue'}
+                {T.next}
               </button>
               <p className="text-center text-sm text-slate-500 mt-4">
                 {T.haveAccount} <Link href="/auth/login" className="text-navy-700 font-semibold hover:underline">{T.signin}</Link>
@@ -188,24 +206,20 @@ export default function RegisterPage() {
               <p className="text-slate-400 text-xs mb-6">{T.sentNote}</p>
               <Link href="/auth/login" className="btn-primary block mb-4">{T.signin}</Link>
               <div className="border-t border-slate-100 pt-4 space-y-2">
-                <p className="text-xs text-slate-400 mb-2">
-                  {lang === 'ar' ? 'لم يصل الإيميل؟ تحقق من مجلد الرسائل غير المرغوب فيها أو' : "Didn't receive it? Check your spam folder or"}
-                </p>
+                <p className="text-xs text-slate-400 mb-2">{T.didntReceive}</p>
                 <button
                   onClick={handleResend}
                   disabled={resendLoading || resendSent}
                   className="text-sm text-navy-700 hover:underline font-semibold disabled:opacity-50 block mx-auto"
                 >
                   {resendLoading ? <Loader2 size={14} className="animate-spin inline mr-1"/> : null}
-                  {resendSent
-                    ? (lang === 'ar' ? '✓ تم إعادة الإرسال' : '✓ Sent!')
-                    : (lang === 'ar' ? 'إعادة إرسال رابط التحقق' : 'Resend verification email')}
+                  {resendSent ? T.resentOk : T.resend}
                 </button>
                 <button
                   onClick={() => { setStep(2); setError('') }}
                   className="text-xs text-slate-400 hover:text-slate-600 block mx-auto mt-1"
                 >
-                  {lang === 'ar' ? 'بريد خاطئ؟ عدّل بياناتك' : 'Wrong email? Go back and fix it'}
+                  {T.wrongEmail}
                 </button>
               </div>
             </div>
@@ -215,7 +229,7 @@ export default function RegisterPage() {
           {step === 1 && (
             <>
               <h2 className="text-xl font-bold mb-1">{T.step1}</h2>
-              <p className="text-slate-500 text-sm mb-5">30-day free trial on any plan</p>
+              <p className="text-slate-500 text-sm mb-5">{T.step1Sub}</p>
               <div className="space-y-3 mb-6">
                 {PLANS.map(p => (
                   <button key={p.id} type="button" onClick={() => setPlan(p.id)}
@@ -223,12 +237,12 @@ export default function RegisterPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-semibold text-slate-900">{lang==='ar'?p.nameAr:p.nameEn}
-                          {p.popular && <span className="ml-2 text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full">{lang==='ar'?'الأكثر شعبية':'Popular'}</span>}
+                          {p.popular && <span className="ml-2 text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full">{T.popular}</span>}
                         </div>
                         <div className="text-xs text-slate-500 mt-0.5">{lang==='ar'?p.descAr:p.descEn}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-navy-700 text-lg">${p.price}<span className="text-xs font-normal text-slate-400">/mo</span></div>
+                        <div className="font-bold text-navy-700 text-lg">${p.price}<span className="text-xs font-normal text-slate-400">{T.perMonth}</span></div>
                       </div>
                     </div>
                   </button>
@@ -245,7 +259,7 @@ export default function RegisterPage() {
           {step === 2 && (
             <>
               <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => setStep(role === 'owner' ? 1 : 0)} className="text-slate-400 hover:text-slate-600 text-sm">&larr;</button>
+                <button onClick={() => setStep(role === 'owner' ? 1 : 0)} className="text-slate-400 hover:text-slate-600 text-sm">{lang === 'ar' ? '→' : '←'}</button>
                 <h2 className="text-xl font-bold">{T.step2}</h2>
                 {role === 'owner' && selectedPlan && (
                   <span className="ml-auto text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full font-medium">
@@ -261,7 +275,7 @@ export default function RegisterPage() {
               {(role === 'tenant' || role === 'technician') && (
                 <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Organization Invite Code
+                    {T.inviteLabel}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -273,7 +287,7 @@ export default function RegisterPage() {
                     />
                     <button type="button" onClick={verifyInviteCode} disabled={loading || !inviteCode}
                       className="btn-secondary px-3 text-sm whitespace-nowrap">
-                      {loading ? '...' : 'Verify'}
+                      {loading ? '...' : T.verify}
                     </button>
                   </div>
                   {inviteErr && <div className="text-red-600 text-xs mt-1">{inviteErr}</div>}
@@ -282,7 +296,7 @@ export default function RegisterPage() {
                       <span>✓</span> <span className="font-semibold">{inviteOrg.name}</span>
                     </div>
                   )}
-                  <div className="text-xs text-slate-400 mt-2">Ask your property manager for the invite code.</div>
+                  <div className="text-xs text-slate-400 mt-2">{T.inviteHint}</div>
                 </div>
               )}
 
@@ -321,7 +335,7 @@ export default function RegisterPage() {
                   {loading ? <><Loader2 size={16} className="animate-spin"/>{T.loading}</> : T.submit}
                 </button>
                 <p className="text-xs text-slate-400 text-center">
-                  By signing up you agree to our <Link href="/terms" className="underline">Terms</Link> & <Link href="/privacy" className="underline">Privacy Policy</Link>
+                  {T.terms} <Link href="/terms" className="underline">{T.termsLink}</Link> & <Link href="/privacy" className="underline">{T.privacyLink}</Link>
                 </p>
               </form>
             </>
