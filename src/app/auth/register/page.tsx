@@ -169,8 +169,7 @@ export default function RegisterPage() {
           {/* Step 0 — Role selection */}
           {step === 0 && (
             <>
-              <h2 className="text-xl font-bold mb-1">{T.step0Title}</h2>
-              <p className="text-slate-500 text-sm mb-5">{T.step0Sub}</p>
+              <h2 className="text-xl font-bold mb-5">{T.step0Sub}</h2>
               <div className="space-y-3 mb-6">
                 {([
                   { role: 'owner', emoji: '🏢', title: lang==='ar'?'مالك عقار':'Property Owner', desc: lang==='ar'?'أدر عقاراتك وعقودك وفواتيرك':'Manage your properties, contracts, and invoices' },
