@@ -39,6 +39,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [sentEmail, setSentEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSent, setResendSent] = useState(false)
   const T = t[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
 
@@ -58,6 +60,16 @@ export default function RegisterPage() {
     setInviteOrg(data.org)
   }
 
+  async function handleResend() {
+    setResendLoading(true); setResendSent(false)
+    const supabase = createClient()
+    await supabase.auth.resend({ type: 'signup', email: sentEmail, options: {
+      emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+    }})
+    setResendLoading(false); setResendSent(true)
+    setTimeout(() => setResendSent(false), 5000)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (form.password.length < 8) { setError(T.passWeak); return }
@@ -65,6 +77,24 @@ export default function RegisterPage() {
       setError('Please verify your organization invite code first'); return
     }
     setLoading(true); setError('')
+
+    // Validate email domain has real mail servers
+    try {
+      const res = await fetch('/api/validate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      })
+      const { valid } = await res.json()
+      if (!valid) {
+        setError(lang === 'ar'
+          ? 'عنوان البريد الإلكتروني غير صالح. يرجى التحقق من الكتابة.'
+          : 'This email address appears invalid. Please check for typos.')
+        setLoading(false)
+        return
+      }
+    } catch { /* network error — let Supabase try anyway */ }
+
     const supabase = createClient()
     const { data, error: err } = await supabase.auth.signUp({
       email: form.email,
@@ -156,7 +186,28 @@ export default function RegisterPage() {
               <p className="text-slate-500 text-sm mb-1">{T.sentBody}</p>
               <p className="text-navy-700 font-semibold text-sm mb-3">{sentEmail}</p>
               <p className="text-slate-400 text-xs mb-6">{T.sentNote}</p>
-              <Link href="/auth/login" className="btn-primary">{T.signin}</Link>
+              <Link href="/auth/login" className="btn-primary block mb-4">{T.signin}</Link>
+              <div className="border-t border-slate-100 pt-4 space-y-2">
+                <p className="text-xs text-slate-400 mb-2">
+                  {lang === 'ar' ? 'لم يصل الإيميل؟ تحقق من مجلد الرسائل غير المرغوب فيها أو' : "Didn't receive it? Check your spam folder or"}
+                </p>
+                <button
+                  onClick={handleResend}
+                  disabled={resendLoading || resendSent}
+                  className="text-sm text-navy-700 hover:underline font-semibold disabled:opacity-50 block mx-auto"
+                >
+                  {resendLoading ? <Loader2 size={14} className="animate-spin inline mr-1"/> : null}
+                  {resendSent
+                    ? (lang === 'ar' ? '✓ تم إعادة الإرسال' : '✓ Sent!')
+                    : (lang === 'ar' ? 'إعادة إرسال رابط التحقق' : 'Resend verification email')}
+                </button>
+                <button
+                  onClick={() => { setStep(2); setError('') }}
+                  className="text-xs text-slate-400 hover:text-slate-600 block mx-auto mt-1"
+                >
+                  {lang === 'ar' ? 'بريد خاطئ؟ عدّل بياناتك' : 'Wrong email? Go back and fix it'}
+                </button>
+              </div>
             </div>
           )}
 
