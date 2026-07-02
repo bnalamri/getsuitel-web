@@ -7,6 +7,7 @@ import Link from 'next/link'
 
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [debugInfo, setDebugInfo] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -15,6 +16,8 @@ export default function VerifyEmailPage() {
     // Implicit flow: tokens are in the URL hash (#access_token=...&type=signup)
     // This works across any device/browser — no PKCE cookie needed
     const hash = window.location.hash
+    const search = window.location.search
+    setDebugInfo(`hash=${hash.substring(0,30)} search=${search.substring(0,30)}`)
     if (hash) {
       const params = new URLSearchParams(hash.substring(1))
       const accessToken = params.get('access_token')
@@ -87,6 +90,7 @@ export default function VerifyEmailPage() {
             <XCircle size={52} className="text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-slate-900 mb-2">Verification failed</h2>
             <p className="text-slate-500 text-sm mb-6">The link may have expired or already been used. Try signing in directly.</p>
+            {debugInfo && <p className="text-xs text-slate-400 mb-4 font-mono break-all">{debugInfo}</p>}
             <Link href="/auth/login" className="btn-primary">Sign In</Link>
           </>
         )}
