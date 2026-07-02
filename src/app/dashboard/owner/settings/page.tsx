@@ -14,6 +14,15 @@ export default async function SettingsPage() {
     ? await supabase.from('organizations').select('*').eq('id', profile.organization_id).single()
     : { data: null }
 
+  // Always use auth user email; fall back to registration metadata for new users
+  const displayProfile = {
+    ...(profile ?? {}),
+    id: user.id,
+    email: user.email,
+    full_name: (profile?.full_name as string) || (user.user_metadata?.full_name as string) || '',
+    phone: (profile?.phone as string) || (user.user_metadata?.phone as string) || '',
+  }
+
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
@@ -21,7 +30,7 @@ export default async function SettingsPage() {
         <p className="text-slate-500 text-sm mt-0.5">Manage your profile and organization</p>
       </div>
 
-      <ProfileSettingsForm profile={profile} />
+      <ProfileSettingsForm profile={displayProfile} />
       <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} />
     </div>
   )
