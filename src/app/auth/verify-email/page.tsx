@@ -23,7 +23,7 @@ export default function VerifyEmailPage() {
             setStatus('error')
           } else {
             setStatus('success')
-            setTimeout(() => router.push('/dashboard'), 2000)
+            setTimeout(() => { window.location.href = '/dashboard' }, 2000)
           }
         })
       return
@@ -39,7 +39,7 @@ export default function VerifyEmailPage() {
         supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
           .then(({ data, error }) => {
             if (error || !data.session) setStatus('error')
-            else { setStatus('success'); setTimeout(() => router.push('/dashboard'), 2000) }
+            else { setStatus('success'); setTimeout(() => { window.location.href = '/dashboard' }, 2000) }
           })
         return
       }
@@ -76,7 +76,7 @@ export default function VerifyEmailPage() {
             <CheckCircle size={52} className="text-green-500 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-slate-900 mb-2">Email verified!</h2>
             <p className="text-slate-500 text-sm mb-6">Your account is active. Redirecting you to the dashboard…</p>
-            <Link href="/dashboard" className="btn-primary">Go to Dashboard</Link>
+            <a href="/dashboard" className="btn-primary">Go to Dashboard</a>
           </>
         )}
 
