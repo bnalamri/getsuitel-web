@@ -9,8 +9,22 @@ export default async function OwnerDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('*, organizations(*)').eq('id', user.id).single()
-  const org = profile?.organizations as Record<string, unknown> | null
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+
+  // Fetch org via two fallbacks: profile.organization_id (primary) or owner_id (in case org exists but link wasn't set)
+  let org: Record<string, unknown> | null = null
+  if (profile?.organization_id) {
+    const { data } = await supabase.from('organizations').select('*').eq('id', profile.organization_id).single()
+    org = data
+  }
+  if (!org) {
+    const { data } = await supabase.from('organizations').select('*').eq('owner_id', user.id).single()
+    if (data) {
+      org = data
+      // Back-fill the missing link on the profile
+      await supabase.from('profiles').update({ organization_id: data.id }).eq('id', user.id)
+    }
+  }
 
   if (!org) {
     return (
