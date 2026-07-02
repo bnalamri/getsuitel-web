@@ -42,16 +42,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div dir={dir} className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div dir={dir} className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')}
-        className="fixed top-4 left-4 text-slate-500 hover:text-slate-700 text-sm font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors bg-white">
+        className="fixed top-4 left-4 text-white/70 hover:text-white text-sm font-bold px-3 py-1.5 rounded-lg border border-white/20 hover:border-white/40 transition-colors">
         {T.lang}
       </button>
 
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="text-navy-800 font-black text-3xl tracking-tight">
-            Get<span className="text-gold-500">Suitel</span>
+          <div className="text-white font-black text-3xl tracking-tight">
+            Get<span className="text-gold-400">Suitel</span>
           </div>
         </div>
 

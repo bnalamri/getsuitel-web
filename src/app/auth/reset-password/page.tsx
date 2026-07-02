@@ -39,10 +39,10 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="text-navy-800 font-black text-3xl">Get<span className="text-gold-500">Suitel</span></div>
+          <div className="text-white font-black text-3xl">Get<span className="text-gold-400">Suitel</span></div>
         </div>
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {done ? (
