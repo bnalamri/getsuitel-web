@@ -76,6 +76,15 @@ export async function middleware(request: NextRequest) {
     return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
   }
 
+  // Redirect /dashboard → role home
+  if (path === '/dashboard') {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const role = profile?.role ?? 'owner'
+    const url = request.nextUrl.clone()
+    url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
+    return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
+  }
+
   // Role guard for /dashboard/*
   if (path.startsWith('/dashboard/')) {
     const { data: profile } = await supabase
