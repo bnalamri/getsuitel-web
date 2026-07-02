@@ -57,7 +57,7 @@ export default function VerifyEmailPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-700 to-navy-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md text-center">
         <div className="font-black text-2xl text-navy-800 mb-8">
           Get<span className="text-gold-500">Suitel</span>
