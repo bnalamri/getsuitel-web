@@ -6,16 +6,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/auth/login?debug=nouser')
 
   // Fetch profile and organization separately to avoid RLS join issues
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/auth/logout')
+  if (!profile) redirect(`/auth/login?debug=noprofile&uid=${user.id}&err=${encodeURIComponent(profileErr?.message ?? 'unknown')}`)
 
   // Fetch org only if the user belongs to one
   let organization = null
