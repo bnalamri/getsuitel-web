@@ -74,9 +74,9 @@ function LoginForm() {
           <img src="/logo-white.svg" alt="GetSuitel" className="h-14 mb-4" onError={e => {
             (e.target as HTMLImageElement).style.display='none'
           }}/>
-          <div className="text-white/90 font-black text-3xl tracking-tight">
+          <a href="https://www.getsuitel.com" className="text-white/90 font-black text-3xl tracking-tight hover:opacity-80 transition-opacity">
             Get<span className="text-gold-400">Suitel</span>
-          </div>
+          </a>
           <div className="text-white/50 text-sm mt-1">SMART REAL ESTATE MANAGEMENT</div>
         </div>
 

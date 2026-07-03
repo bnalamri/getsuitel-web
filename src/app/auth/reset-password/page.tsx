@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="text-white font-black text-3xl">Get<span className="text-gold-400">Suitel</span></div>
+          <a href="https://www.getsuitel.com" className="text-white font-black text-3xl hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
         </div>
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {done ? (

@@ -181,7 +181,7 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-lg">
         <div className="flex justify-center mb-8">
-          <div className="text-white font-black text-3xl">Get<span className="text-gold-400">Suitel</span></div>
+          <a href="https://www.getsuitel.com" className="text-white font-black text-3xl hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
         </div>
 
         {/* Progress dots */}

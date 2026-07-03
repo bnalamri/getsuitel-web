@@ -59,9 +59,9 @@ export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md text-center">
-        <div className="font-black text-2xl text-navy-800 mb-8">
+        <a href="https://www.getsuitel.com" className="font-black text-2xl text-navy-800 mb-8 block hover:opacity-80 transition-opacity">
           Get<span className="text-gold-500">Suitel</span>
-        </div>
+        </a>
 
         {status === 'loading' && (
           <>

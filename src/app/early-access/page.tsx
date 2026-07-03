@@ -14,9 +14,9 @@ export default function EarlyAccessPage() {
       </button>
 
       <div className="w-full max-w-lg text-center">
-        <div className="text-white font-black text-3xl mb-10">
+        <a href="https://www.getsuitel.com" className="text-white font-black text-3xl mb-10 block hover:opacity-80 transition-opacity">
           Get<span className="text-gold-400">Suitel</span>
-        </div>
+        </a>
 
         <div className="bg-white rounded-2xl shadow-2xl p-10">
           {/* Icon */}

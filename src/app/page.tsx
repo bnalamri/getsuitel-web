@@ -104,7 +104,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-navy-900/95 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="font-black text-xl text-white">Get<span className="text-gold-400">Suitel</span></div>
+          <a href="https://www.getsuitel.com" className="font-black text-xl text-white hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
           <div className="hidden md:flex items-center gap-8 text-sm text-white/70">
             <a href="#features" className="hover:text-white transition-colors">{C.nav.features}</a>
             <a href="#for-who" className="hover:text-white transition-colors">{C.nav.forWho}</a>
@@ -245,7 +245,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
-              <div className="font-black text-2xl text-white mb-3">Get<span className="text-gold-400">Suitel</span></div>
+              <a href="https://www.getsuitel.com" className="font-black text-2xl text-white mb-3 block hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
               <p className="text-sm leading-relaxed max-w-xs">{C.footer.desc}</p>
             </div>
             <div>

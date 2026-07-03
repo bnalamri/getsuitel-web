@@ -108,7 +108,7 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
         {!collapsed && (
-          <Link href="/" className="flex flex-col">
+          <Link href="https://www.getsuitel.com" className="flex flex-col">
             <span className="font-black text-lg tracking-tight leading-none">
               Get<span className="text-gold-400">Suitel</span>
             </span>

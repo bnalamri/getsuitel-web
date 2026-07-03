@@ -50,9 +50,9 @@ export default function ForgotPasswordPage() {
 
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="text-white font-black text-3xl tracking-tight">
+          <a href="https://www.getsuitel.com" className="text-white font-black text-3xl tracking-tight hover:opacity-80 transition-opacity">
             Get<span className="text-gold-400">Suitel</span>
-          </div>
+          </a>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
