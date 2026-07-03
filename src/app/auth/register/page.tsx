@@ -142,32 +142,43 @@ export default function RegisterPage() {
       }
     } catch { /* network error — let Supabase try anyway */ }
 
-    const supabase = createClient()
-    const { data, error: err } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
-          full_name: form.name,
-          role,
-          lang_pref: lang,
-          organization_id: inviteOrg?.id ?? null,
-          plan: role === 'owner' ? plan : null,
-          org_name: role === 'owner' ? form.org : null,
-          phone: form.phone,
+    try {
+      const supabase = createClient()
+      const { data, error: err } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.name,
+            role,
+            lang_pref: lang,
+            organization_id: inviteOrg?.id ?? null,
+            plan: role === 'owner' ? plan : null,
+            org_name: role === 'owner' ? form.org : null,
+            phone: form.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/verify-email`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
-      },
-    })
-    setLoading(false)
-    if (err) { setError(err.message || 'Registration failed. Please try again.'); return }
-    // Supabase returns 200 for duplicate emails but identities will be empty
-    if (data?.user?.identities?.length === 0) {
-      setError('An account with this email already exists. Please sign in instead.')
-      return
+      })
+      setLoading(false)
+      if (err) {
+        const msg = typeof err.message === 'string' && err.message.trim()
+          ? err.message
+          : 'Registration failed. Please try again.'
+        setError(msg)
+        return
+      }
+      // Supabase returns 200 for duplicate emails but identities will be empty
+      if (data?.user?.identities?.length === 0) {
+        setError('An account with this email already exists. Please sign in instead.')
+        return
+      }
+      setSentEmail(form.email)
+      setStep(3)
+    } catch (e: unknown) {
+      setLoading(false)
+      setError(e instanceof Error ? e.message : 'Registration failed. Please try again.')
     }
-    setSentEmail(form.email)
-    setStep(3)
   }
 
   const selectedPlan = PLANS.find(p => p.id === plan)
