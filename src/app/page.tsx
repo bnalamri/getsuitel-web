@@ -38,6 +38,20 @@ const content = {
         { name:'Pro', price:'$79', desc:'For growing property portfolios', features:['Up to 50 units','Up to 75 tenants','Everything in Basic','Advanced reports','Team management','File attachments','Priority support'] },
         { name:'Enterprise', price:'$199', desc:'For large real estate companies', features:['Unlimited units & tenants','Everything in Pro','Custom branding','Dedicated account manager','API access','SLA guarantee'] },
       ],
+      exclusive: {
+        badge: 'EXCLUSIVE', name: 'Fully Managed', price: 'Custom',
+        desc: 'Let GetSuitel handle everything — we manage your properties end-to-end so you can focus on growth.',
+        features: [
+          'Dedicated GetSuitel management team',
+          'Full tenant & contract management',
+          'Maintenance coordination & follow-up',
+          'Monthly financial performance report',
+          'End-of-year financial & tax report',
+          'Priority 24/7 support',
+          'Quarterly portfolio review',
+        ],
+        cta: 'Contact Us', ctaHref: 'mailto:hello@getsuitel.com',
+      },
     },
     footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
   },
@@ -75,6 +89,20 @@ const content = {
         { name:'احترافي', price:'$79', desc:'للمحافظ العقارية المتنامية', features:['حتى 50 وحدة','حتى 75 مستأجراً','كل مميزات الأساسي','تقارير متقدمة','إدارة الفريق','المرفقات','دعم ذو أولوية'] },
         { name:'مؤسسي', price:'$199', desc:'للشركات العقارية الكبيرة', features:['وحدات ومستأجرون غير محدودين','كل مميزات الاحترافي','علامة تجارية مخصصة','مدير حساب مخصص','الوصول للـ API','ضمان مستوى الخدمة'] },
       ],
+      exclusive: {
+        badge: 'حصري', name: 'إدارة متكاملة', price: 'تسعير خاص',
+        desc: 'دعنا في GetSuitel نتولى كل شيء — نُدير عقاراتك من الألف إلى الياء حتى تتفرغ للنمو.',
+        features: [
+          'فريق إداري مخصص من GetSuitel',
+          'إدارة كاملة للمستأجرين والعقود',
+          'تنسيق أعمال الصيانة ومتابعتها',
+          'تقرير مالي شهري للأداء',
+          'تقرير مالي وضريبي سنوي شامل',
+          'دعم متميز على مدار الساعة',
+          'مراجعة فصلية للمحفظة العقارية',
+        ],
+        cta: 'تواصل معنا', ctaHref: 'mailto:hello@getsuitel.com',
+      },
     },
     footer: { desc:'منصة إدارة العقارات الذكية للملاك والمستأجرين وفرق الخدمة.', product:'المنتج', legal:'قانوني', links:{ features:'المميزات', pricing:'الأسعار', signup:'إنشاء حساب', signin:'تسجيل الدخول' }, legal_links:{ privacy:'سياسة الخصوصية', terms:'شروط الخدمة', contact:'تواصل معنا' }, copyright:'GetSuitel. جميع الحقوق محفوظة.', status:'جميع الأنظمة تعمل' },
   },
@@ -236,6 +264,38 @@ export default function LandingPage() {
                 </div>
               )
             })}
+          </div>
+
+          {/* Exclusive / Fully Managed plan */}
+          <div className="mt-10 rounded-2xl overflow-hidden bg-gradient-to-r from-slate-900 via-navy-900 to-slate-900 ring-2 ring-gold-400 shadow-2xl">
+            <div className="px-8 py-8 md:flex md:items-center md:gap-10">
+              {/* Left: badge + title + desc */}
+              <div className="md:w-72 flex-shrink-0 mb-6 md:mb-0">
+                <div className="inline-flex items-center gap-2 bg-gold-400 text-navy-900 text-xs font-black px-3 py-1 rounded-full mb-4">
+                  <span>★</span> {C.pricing.exclusive.badge}
+                </div>
+                <div className="text-2xl font-black text-white mb-2">{C.pricing.exclusive.name}</div>
+                <div className="text-white/60 text-sm leading-relaxed">{C.pricing.exclusive.desc}</div>
+                <div className="mt-4">
+                  <span className="text-3xl font-black text-gold-400">{C.pricing.exclusive.price}</span>
+                </div>
+              </div>
+              {/* Middle: features */}
+              <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 mb-6 md:mb-0">
+                {C.pricing.exclusive.features.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
+                    <CheckCircle size={15} className="flex-shrink-0 text-gold-400" />{f}
+                  </li>
+                ))}
+              </ul>
+              {/* Right: CTA */}
+              <div className="flex-shrink-0">
+                <a href={C.pricing.exclusive.ctaHref}
+                  className="block text-center bg-gold-400 hover:bg-gold-300 text-navy-900 font-black px-8 py-3.5 rounded-xl transition-colors text-sm whitespace-nowrap">
+                  {C.pricing.exclusive.cta} →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
