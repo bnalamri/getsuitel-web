@@ -322,7 +322,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm">
                 <li><a href="#" className="hover:text-white transition-colors">{C.footer.legal_links.privacy}</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">{C.footer.legal_links.terms}</a></li>
-                <li><a href="mailto:support@getsuitel.com" className="hover:text-white transition-colors">{C.footer.legal_links.contact}</a></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">{C.footer.legal_links.contact}</Link></li>
               </ul>
             </div>
           </div>
