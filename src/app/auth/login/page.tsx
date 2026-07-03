@@ -42,19 +42,27 @@ function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password })
-    if (authErr) {
-      setError(T.error)
-      setLoading(false)
-      return
-    }
-    // Get role to redirect correctly
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
+    try {
+      const supabase = createClient()
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (authErr) {
+        setError(authErr.message || T.error)
+        setLoading(false)
+        return
+      }
+      // Get role to redirect correctly
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setError('Session not established. Please try again.')
+        setLoading(false)
+        return
+      }
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
       const next = params.get('next') || ROLE_HOME[profile?.role ?? 'owner'] || '/dashboard/owner'
       window.location.href = next
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : T.error)
+      setLoading(false)
     }
   }
 
