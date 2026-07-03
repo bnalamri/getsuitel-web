@@ -72,7 +72,7 @@ export async function POST(req: Request) {
   try {
     const { error } = await resend.emails.send({
       from: 'GetSuitel Contact <notices@getsuitel.com>',
-      to: ['hello@getsuitel.com'],
+      to: ['getsuitelmail@omanportal.net'],
       replyTo: email,
       subject: `New message from ${name} (${country || 'Unknown'})`,
       html,
