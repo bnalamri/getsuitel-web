@@ -50,7 +50,7 @@ const content = {
           'Priority 24/7 support',
           'Quarterly portfolio review',
         ],
-        cta: 'Contact Us', ctaHref: 'mailto:hello@getsuitel.com',
+        cta: 'Contact Us', ctaHref: '/contact',
       },
     },
     footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
