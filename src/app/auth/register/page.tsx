@@ -145,9 +145,8 @@ try {
       })
       setLoading(false)
       if (err) {
-        const msg = typeof err.message === 'string' && err.message.trim()
-          ? err.message
-          : 'Registration failed. Please try again.'
+        const raw = typeof err.message === 'string' ? err.message.trim() : ''
+        const msg = (raw && raw !== '{}' && raw !== '{ }') ? raw : 'Registration failed. Please try again.'
         setError(msg)
         return
       }
