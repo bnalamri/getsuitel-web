@@ -8,11 +8,10 @@ export async function POST(req: Request) {
   if (!code || code.length < 6) return NextResponse.json({ error: 'Invalid code' }, { status: 400 })
 
   const supabase = createAdminClient()
-  // UUID columns need a text cast for pattern matching in PostgREST
   const { data: orgs, error } = await supabase
     .from('organizations')
     .select('id, name')
-    .filter('id::text', 'ilike', `${code.toLowerCase()}%`)
+    .eq('invite_code', code.trim().toUpperCase())
     .limit(1)
 
   if (error) return NextResponse.json({ error: 'Lookup failed', detail: error.message }, { status: 500 })
