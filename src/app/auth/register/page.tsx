@@ -55,7 +55,10 @@ export default function RegisterPage() {
     setLang(next)
     localStorage.setItem('lang', next)
   }
-  const [step, setStep] = useState(0) // 0=role select, 1=plan(owner only), 2=details, 3=sent
+  const [step, setStep] = useState(-1) // -1=pilot gate, 0=role select, 1=plan(owner only), 2=details, 3=sent
+  const [pilotCode, setPilotCode] = useState('')
+  const [pilotError, setPilotError] = useState('')
+  const [pilotLoading, setPilotLoading] = useState(false)
   const [role, setRole] = useState<'owner'|'tenant'|'technician'>('owner')
   const [plan, setPlan] = useState('basic')
   const [inviteCode, setInviteCode] = useState('')
@@ -72,6 +75,23 @@ export default function RegisterPage() {
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
 
   function set(k: string, v: string) { setForm(f => ({...f, [k]: v})) }
+
+  async function handlePilotCode(e: React.FormEvent) {
+    e.preventDefault()
+    setPilotLoading(true); setPilotError('')
+    const res = await fetch('/api/pilot/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: pilotCode }),
+    })
+    const { valid } = await res.json()
+    setPilotLoading(false)
+    if (valid) {
+      setStep(0)
+    } else {
+      window.location.href = '/early-access'
+    }
+  }
 
   async function verifyInviteCode() {
     if (!inviteCode.trim()) return
@@ -165,7 +185,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Progress dots */}
-        {step > 0 && step < 3 && (
+        {step > 0 && step < 3 && step !== -1 && (
           <div className="flex items-center justify-center gap-3 mb-6">
             {(role === 'owner' ? [1,2] : [2]).map(s => (
               <div key={s} className={`h-2 rounded-full transition-all ${s === step ? 'w-8 bg-gold-400' : s < step ? 'w-4 bg-gold-400' : 'w-4 bg-white/30'}`}/>
@@ -174,6 +194,49 @@ export default function RegisterPage() {
         )}
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
+
+          {/* Step -1 — Pilot gate */}
+          {step === -1 && (
+            <>
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-navy-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-navy-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 mb-1">
+                  {lang === 'ar' ? 'وصول تجريبي' : 'Pilot Access'}
+                </h2>
+                <p className="text-slate-500 text-sm">
+                  {lang === 'ar' ? 'أدخل رمز الوصول الذي أرسله لك فريقنا' : 'Enter the access code provided by our team'}
+                </p>
+              </div>
+              <form onSubmit={handlePilotCode} className="space-y-4">
+                <input
+                  type="text"
+                  value={pilotCode}
+                  onChange={e => setPilotCode(e.target.value)}
+                  required
+                  className="input text-center font-mono tracking-widest text-lg uppercase"
+                  placeholder={lang === 'ar' ? 'رمز الوصول' : 'ACCESS CODE'}
+                  autoFocus
+                />
+                {pilotError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2.5 rounded-lg text-center">{pilotError}</div>
+                )}
+                <button type="submit" disabled={pilotLoading || !pilotCode.trim()} className="btn-primary w-full py-3">
+                  {pilotLoading ? <Loader2 size={16} className="animate-spin inline mr-2"/> : null}
+                  {lang === 'ar' ? 'متابعة' : 'Continue'}
+                </button>
+              </form>
+              <p className="text-center text-xs text-slate-400 mt-4">
+                {lang === 'ar' ? 'لا تملك رمزاً؟' : "Don't have a code?"}{' '}
+                <a href="/early-access" className="text-navy-700 hover:underline font-medium">
+                  {lang === 'ar' ? 'اطلب الوصول المبكر' : 'Request early access'}
+                </a>
+              </p>
+            </>
+          )}
 
           {/* Step 0 — Role selection */}
           {step === 0 && (
