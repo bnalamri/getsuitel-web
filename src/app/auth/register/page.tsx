@@ -125,24 +125,7 @@ export default function RegisterPage() {
     }
     setLoading(true); setError('')
 
-    // Validate email domain has real mail servers
-    try {
-      const res = await fetch('/api/validate-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email }),
-      })
-      const { valid } = await res.json()
-      if (!valid) {
-        setError(lang === 'ar'
-          ? 'عنوان البريد الإلكتروني غير صالح. يرجى التحقق من الكتابة.'
-          : 'This email address appears invalid. Please check for typos.')
-        setLoading(false)
-        return
-      }
-    } catch { /* network error — let Supabase try anyway */ }
-
-    try {
+try {
       const supabase = createClient()
       const { data, error: err } = await supabase.auth.signUp({
         email: form.email,
