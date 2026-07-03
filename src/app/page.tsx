@@ -32,7 +32,7 @@ const content = {
       ],
     },
     pricing: {
-      title: 'Simple, transparent pricing', sub: '30-day free trial on all plans. No credit card required.', popular: 'MOST POPULAR', cta: 'Start Free Trial',
+      title: 'Simple, transparent pricing', sub: '30-day free trial on all plans. No credit card required.', popular: 'MOST POPULAR', cta: 'Start Free Trial', month: '/month',
       plans: [
         { name:'Basic', price:'$29', desc:'Perfect for individual landlords', features:['Up to 10 units','Up to 15 tenants','Invoicing & contracts','Maintenance requests','Email notices','Standard support'] },
         { name:'Pro', price:'$79', desc:'For growing property portfolios', features:['Up to 50 units','Up to 75 tenants','Everything in Basic','Advanced reports','Team management','File attachments','Priority support'] },
@@ -50,7 +50,7 @@ const content = {
           'Priority 24/7 support',
           'Quarterly portfolio review',
         ],
-        cta: 'Contact Us', ctaHref: '/contact',
+        cta: 'Contact Us', ctaHref: '/contact', ctaArrow: '→',
       },
     },
     footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
@@ -83,7 +83,7 @@ const content = {
       ],
     },
     pricing: {
-      title: 'أسعار بسيطة وشفافة', sub: 'تجربة مجانية لمدة 30 يوماً على جميع الخطط. لا يلزم بطاقة ائتمانية.', popular: 'الأكثر شعبية', cta: 'ابدأ التجربة المجانية',
+      title: 'أسعار بسيطة وشفافة', sub: 'تجربة مجانية لمدة 30 يوماً على جميع الخطط. لا يلزم بطاقة ائتمانية.', popular: 'الأكثر شعبية', cta: 'ابدأ التجربة المجانية', month: '/ شهر',
       plans: [
         { name:'أساسي', price:'$29', desc:'مثالي للملاك الأفراد', features:['حتى 10 وحدات','حتى 15 مستأجراً','الفوترة والعقود','طلبات الصيانة','إشعارات البريد الإلكتروني','دعم عادي'] },
         { name:'احترافي', price:'$79', desc:'للمحافظ العقارية المتنامية', features:['حتى 50 وحدة','حتى 75 مستأجراً','كل مميزات الأساسي','تقارير متقدمة','إدارة الفريق','المرفقات','دعم ذو أولوية'] },
@@ -101,7 +101,7 @@ const content = {
           'دعم متميز على مدار الساعة',
           'مراجعة فصلية للمحفظة العقارية',
         ],
-        cta: 'تواصل معنا', ctaHref: 'mailto:hello@getsuitel.com',
+        cta: 'تواصل معنا', ctaHref: '/contact', ctaArrow: '←',
       },
     },
     footer: { desc:'منصة إدارة العقارات الذكية للملاك والمستأجرين وفرق الخدمة.', product:'المنتج', legal:'قانوني', links:{ features:'المميزات', pricing:'الأسعار', signup:'إنشاء حساب', signin:'تسجيل الدخول' }, legal_links:{ privacy:'سياسة الخصوصية', terms:'شروط الخدمة', contact:'تواصل معنا' }, copyright:'GetSuitel. جميع الحقوق محفوظة.', status:'جميع الأنظمة تعمل' },
@@ -165,7 +165,7 @@ export default function LandingPage() {
           <p className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed">{C.hero.sub}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link href="/auth/register" className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold px-8 py-4 rounded-xl text-lg transition-colors shadow-xl shadow-gold-500/20">
-              {C.hero.cta1} <ArrowRight size={20} />
+              {C.hero.cta1} <ArrowRight size={20} className={lang === 'ar' ? 'rotate-180' : ''} />
             </Link>
             <Link href="/auth/login" className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold px-8 py-4 rounded-xl text-lg transition-colors">
               {C.hero.cta2}
@@ -249,7 +249,7 @@ export default function LandingPage() {
                   <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{p.desc}</div>
                   <div className="flex items-baseline gap-1 mb-8">
                     <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{p.price}</span>
-                    <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>/month</span>
+                    <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
                   </div>
                   <ul className="space-y-3 mb-8">
                     {p.features.map((f, j) => (
@@ -292,7 +292,7 @@ export default function LandingPage() {
               <div className="flex-shrink-0">
                 <a href={C.pricing.exclusive.ctaHref}
                   className="block text-center bg-gold-400 hover:bg-gold-300 text-navy-900 font-black px-8 py-3.5 rounded-xl transition-colors text-sm whitespace-nowrap">
-                  {C.pricing.exclusive.cta} →
+                  {C.pricing.exclusive.cta} {C.pricing.exclusive.ctaArrow}
                 </a>
               </div>
             </div>
