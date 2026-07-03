@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { FileText, Calendar } from 'lucide-react'
 import AddContractForm from './AddContractForm'
+import ActivateContractButton from './ActivateContractButton'
 
 export const metadata = { title: 'Contracts' }
 
@@ -82,7 +83,14 @@ export default async function ContractsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">{Number(c.rent_amount).toLocaleString()} {c.currency}</td>
-                    <td className="px-4 py-3"><span className={`badge ${statusColor[c.status]}`}>{c.status}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`badge ${statusColor[c.status]}`}>{c.status}</span>
+                        {c.status === 'draft' && (
+                          <ActivateContractButton contractId={c.id} unitId={c.unit_id} />
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
