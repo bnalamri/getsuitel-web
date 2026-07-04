@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Wrench } from 'lucide-react'
 import AddMaintenanceForm from './AddMaintenanceForm'
 import AssignTechnicianForm from './AssignTechnicianForm'
@@ -24,10 +24,11 @@ export default async function MaintenancePage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
+  const admin = createAdminClient()
   const [reqRes, unitsRes, techRes] = await Promise.all([
     supabase.from('maintenance_requests').select('*, units(unit_number, properties(name)), profiles(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
-    supabase.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'technician'),
+    admin.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'technician'),
   ])
 
   const requests = reqRes.data ?? []

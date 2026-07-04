@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { HardHat, Mail, Phone } from 'lucide-react'
 
 export const metadata = { title: 'Team' }
@@ -11,7 +11,8 @@ export default async function TeamPage() {
   const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
   const orgId = profile?.organization_id
 
-  const { data: team } = await supabase.from('profiles').select('*').eq('organization_id', orgId ?? '').eq('role', 'technician').order('full_name')
+  const admin = createAdminClient()
+  const { data: team } = await admin.from('profiles').select('*').eq('organization_id', orgId ?? '').eq('role', 'technician').order('full_name')
 
   return (
     <div className="space-y-6">
