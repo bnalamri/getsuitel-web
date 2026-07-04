@@ -31,16 +31,21 @@ export default async function TenantDashboard() {
     const { data: org } = await supabase.from('organizations').select('name, owner_id').eq('id', tenant.organization_id).single()
     orgName = org?.name ?? ''
     if (org?.owner_id) {
-      const { data: ownerProfile } = await supabase.from('profiles').select('full_name, phone').eq('id', org.owner_id).single()
+      const { data: ownerProfile } = await supabase.from('profiles').select('full_name, phone, email').eq('id', org.owner_id).single()
       ownerName = ownerProfile?.full_name ?? ''
       ownerPhone = ownerProfile?.phone ?? ''
-      try {
-        const admin = createAdminClient()
-        const { data: { user: ownerUser } } = await admin.auth.admin.getUserById(org.owner_id)
-        ownerEmail = ownerUser?.email ?? ''
-      } catch { /* ignore */ }
+      ownerEmail = ownerProfile?.email ?? ''
+      if (!ownerEmail) {
+        try {
+          const admin = createAdminClient()
+          const { data: { user: ownerUser } } = await admin.auth.admin.getUserById(org.owner_id)
+          ownerEmail = ownerUser?.email ?? ''
+        } catch { /* ignore */ }
+      }
     }
   }
+
+  const hasOwnerContact = ownerName || ownerEmail || ownerPhone
 
   return (
     <div className="space-y-6">
@@ -49,7 +54,7 @@ export default async function TenantDashboard() {
         <p className="text-slate-500 text-sm mt-1">{tenant?.full_name}</p>
       </div>
 
-      {/* Active contract summary */}
+      {/* Active contract + owner contact embedded */}
       {activeContract ? (
         <div className="card p-5 border-l-4 border-l-navy-700">
           <div className="flex items-start gap-3">
@@ -63,41 +68,41 @@ export default async function TenantDashboard() {
                 <span className="mx-2">·</span>
                 Contract ends: {new Date(activeContract.end_date).toLocaleDateString()}
               </div>
+
+              {/* Owner contact — embedded per property */}
+              {hasOwnerContact && (
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <User size={14} className="text-navy-700"/>
+                    <span>
+                      {ownerName
+                        ? <><span className="font-medium text-slate-800">{ownerName}</span>{orgName ? <span className="text-slate-400"> · {orgName}</span> : ''}</>
+                        : <span className="text-slate-500">{orgName || 'Property Manager'}</span>
+                      }
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {ownerPhone && (
+                      <a href={`tel:${ownerPhone}`}
+                        className="inline-flex items-center gap-1.5 btn-secondary text-xs px-3 py-1.5">
+                        <Phone size={12}/> {ownerPhone}
+                      </a>
+                    )}
+                    {ownerEmail && (
+                      <a href={`mailto:${ownerEmail}?subject=Inquiry from ${tenant?.full_name}`}
+                        className="inline-flex items-center gap-1.5 btn-primary text-xs px-3 py-1.5">
+                        <Mail size={12}/> Email Manager
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <a href="/dashboard/tenant/contract" className="btn-secondary text-xs px-3 py-1.5">View</a>
+            <a href="/dashboard/tenant/contract" className="btn-secondary text-xs px-3 py-1.5 flex-shrink-0">View</a>
           </div>
         </div>
       ) : (
         <div className="card p-5 text-center text-slate-500 text-sm">No active contract found.</div>
-      )}
-
-      {/* Owner contact card */}
-      {ownerName && (
-        <div className="card p-5">
-          <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <User size={16} className="text-navy-700"/> Property Manager
-          </h3>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <div className="font-semibold text-slate-900">{ownerName}</div>
-              {orgName && <div className="text-sm text-slate-500">{orgName}</div>}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {ownerPhone && (
-                <a href={`tel:${ownerPhone}`}
-                  className="inline-flex items-center gap-1.5 btn-secondary text-xs px-3 py-2">
-                  <Phone size={13}/> {ownerPhone}
-                </a>
-              )}
-              {ownerEmail && (
-                <a href={`mailto:${ownerEmail}?subject=Inquiry from tenant ${tenant?.full_name}`}
-                  className="inline-flex items-center gap-1.5 btn-primary text-xs px-3 py-2">
-                  <Mail size={13}/> Send Email
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Quick stats */}
