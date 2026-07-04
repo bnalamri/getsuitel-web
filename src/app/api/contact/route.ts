@@ -19,6 +19,7 @@ export async function POST(req: Request) {
 <tr><td style="background:#1B3A6B;padding:28px 32px">
   <div style="font-size:22px;font-weight:900;color:#fff">Get<span style="color:#C9931A">Suitel</span></div>
   <div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:2px;margin-top:2px">NEW CONTACT FORM SUBMISSION</div>
+  <div style="font-size:13px;color:#C9931A;font-weight:700;margin-top:6px">Request for Exclusive Plan</div>
 </td></tr>
 
 <tr><td style="padding:28px 32px 0">
