@@ -24,7 +24,6 @@ export async function POST(req: Request) {
   }
 
   const updates: Record<string, unknown> = { status: nextStatus }
-  if (nextStatus === 'completed') updates.completed_at = new Date().toISOString()
 
   const { error } = await admin
     .from('maintenance_requests')
