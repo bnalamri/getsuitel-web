@@ -137,13 +137,22 @@ export default async function MaintenancePage() {
                       <span className={`badge ${priorityColor[r.priority]}`}>{r.priority}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <AssignTechnicianForm
-                        requestId={r.id}
-                        currentTechId={r.technician_id ?? null}
-                        technicians={technicians}
-                        currentChargePayer={chargePayer}
-                        currentChargeAmount={chargeAmount}
-                      />
+                      {r.status === 'completed' || r.status === 'canceled' ? (
+                        <div className="text-xs text-slate-500">
+                          {techProfile
+                            ? <span className="font-medium text-slate-700">{techProfile.full_name}</span>
+                            : <span className="text-slate-300">—</span>
+                          }
+                        </div>
+                      ) : (
+                        <AssignTechnicianForm
+                          requestId={r.id}
+                          currentTechId={r.technician_id ?? null}
+                          technicians={technicians}
+                          currentChargePayer={chargePayer}
+                          currentChargeAmount={chargeAmount}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="space-y-1">
