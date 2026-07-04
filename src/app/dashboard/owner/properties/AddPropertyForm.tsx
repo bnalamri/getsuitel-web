@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 export default function AddPropertyForm({ orgId, inline }: { orgId: string; inline?: boolean }) {
@@ -15,9 +14,13 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('properties').insert({ ...form, organization_id: orgId })
-    if (err) { setError(err.message); setLoading(false); return }
+    const res = await fetch('/api/properties', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to add property'); setLoading(false); return }
     setOpen(false)
     setForm({ name: '', type: 'residential', address: '', city: '', country: 'Oman' })
     router.refresh()
