@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ArrowLeft, MapPin, Tag, Calendar, AlertCircle } from 'lucide-react'
 import UpdateStatusButton from '../UpdateStatusButton'
+import SubmitChargeForm from '../SubmitChargeForm'
 
 const priorityColor: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700', high: 'bg-orange-100 text-orange-700',
@@ -32,6 +33,11 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
   const unit = order.units as { unit_number: string; floor: number | null; properties: { name: string; address: string } | null } | null
   const next = nextStatus[order.status]
+
+  const chargePayer = order.charge_payer as string | null
+  const chargeAmount = order.charge_amount as number | null
+  const finalAmount = order.final_amount as number | null
+  const invoicePaid = (order.invoice_paid as boolean | null) ?? false
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -88,7 +94,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </div>
       </div>
 
-      {/* Action */}
+      {/* Action — Start / Complete */}
       {next && (
         <div className="card p-5">
           <p className="text-sm text-slate-500 mb-3">
@@ -103,9 +109,33 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </div>
       )}
 
+      {/* Completed confirmation */}
       {order.status === 'completed' && (
         <div className="card p-5 text-center text-green-600 font-medium">
           ✓ This job has been completed.
+        </div>
+      )}
+
+      {/* Service charge — owner pays: invoice submission form */}
+      {order.status === 'completed' && chargePayer === 'owner' && (
+        <SubmitChargeForm
+          orderId={order.id}
+          agreedAmount={chargeAmount}
+          finalAmount={finalAmount}
+          invoicePaid={invoicePaid}
+        />
+      )}
+
+      {/* Service charge — tenant pays: info only */}
+      {order.status === 'completed' && chargePayer === 'tenant' && (
+        <div className="card p-5 bg-amber-50 border border-amber-200">
+          <div className="text-sm font-semibold text-amber-800 mb-1">Payment — Tenant</div>
+          <div className="text-sm text-amber-700">
+            {chargeAmount != null
+              ? `OMR ${parseFloat(String(chargeAmount)).toFixed(3)} — agreed and collected directly from tenant.`
+              : 'Fees to be agreed and collected directly from tenant.'
+            }
+          </div>
         </div>
       )}
     </div>

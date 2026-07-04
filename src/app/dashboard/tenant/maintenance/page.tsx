@@ -75,9 +75,11 @@ export default async function TenantMaintenancePage() {
                     <div className="text-sm text-slate-500 mt-0.5 capitalize">{r.category}</div>
                     <div className="text-xs text-slate-400 mt-1">{r.description}</div>
                     <div className="text-xs mt-2">
-                      {tech
-                        ? <span className="text-slate-500">Assigned to: <span className="font-medium text-slate-700">{tech.full_name}</span></span>
-                        : <span className="text-amber-600 font-medium">Awaiting assignment by property manager</span>
+                      {r.status === 'completed' && tech
+                        ? <span className="text-green-600">Completed by <span className="font-medium">{tech.full_name}</span></span>
+                        : tech
+                          ? <span className="text-slate-500">Assigned to: <span className="font-medium text-slate-700">{tech.full_name}</span></span>
+                          : <span className="text-amber-600 font-medium">Awaiting assignment by property manager</span>
                       }
                     </div>
                   </div>

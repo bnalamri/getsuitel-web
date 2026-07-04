@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Wrench } from 'lucide-react'
 import AddMaintenanceForm from './AddMaintenanceForm'
 import AssignTechnicianForm from './AssignTechnicianForm'
+import MarkPaidButton from './MarkPaidButton'
 
 export const metadata = { title: 'Maintenance' }
 
@@ -26,7 +27,11 @@ export default async function MaintenancePage() {
 
   const admin = createAdminClient()
   const [reqRes, unitsRes, techRes] = await Promise.all([
-    supabase.from('maintenance_requests').select('*, units(unit_number, properties(name)), profiles(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
+    supabase
+      .from('maintenance_requests')
+      .select('*, units(unit_number, properties(name)), profiles(full_name)')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false }),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
     admin.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'technician'),
   ])
@@ -57,35 +62,100 @@ export default async function MaintenancePage() {
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Title</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Category</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit · Category</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Priority</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Assign Technician</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Service Charge</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {requests.map(r => {
                 const unit = r.units as { unit_number: string; properties: { name: string } | null } | null
+                const techProfile = r.profiles as { full_name: string } | null
+                const chargePayer = r.charge_payer as string | null
+                const chargeAmount = r.charge_amount as number | null
+                const finalAmount = r.final_amount as number | null
+                const invoicePaid = r.invoice_paid as boolean | null
+
+                // Charge cell content
+                let chargeCell: React.ReactNode = <span className="text-slate-300">—</span>
+                if (chargePayer === 'tenant') {
+                  chargeCell = (
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-medium text-amber-700">Tenant pays directly</div>
+                      {chargeAmount != null && (
+                        <div className="text-xs text-slate-400">Est. OMR {parseFloat(String(chargeAmount)).toFixed(3)}</div>
+                      )}
+                    </div>
+                  )
+                } else if (chargePayer === 'owner') {
+                  if (invoicePaid) {
+                    chargeCell = (
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-medium text-green-700">✓ Paid</div>
+                        {finalAmount != null && (
+                          <div className="text-xs text-slate-500">OMR {parseFloat(String(finalAmount)).toFixed(3)}</div>
+                        )}
+                      </div>
+                    )
+                  } else if (finalAmount != null) {
+                    chargeCell = (
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-medium text-slate-700">
+                          OMR {parseFloat(String(finalAmount)).toFixed(3)}
+                        </div>
+                        <div className="text-xs text-blue-600">Invoice received</div>
+                        <MarkPaidButton requestId={r.id} />
+                      </div>
+                    )
+                  } else {
+                    chargeCell = (
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-medium text-slate-700">Owner pays</div>
+                        {chargeAmount != null && (
+                          <div className="text-xs text-slate-400">Est. OMR {parseFloat(String(chargeAmount)).toFixed(3)}</div>
+                        )}
+                        <div className="text-xs text-slate-400">Awaiting invoice</div>
+                      </div>
+                    )
+                  }
+                }
+
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-slate-50 align-top">
                     <td className="px-4 py-3">
                       <div className="font-medium text-slate-900">{r.title}</div>
                       <div className="text-xs text-slate-400 truncate max-w-[180px]">{r.description}</div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">
-                      <div>{unit?.properties?.name}</div><div className="text-slate-400">Unit {unit?.unit_number}</div>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="text-slate-600">{unit?.properties?.name}</div>
+                      <div className="text-slate-400">Unit {unit?.unit_number}</div>
+                      <div className="text-slate-400 capitalize mt-0.5">{r.category}</div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 capitalize">{r.category}</td>
-                    <td className="px-4 py-3"><span className={`badge ${priorityColor[r.priority]}`}>{r.priority}</span></td>
+                    <td className="px-4 py-3">
+                      <span className={`badge ${priorityColor[r.priority]}`}>{r.priority}</span>
+                    </td>
                     <td className="px-4 py-3">
                       <AssignTechnicianForm
                         requestId={r.id}
                         currentTechId={r.technician_id ?? null}
                         technicians={technicians}
+                        currentChargePayer={chargePayer}
+                        currentChargeAmount={chargeAmount}
                       />
                     </td>
-                    <td className="px-4 py-3"><span className={`badge ${statusColor[r.status]}`}>{r.status.replace('_', ' ')}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-1">
+                        <span className={`badge ${statusColor[r.status]}`}>{r.status.replace('_', ' ')}</span>
+                        {r.status === 'completed' && techProfile && (
+                          <div className="text-xs text-slate-400">
+                            by <span className="font-medium text-slate-600">{techProfile.full_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">{chargeCell}</td>
                   </tr>
                 )
               })}

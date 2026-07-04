@@ -12,19 +12,23 @@ const priorityLabel: Record<string, string> = {
 }
 
 export async function POST(req: Request) {
-  const { requestId, technicianId } = await req.json()
+  const { requestId, technicianId, chargePayer, chargeAmount } = await req.json()
 
   if (!requestId) return NextResponse.json({ error: 'Missing requestId' }, { status: 400 })
 
   const supabase = createAdminClient()
 
-  // Update the request
+  // Build update payload
+  const updatePayload: Record<string, unknown> = {
+    technician_id: technicianId || null,
+    status: technicianId ? 'assigned' : 'open',
+    charge_payer: technicianId ? (chargePayer ?? 'none') : null,
+    charge_amount: (technicianId && chargeAmount != null) ? chargeAmount : null,
+  }
+
   const { error } = await supabase
     .from('maintenance_requests')
-    .update({
-      technician_id: technicianId || null,
-      status: technicianId ? 'assigned' : 'open',
-    })
+    .update(updatePayload)
     .eq('id', requestId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -32,7 +36,6 @@ export async function POST(req: Request) {
   // Send email to technician if assigned
   if (technicianId) {
     try {
-      // Fetch request details + technician profile in parallel
       const [{ data: request }, { data: tech }] = await Promise.all([
         supabase
           .from('maintenance_requests')
@@ -51,6 +54,22 @@ export async function POST(req: Request) {
         const bgColor = priorityBg[request.priority] ?? '#64748b'
         const label = priorityLabel[request.priority] ?? request.priority
         const location = unit ? `${unit.properties?.name ?? ''} — Unit ${unit.unit_number}` : '—'
+
+        // Build charge info row
+        let chargeRow = ''
+        if (chargePayer === 'owner') {
+          const amtStr = chargeAmount ? `OMR ${parseFloat(String(chargeAmount)).toFixed(3)}` : 'TBD'
+          chargeRow = `<tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:600;color:#64748b">Service Charge</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a">${amtStr} — invoice owner on completion</td>
+          </tr>`
+        } else if (chargePayer === 'tenant') {
+          const amtStr = chargeAmount ? `OMR ${parseFloat(String(chargeAmount)).toFixed(3)}` : 'TBD'
+          chargeRow = `<tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:600;color:#64748b">Service Charge</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#92400e">${amtStr} — contact tenant directly to agree and collect payment</td>
+          </tr>`
+        }
 
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -85,11 +104,12 @@ export async function POST(req: Request) {
       <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a;text-transform:capitalize">${request.category}</td>
     </tr>
     <tr>
-      <td style="padding:10px 0;font-size:13px;font-weight:600;color:#64748b">Priority</td>
-      <td style="padding:10px 0;font-size:13px">
+      <td style="padding:10px 0;${chargeRow ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:13px;font-weight:600;color:#64748b">Priority</td>
+      <td style="padding:10px 0;${chargeRow ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:13px">
         <span style="background:${bgColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:0.5px">${label}</span>
       </td>
     </tr>
+    ${chargeRow}
   </table>
 </td></tr>
 
