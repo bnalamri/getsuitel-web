@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2, AlertCircle, Bell, Paperclip, UploadCloud } from 'lucide-react'
+// Note: createClient is kept for storage uploads only; DB writes go through /api/notices
 
 type Tenant = { id: string; full_name: string; email: string }
 type OverdueInvoice = { id: string; amount: number; currency: string; due_date: string; tenants: { id: string; full_name: string; email: string } | null }
@@ -82,14 +83,17 @@ export default function AddNoticeForm({
     if (!subject.trim() || !body.trim()) { setError('Subject and body are required'); return }
     setLoading(true)
     setError('')
-    const supabase = createClient()
-
     const rows = sendToAll
-      ? tenants.map(t => ({ organization_id: orgId, tenant_id: t.id, type, subject, body, attachment_url: attachmentUrl }))
-      : [{ organization_id: orgId, tenant_id: tenantId || null, type, subject, body, attachment_url: attachmentUrl }]
+      ? tenants.map(t => ({ tenant_id: t.id, type, subject, body, attachment_url: attachmentUrl }))
+      : [{ tenant_id: tenantId || null, type, subject, body, attachment_url: attachmentUrl }]
 
-    const { error: err } = await supabase.from('notices').insert(rows)
-    if (err) { setError(err.message); setLoading(false); return }
+    const res = await fetch('/api/notices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows }),
+    })
+    const noticeJson = await res.json()
+    if (!res.ok) { setError(noticeJson.error ?? 'Failed to send notice'); setLoading(false); return }
 
     // Send emails
     const recipients = sendToAll ? tenants : tenants.filter(t => t.id === tenantId)

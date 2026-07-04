@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
@@ -21,18 +20,20 @@ export default function AddMaintenanceForm({ orgId, units, technicians }: { orgI
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('maintenance_requests').insert({
-      organization_id: orgId,
-      unit_id: form.unit_id,
-      title: form.title,
-      description: form.description,
-      category: form.category,
-      priority: form.priority,
-      technician_id: form.technician_id || null,
-      status: form.technician_id ? 'assigned' : 'open',
+    const res = await fetch('/api/maintenance/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unit_id: form.unit_id,
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        priority: form.priority,
+        technician_id: form.technician_id || null,
+      }),
     })
-    if (err) { setError(err.message); setLoading(false); return }
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to create request'); setLoading(false); return }
     setOpen(false)
     router.refresh()
     setLoading(false)

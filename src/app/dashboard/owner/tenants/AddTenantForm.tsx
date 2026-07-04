@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 export default function AddTenantForm({ orgId }: { orgId: string }) {
@@ -15,9 +14,13 @@ export default function AddTenantForm({ orgId }: { orgId: string }) {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('tenants').insert({ ...form, organization_id: orgId })
-    if (err) { setError(err.message); setLoading(false); return }
+    const res = await fetch('/api/tenants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to add tenant'); setLoading(false); return }
     setOpen(false)
     setForm({ full_name: '', email: '', phone: '', nationality: '', national_id: '', emergency_contact: '' })
     router.refresh()

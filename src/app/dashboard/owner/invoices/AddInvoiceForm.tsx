@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 type Tenant = { id: string; full_name: string }
@@ -22,19 +21,22 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('invoices').insert({
-      organization_id: orgId,
-      tenant_id: form.tenant_id,
-      unit_id: form.unit_id,
-      type: form.type,
-      amount: Number(form.amount),
-      currency: form.currency,
-      due_date: form.due_date,
-      status: form.status,
-      notes: form.notes || null,
+    const res = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: form.tenant_id,
+        unit_id: form.unit_id,
+        type: form.type,
+        amount: Number(form.amount),
+        currency: form.currency,
+        due_date: form.due_date,
+        status: form.status,
+        notes: form.notes || null,
+      }),
     })
-    if (err) { setError(err.message); setLoading(false); return }
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to create invoice'); setLoading(false); return }
 
     // Send email to tenant
     const tenant = tenants.find(t => t.id === form.tenant_id)

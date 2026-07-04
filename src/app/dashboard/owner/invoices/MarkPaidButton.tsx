@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, Loader2 } from 'lucide-react'
 
 export default function MarkPaidButton({ invoiceId }: { invoiceId: string }) {
@@ -10,8 +9,11 @@ export default function MarkPaidButton({ invoiceId }: { invoiceId: string }) {
 
   async function markPaid() {
     setLoading(true)
-    const supabase = createClient()
-    await supabase.from('invoices').update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] }).eq('id', invoiceId)
+    await fetch('/api/invoices/markpaid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId }),
+    })
     router.refresh()
     setLoading(false)
   }

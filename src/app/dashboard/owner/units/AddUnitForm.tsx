@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
@@ -23,20 +22,23 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('units').insert({
-      organization_id: orgId,
-      property_id: form.property_id,
-      unit_number: form.unit_number,
-      floor: form.floor ? Number(form.floor) : null,
-      area_sqm: form.area_sqm ? Number(form.area_sqm) : null,
-      bedrooms: form.bedrooms ? Number(form.bedrooms) : null,
-      bathrooms: form.bathrooms ? Number(form.bathrooms) : null,
-      rent_amount: Number(form.rent_amount),
-      currency: form.currency,
-      status: form.status,
+    const res = await fetch('/api/units', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        property_id: form.property_id,
+        unit_number: form.unit_number,
+        floor: form.floor ? Number(form.floor) : null,
+        area_sqm: form.area_sqm ? Number(form.area_sqm) : null,
+        bedrooms: form.bedrooms ? Number(form.bedrooms) : null,
+        bathrooms: form.bathrooms ? Number(form.bathrooms) : null,
+        rent_amount: Number(form.rent_amount),
+        currency: form.currency,
+        status: form.status,
+      }),
     })
-    if (err) { setError(err.message); setLoading(false); return }
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to add unit'); setLoading(false); return }
     setOpen(false)
     router.refresh()
     setLoading(false)

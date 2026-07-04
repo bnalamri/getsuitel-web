@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, Loader2 } from 'lucide-react'
 
 export default function ActivateContractButton({ contractId, unitId }: { contractId: string; unitId: string }) {
@@ -11,9 +10,11 @@ export default function ActivateContractButton({ contractId, unitId }: { contrac
   async function activate() {
     if (!confirm('Activate this contract? The unit will be marked as occupied.')) return
     setLoading(true)
-    const supabase = createClient()
-    await supabase.from('contracts').update({ status: 'active' }).eq('id', contractId)
-    await supabase.from('units').update({ status: 'occupied' }).eq('id', unitId)
+    await fetch('/api/contracts/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contractId, unitId }),
+    })
     router.refresh()
     setLoading(false)
   }

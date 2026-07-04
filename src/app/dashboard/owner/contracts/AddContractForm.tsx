@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
@@ -24,23 +23,23 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error: err } = await supabase.from('contracts').insert({
-      organization_id: orgId,
-      unit_id: form.unit_id,
-      tenant_id: form.tenant_id,
-      start_date: form.start_date,
-      end_date: form.end_date,
-      rent_amount: Number(form.rent_amount),
-      currency: form.currency,
-      deposit_amount: Number(form.deposit_amount),
-      payment_day: Number(form.payment_day),
-      status: form.status,
+    const res = await fetch('/api/contracts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unit_id: form.unit_id,
+        tenant_id: form.tenant_id,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        rent_amount: Number(form.rent_amount),
+        currency: form.currency,
+        deposit_amount: Number(form.deposit_amount),
+        payment_day: Number(form.payment_day),
+        status: form.status,
+      }),
     })
-    if (err) { setError(err.message); setLoading(false); return }
-    if (form.status === 'active') {
-      await supabase.from('units').update({ status: 'occupied' }).eq('id', form.unit_id)
-    }
+    const json = await res.json()
+    if (!res.ok) { setError(json.error ?? 'Failed to create contract'); setLoading(false); return }
     setOpen(false)
     router.refresh()
     setLoading(false)
