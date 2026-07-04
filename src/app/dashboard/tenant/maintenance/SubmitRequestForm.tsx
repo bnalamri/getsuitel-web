@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Loader2 } from 'lucide-react'
 
 export default function SubmitRequestForm({
-  tenantId, orgId, unitId, unitNumber
-}: { tenantId: string; orgId: string; unitId: string; unitNumber: string }) {
+  tenantId, orgId, unitId, unitNumber, tenantName,
+}: { tenantId: string; orgId: string; unitId: string; unitNumber: string; tenantName: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -29,6 +29,22 @@ export default function SubmitRequestForm({
       status: 'open',
     })
     if (err) { setError(err.message); setLoading(false); return }
+
+    // Notify owner — fire and forget
+    fetch('/api/maintenance/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orgId,
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        priority: form.priority,
+        unitNumber: `Unit ${unitNumber}`,
+        tenantName,
+      }),
+    }).catch(() => {/* silent */})
+
     setOpen(false)
     setForm({ title: '', description: '', category: 'other', priority: 'medium' })
     router.refresh()

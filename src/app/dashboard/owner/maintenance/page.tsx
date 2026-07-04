@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Wrench } from 'lucide-react'
 import AddMaintenanceForm from './AddMaintenanceForm'
+import AssignTechnicianForm from './AssignTechnicianForm'
 
 export const metadata = { title: 'Maintenance' }
 
@@ -58,14 +59,13 @@ export default async function MaintenancePage() {
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Category</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Priority</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Assigned To</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Assign Technician</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {requests.map(r => {
                 const unit = r.units as { unit_number: string; properties: { name: string } | null } | null
-                const tech = r.profiles as { full_name: string } | null
                 return (
                   <tr key={r.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -77,7 +77,13 @@ export default async function MaintenancePage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600 capitalize">{r.category}</td>
                     <td className="px-4 py-3"><span className={`badge ${priorityColor[r.priority]}`}>{r.priority}</span></td>
-                    <td className="px-4 py-3 text-slate-600">{tech?.full_name ?? <span className="text-slate-300">Unassigned</span>}</td>
+                    <td className="px-4 py-3">
+                      <AssignTechnicianForm
+                        requestId={r.id}
+                        currentTechId={r.technician_id ?? null}
+                        technicians={technicians}
+                      />
+                    </td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[r.status]}`}>{r.status.replace('_', ' ')}</span></td>
                   </tr>
                 )

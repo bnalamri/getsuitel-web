@@ -20,8 +20,12 @@ export default async function TenantMaintenancePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: tenant } = await supabase.from('tenants').select('id, organization_id').eq('profile_id', user.id).single()
+  const [{ data: tenant }, { data: profile }] = await Promise.all([
+    supabase.from('tenants').select('id, organization_id').eq('profile_id', user.id).single(),
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+  ])
   if (!tenant) return <div className="text-slate-400 text-center py-20">No tenant profile found.</div>
+  const tenantName = profile?.full_name ?? 'Tenant'
 
   // Get tenant's active unit
   const { data: contract } = await supabase
@@ -48,6 +52,7 @@ export default async function TenantMaintenancePage() {
             orgId={tenant.organization_id}
             unitId={contract.unit_id}
             unitNumber={(contract.units as { unit_number: string } | null)?.unit_number ?? ''}
+            tenantName={tenantName}
           />
         )}
       </div>
