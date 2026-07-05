@@ -6,7 +6,7 @@ import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen,
 const content = {
   en: {
     dir: 'ltr', lang: 'ع',
-    nav: { features: 'Features', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Start Free Trial' },
+    nav: { features: 'Features', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up' },
     hero: { badge: 'Smart Real Estate Management Platform', h1a: 'Manage Properties', h1b: 'Effortlessly', sub: 'GetSuitel brings owners, tenants, and service teams together in one powerful platform. From contracts to maintenance — all in one place.', cta1: 'Start Free Trial', cta2: 'Sign In', stats: [{ v:'30', s:'-day', l:'Free Trial' },{ v:'4', s:'', l:'User Roles' },{ v:'∞', s:'', l:'Properties' }] },
     features: {
       title: 'Everything you need to run your properties',
@@ -57,7 +57,7 @@ const content = {
   },
   ar: {
     dir: 'rtl', lang: 'EN',
-    nav: { features: 'المميزات', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'ابدأ مجاناً' },
+    nav: { features: 'المميزات', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب' },
     hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'٣٠', s:'', l:'يوم تجربة مجانية' },{ v:'٤', s:'', l:'أدوار مستخدمين' },{ v:'لا محدود', s:'', l:'عقارات' }] },
     features: {
       title: 'كل ما تحتاجه لإدارة عقاراتك',
