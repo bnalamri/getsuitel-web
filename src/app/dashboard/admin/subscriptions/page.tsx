@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { CreditCard, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,9 +17,9 @@ const statusColor: Record<string, string> = {
 }
 
 export default async function SubscriptionsPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: orgs } = await supabase
+  const { data: orgs } = await admin
     .from('organizations')
     .select('*, profiles!organizations_owner_id_fkey(full_name, email)')
     .order('subscription_status')

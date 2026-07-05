@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -18,20 +18,25 @@ const statusColor: Record<string, string> = {
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  // Use admin client to bypass RLS — admin needs cross-org visibility
+  const admin = createAdminClient()
 
   const [orgsRes, usersRes, propsRes, unitsRes, tenantsRes, recentOrgsRes] = await Promise.all([
-    supabase.from('organizations').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'owner'),
-    supabase.from('properties').select('*', { count: 'exact', head: true }),
-    supabase.from('units').select('*', { count: 'exact', head: true }),
-    supabase.from('tenants').select('*', { count: 'exact', head: true }),
-    supabase.from('organizations').select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
+    admin.from('organizations').select('*', { count: 'exact', head: true }),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'owner'),
+    admin.from('properties').select('*', { count: 'exact', head: true }),
+    admin.from('units').select('*', { count: 'exact', head: true }),
+    admin.from('tenants').select('*', { count: 'exact', head: true }),
+    admin.from('organizations').select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
   ])
 
   const [activeRes, trialingRes, pastDueRes] = await Promise.all([
-    supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-    supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
-    supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
+    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
+    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
+    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
   ])
 
   const stats = [

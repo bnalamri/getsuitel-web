@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Settings2, Loader2, X } from 'lucide-react'
 
 export default function ChangeSubscriptionForm({
@@ -17,12 +16,11 @@ export default function ChangeSubscriptionForm({
 
   async function handleSave() {
     setLoading(true)
-    const supabase = createClient()
-    const updates: Record<string, unknown> = { subscription_plan: plan, subscription_status: status }
-    if (maxUnits) updates.max_units = Number(maxUnits)
-    if (maxTenants) updates.max_tenants = Number(maxTenants)
-    if (status === 'active') updates.subscription_ends_at = new Date(Date.now() + 365 * 86400000).toISOString()
-    await supabase.from('organizations').update(updates).eq('id', orgId)
+    await fetch('/api/admin/subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orgId, plan, status, maxUnits, maxTenants }),
+    })
     setOpen(false)
     router.refresh()
     setLoading(false)

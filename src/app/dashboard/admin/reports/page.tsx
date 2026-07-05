@@ -1,18 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { BarChart2, TrendingUp } from 'lucide-react'
 
 export const metadata = { title: 'Reports' }
 
 export default async function AdminReportsPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
   const [orgs, props, units, tenants, contracts, maintenance] = await Promise.all([
-    supabase.from('organizations').select('subscription_plan, subscription_status, created_at'),
-    supabase.from('properties').select('id, created_at'),
-    supabase.from('units').select('id, status'),
-    supabase.from('tenants').select('id, created_at'),
-    supabase.from('contracts').select('id, status'),
-    supabase.from('maintenance_requests').select('id, status, priority'),
+    admin.from('organizations').select('subscription_plan, subscription_status, created_at'),
+    admin.from('properties').select('id, created_at'),
+    admin.from('units').select('id, status'),
+    admin.from('tenants').select('id, created_at'),
+    admin.from('contracts').select('id, status'),
+    admin.from('maintenance_requests').select('id, status, priority'),
   ])
 
   const orgList = orgs.data ?? []

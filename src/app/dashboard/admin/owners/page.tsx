@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
 
@@ -17,9 +17,9 @@ const statusColor: Record<string, string> = {
 }
 
 export default async function OwnersPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: orgs } = await supabase
+  const { data: orgs } = await admin
     .from('organizations')
     .select('*, profiles!organizations_owner_id_fkey(full_name, email, phone)')
     .order('created_at', { ascending: false })
@@ -27,9 +27,9 @@ export default async function OwnersPage() {
   // Get counts per org
   const orgIds = (orgs ?? []).map(o => o.id)
   const [propsRes, unitsRes, tenantsRes] = orgIds.length > 0 ? await Promise.all([
-    supabase.from('properties').select('id, organization_id').in('organization_id', orgIds),
-    supabase.from('units').select('id, organization_id').in('organization_id', orgIds),
-    supabase.from('tenants').select('id, organization_id').in('organization_id', orgIds),
+    admin.from('properties').select('id, organization_id').in('organization_id', orgIds),
+    admin.from('units').select('id, organization_id').in('organization_id', orgIds),
+    admin.from('tenants').select('id, organization_id').in('organization_id', orgIds),
   ]) : [{ data: [] }, { data: [] }, { data: [] }]
 
   const propCount = (id: string) => (propsRes.data ?? []).filter(p => p.organization_id === id).length
