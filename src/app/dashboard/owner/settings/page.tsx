@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import OrgSettingsForm from './OrgSettingsForm'
 import ProfileSettingsForm from './ProfileSettingsForm'
+import PaymentSettingsForm from './PaymentSettingsForm'
 
 export const metadata = { title: 'Settings' }
 
@@ -32,6 +33,7 @@ export default async function SettingsPage() {
 
       <ProfileSettingsForm profile={displayProfile} />
       <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} />
+      <PaymentSettingsForm org={org} orgId={profile?.organization_id ?? null} />
     </div>
   )
 }

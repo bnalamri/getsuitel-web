@@ -198,6 +198,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     orders:       {en:'Work Orders',ar:'أوامر العمل'},
     schedule:     {en:'Schedule',ar:'الجدول'},
     contract:     {en:'My Contract',ar:'عقدي'},
+    cheques:      {en:'Cheque Tracker',ar:'سجل الشيكات'},
   }
   const title = labels[segment]?.[lang] ?? segment
 

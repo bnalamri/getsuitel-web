@@ -71,16 +71,22 @@ export async function POST(req: Request) {
 </body></html>`
 
   try {
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'GetSuitel Contact <notices@getsuitel.com>',
       to: ['getsuitelmail@omanportal.net'],
+      cc: ['bnalamri5@gmail.com'],
       replyTo: email,
       subject: `New message from ${name} (${country || 'Unknown'})`,
       html,
     })
-    if (error) return NextResponse.json({ error }, { status: 500 })
+    if (error) {
+      console.error('[contact] Resend error:', JSON.stringify(error))
+      return NextResponse.json({ error }, { status: 500 })
+    }
+    console.log('[contact] Sent, id:', data?.id)
     return NextResponse.json({ ok: true })
   } catch (e) {
+    console.error('[contact] Exception:', e)
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }
