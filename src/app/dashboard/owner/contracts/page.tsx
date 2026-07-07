@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { FileText, Calendar } from 'lucide-react'
+import { FileText, Calendar, ArrowRight } from 'lucide-react'
 import AddContractForm from './AddContractForm'
 import ActivateContractButton from './ActivateContractButton'
+import Link from 'next/link'
 
 export const metadata = { title: 'Contracts' }
 
@@ -31,6 +32,10 @@ export default async function ContractsPage() {
   const vacantUnits = unitsRes.data ?? []
   const tenants = tenantsRes.data ?? []
 
+  const hasUnits = vacantUnits.length > 0
+  const hasTenants = tenants.length > 0
+  const canAddContract = hasUnits && hasTenants
+
   const daysLeft = (endDate: string) => {
     const diff = new Date(endDate).getTime() - Date.now()
     return Math.ceil(diff / (1000 * 60 * 60 * 24))
@@ -43,10 +48,28 @@ export default async function ContractsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Contracts</h2>
           <p className="text-slate-500 text-sm mt-0.5">{contracts.length} contracts</p>
         </div>
-        <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} />
+        {canAddContract && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} />}
       </div>
 
-      {contracts.length === 0 ? (
+      {!hasUnits ? (
+        <div className="card p-16 text-center">
+          <FileText size={40} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700 mb-1">Set up properties and units first</h3>
+          <p className="text-slate-400 text-sm mb-6">You need at least one unit before creating a contract.</p>
+          <Link href="/dashboard/owner/properties" className="btn-primary inline-flex items-center gap-2">
+            Go to Properties <ArrowRight size={14} />
+          </Link>
+        </div>
+      ) : !hasTenants ? (
+        <div className="card p-16 text-center">
+          <FileText size={40} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700 mb-1">Add tenants first</h3>
+          <p className="text-slate-400 text-sm mb-6">You need at least one tenant before creating a contract.</p>
+          <Link href="/dashboard/owner/tenants" className="btn-primary inline-flex items-center gap-2">
+            Go to Tenants <ArrowRight size={14} />
+          </Link>
+        </div>
+      ) : contracts.length === 0 ? (
         <div className="card p-16 text-center">
           <FileText size={40} className="mx-auto text-slate-300 mb-3" />
           <h3 className="font-semibold text-slate-700 mb-1">No contracts yet</h3>

@@ -155,6 +155,21 @@ try {
         setError('An account with this email already exists. Please sign in instead.')
         return
       }
+      // Notify super admin of new owner registration
+      if (role === 'owner') {
+        fetch('/api/auth/new-owner-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ownerName: form.name,
+            ownerEmail: form.email,
+            ownerPhone: form.phone,
+            orgName: form.org,
+            plan,
+          }),
+        }).catch(() => {}) // fire-and-forget, don't block UX
+      }
+
       setSentEmail(form.email)
       setStep(3)
     } catch (e: unknown) {

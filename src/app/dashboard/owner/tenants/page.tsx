@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { Users, Phone, Mail } from 'lucide-react'
+import { Users, Phone, Mail, ArrowRight } from 'lucide-react'
 import AddTenantForm from './AddTenantForm'
+import Link from 'next/link'
 
 export const metadata = { title: 'Tenants' }
 
@@ -13,11 +14,12 @@ export default async function TenantsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))')
-    .eq('organization_id', orgId)
-    .order('created_at', { ascending: false })
+  const [{ data: tenants }, { count: unitsCount }] = await Promise.all([
+    supabase.from('tenants').select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))').eq('organization_id', orgId).order('created_at', { ascending: false }),
+    supabase.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+  ])
+
+  const hasUnits = (unitsCount ?? 0) > 0
 
   return (
     <div className="space-y-6">
@@ -26,16 +28,27 @@ export default async function TenantsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Tenants</h2>
           <p className="text-slate-500 text-sm mt-0.5">{tenants?.length ?? 0} tenants</p>
         </div>
-        <AddTenantForm orgId={orgId} />
+        {hasUnits && <AddTenantForm orgId={orgId} />}
       </div>
 
-      {tenants?.length === 0 ? (
+      {!hasUnits ? (
+        <div className="card p-16 text-center">
+          <Users size={40} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700 mb-1">Set up your properties first</h3>
+          <p className="text-slate-400 text-sm mb-6">You need to add a property and at least one unit before you can add tenants.</p>
+          <div className="flex items-center justify-center gap-3 text-sm">
+            <Link href="/dashboard/owner/properties" className="btn-primary flex items-center gap-2">
+              Go to Properties <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      ) : tenants?.length === 0 ? (
         <div className="card p-16 text-center">
           <Users size={40} className="mx-auto text-slate-300 mb-3" />
           <h3 className="font-semibold text-slate-700 mb-1">No tenants yet</h3>
           <p className="text-slate-400 text-sm">Add tenants to assign them to units and create contracts.</p>
         </div>
-      ) : (
+      ) : hasUnits && (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
