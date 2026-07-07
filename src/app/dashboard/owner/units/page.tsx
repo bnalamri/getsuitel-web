@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { DoorOpen, ArrowRight } from 'lucide-react'
 import AddUnitForm from './AddUnitForm'
+import EditUnitForm from './EditUnitForm'
+import DeleteUnitButton from './DeleteUnitButton'
 import Link from 'next/link'
 
 export const metadata = { title: 'Units' }
@@ -89,11 +91,13 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Details</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Rent</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {units?.map(u => {
                 const prop = u.properties as { name: string } | null
+                const isOccupied = u.status === 'occupied'
                 return (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-slate-900">Unit {u.unit_number}</td>
@@ -105,6 +109,12 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">{Number(u.rent_amount).toLocaleString()} {u.currency}</td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[u.status]}`}>{u.status}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <EditUnitForm unit={u} occupied={isOccupied} />
+                        <DeleteUnitButton unitId={u.id} unitNumber={u.unit_number} occupied={isOccupied} />
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
