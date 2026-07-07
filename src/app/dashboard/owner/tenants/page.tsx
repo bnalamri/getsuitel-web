@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { Users, Phone, Mail, ArrowRight } from 'lucide-react'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { Users, Phone, Mail, ArrowRight, UserCheck } from 'lucide-react'
 import AddTenantForm from './AddTenantForm'
+import AcceptMemberButton from './AcceptMemberButton'
 import Link from 'next/link'
 
 export const metadata = { title: 'Tenants' }
@@ -14,10 +15,20 @@ export default async function TenantsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const [{ data: tenants }, { count: unitsCount }] = await Promise.all([
+  const admin = createAdminClient()
+
+  const [{ data: tenants }, { count: unitsCount }, { data: pendingProfiles }] = await Promise.all([
     supabase.from('tenants').select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+    // Profiles that joined via invite code but haven't been linked to a tenant record yet
+    admin.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
   ])
+
+  // Filter out profiles that already have a tenant record
+  const linkedProfileIds = new Set(
+    (tenants ?? []).map((t: { profile_id?: string | null }) => t.profile_id).filter(Boolean)
+  )
+  const pendingMembers = (pendingProfiles ?? []).filter(p => !linkedProfileIds.has(p.id))
 
   const hasUnits = (unitsCount ?? 0) > 0
 
@@ -30,6 +41,32 @@ export default async function TenantsPage() {
         </div>
         {hasUnits && <AddTenantForm orgId={orgId} />}
       </div>
+
+      {/* Pending members — registered via invite but not yet linked */}
+      {pendingMembers.length > 0 && (
+        <div className="border border-amber-200 bg-amber-50 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200">
+            <UserCheck size={16} className="text-amber-600" />
+            <span className="font-semibold text-amber-800 text-sm">
+              {pendingMembers.length} pending member{pendingMembers.length > 1 ? 's' : ''} — registered but not yet added as tenant
+            </span>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {pendingMembers.map(p => (
+              <div key={p.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-900">{p.full_name}</div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="flex items-center gap-1 text-xs text-slate-500"><Mail size={11} />{p.email}</span>
+                    {p.phone && <span className="flex items-center gap-1 text-xs text-slate-400"><Phone size={11} />{p.phone}</span>}
+                  </div>
+                </div>
+                <AcceptMemberButton profile={p} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!hasUnits ? (
         <div className="card p-16 text-center">

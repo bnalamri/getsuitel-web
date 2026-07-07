@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { full_name, email, phone, nationality, national_id, emergency_contact } = body
+  const { full_name, email, phone, nationality, national_id, emergency_contact, profile_id } = body
 
   if (!full_name || !email || !phone) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     nationality: nationality ?? null,
     national_id: national_id ?? null,
     emergency_contact: emergency_contact ?? null,
+    profile_id: profile_id ?? null,
   }).select('id').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
