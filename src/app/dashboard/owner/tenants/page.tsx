@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Users, Phone, Mail, ArrowRight, UserCheck } from 'lucide-react'
 import AddTenantForm from './AddTenantForm'
 import AcceptMemberButton from './AcceptMemberButton'
@@ -16,11 +16,13 @@ export default async function TenantsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
+  const admin = createAdminClient()
+
   const [{ data: tenants }, { count: unitsCount }, { data: pendingProfiles }] = await Promise.all([
     supabase.from('tenants').select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
-    // RLS policy "profiles: owner read org" allows this — owner reads profiles in their org
-    supabase.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
+    // Use admin client to bypass RLS — owner cannot read other users' profiles via user client
+    admin.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
   ])
 
   // Filter out profiles that already have a tenant record
