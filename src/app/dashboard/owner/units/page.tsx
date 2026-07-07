@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { DoorOpen, Plus } from 'lucide-react'
+import { DoorOpen, ArrowRight } from 'lucide-react'
 import AddUnitForm from './AddUnitForm'
+import Link from 'next/link'
 
 export const metadata = { title: 'Units' }
 
@@ -22,11 +23,32 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
 
   const { data: properties } = await supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name')
 
+  const hasProperties = (properties?.length ?? 0) > 0
+
   let query = supabase.from('units').select('*, properties(name)').eq('organization_id', orgId).order('created_at', { ascending: false })
   if (searchParams.property) query = query.eq('property_id', searchParams.property)
   const { data: units } = await query
 
   const selectedProperty = properties?.find(p => p.id === searchParams.property)
+
+  if (!hasProperties) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Units</h2>
+          <p className="text-slate-500 text-sm mt-0.5">0 units</p>
+        </div>
+        <div className="card p-16 text-center">
+          <DoorOpen size={40} className="mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700 mb-1">Add a property first</h3>
+          <p className="text-slate-400 text-sm mb-6">You need to create a property before adding units to it.</p>
+          <Link href="/dashboard/owner/properties" className="btn-primary inline-flex items-center gap-2">
+            Go to Properties <ArrowRight size={14} />
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
