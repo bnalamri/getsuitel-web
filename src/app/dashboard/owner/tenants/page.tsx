@@ -1,9 +1,10 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { Users, Phone, Mail, ArrowRight, UserCheck } from 'lucide-react'
 import AddTenantForm from './AddTenantForm'
 import AcceptMemberButton from './AcceptMemberButton'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Tenants' }
 
 export default async function TenantsPage() {
@@ -15,13 +16,11 @@ export default async function TenantsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const admin = createAdminClient()
-
   const [{ data: tenants }, { count: unitsCount }, { data: pendingProfiles }] = await Promise.all([
     supabase.from('tenants').select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
-    // Profiles that joined via invite code but haven't been linked to a tenant record yet
-    admin.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
+    // RLS policy "profiles: owner read org" allows this — owner reads profiles in their org
+    supabase.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
   ])
 
   // Filter out profiles that already have a tenant record
