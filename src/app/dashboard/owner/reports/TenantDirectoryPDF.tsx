@@ -64,7 +64,8 @@ export default function TenantDirectoryPDF({
     tr:nth-child(even) td { background: #f8fafc; }
     .badge { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 9px; font-weight: 600; text-transform: capitalize; }
     .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-    @media print { body { padding: 16px; } }
+    @page { size: landscape; margin: 12mm; }
+    @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
