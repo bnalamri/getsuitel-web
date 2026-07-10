@@ -76,7 +76,7 @@ export default async function SubscriptionsPage() {
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Owner</th>
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Plan</th>
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
-              <th className="text-left px-4 py-3 text-slate-600 font-semibold">Trial Ends</th>
+              <th className="text-left px-4 py-3 text-slate-600 font-semibold">Period</th>
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Limits</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -84,6 +84,8 @@ export default async function SubscriptionsPage() {
           <tbody className="divide-y divide-slate-100">
             {list.map(org => {
               const owner = org.profiles as { full_name: string; email: string } | null
+              const isActive = org.subscription_status === 'active'
+              const expiresAt = org.subscription_expires_at
               const trialDays = org.trial_ends_at
                 ? Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / 86400000)
                 : null
@@ -97,7 +99,11 @@ export default async function SubscriptionsPage() {
                   <td className="px-4 py-3"><span className={`badge capitalize ${planColor[org.subscription_plan]}`}>{org.subscription_plan}</span></td>
                   <td className="px-4 py-3"><span className={`badge capitalize ${statusColor[org.subscription_status]}`}>{org.subscription_status.replace('_',' ')}</span></td>
                   <td className="px-4 py-3 text-xs text-slate-600">
-                    {trialDays !== null ? (
+                    {isActive && expiresAt ? (
+                      <span className="text-green-700 font-medium">
+                        Until {new Date(expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    ) : trialDays !== null ? (
                       <span className={trialDays <= 7 ? 'text-red-600 font-medium' : trialDays <= 14 ? 'text-orange-600' : ''}>
                         {trialDays > 0 ? `${trialDays} days` : 'Expired'}
                       </span>
