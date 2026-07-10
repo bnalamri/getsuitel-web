@@ -242,8 +242,10 @@ export default async function ReportsPage() {
           <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</p>
           <p className="text-xs text-red-800 mt-1 leading-relaxed">
             This document is intended solely for authorised internal use within the organisation.
-            Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.<br />
-            <span dir="rtl">هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.</span>
+            Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
+          </p>
+          <p dir="rtl" className="text-xs text-red-800 mt-1 leading-relaxed text-center">
+            هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
           </p>
         </div>
       </div>

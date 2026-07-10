@@ -83,6 +83,20 @@ export default function TenantDirectoryPDF({
     </div>
   </div>
 
+  <div style="margin-bottom:16px;border:1.5px solid #dc2626;border-radius:6px;padding:10px 14px;background:#fff5f5;">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;letter-spacing:0.05em;">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</div>
+    <div style="font-size:9px;color:#7f1d1d;margin-top:4px;line-height:1.6;">
+      This document is intended solely for authorised internal use within the organisation.
+      Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
+    </div>
+    <div dir="rtl" style="font-size:9px;color:#7f1d1d;margin-top:2px;line-height:1.6;text-align:center;">
+      هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
+    </div>
+    <div dir="ltr" style="font-size:9px;color:#64748b;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">
+      Printed by: <strong>${printerName}</strong> &nbsp;·&nbsp; ${printDate} &nbsp;·&nbsp; GetSuitel Property Management
+    </div>
+  </div>
+
   <h2>Tenant Directory</h2>
   <div class="sub">Personal information and contract details for all registered tenants</div>
 
@@ -126,16 +140,8 @@ export default function TenantDirectoryPDF({
     </tbody>
   </table>
 
-  <div style="margin-top:24px;border:1.5px solid #dc2626;border-radius:6px;padding:10px 14px;background:#fff5f5;">
-    <div style="font-size:11px;font-weight:700;color:#dc2626;letter-spacing:0.05em;">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</div>
-    <div style="font-size:9px;color:#7f1d1d;margin-top:4px;line-height:1.6;">
-      This document is intended solely for authorised internal use within the organisation.
-      Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.<br/>
-      <span dir="rtl">هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.</span>
-    </div>
-    <div style="font-size:9px;color:#64748b;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">
-      Printed by: <strong>${printerName}</strong> &nbsp;·&nbsp; ${printDate} &nbsp;·&nbsp; GetSuitel Property Management
-    </div>
+  <div style="margin-top:20px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;">
+    GetSuitel Property Management &nbsp;·&nbsp; ${printDate}
   </div>
 
   <script>
