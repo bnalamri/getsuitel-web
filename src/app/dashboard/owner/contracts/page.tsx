@@ -18,6 +18,9 @@ export default async function ContractsPage() {
 
   const admin = createAdminClient()
 
+  const { data: org } = await supabase.from('organizations').select('default_currency').eq('id', orgId).single()
+  const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
+
   const [contractsRes, unitsRes, allUnitsRes, tenantsRes] = await Promise.all([
     supabase.from('contracts').select('*, units(unit_number, properties(name)), tenants(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId).eq('status', 'vacant'),
@@ -41,7 +44,7 @@ export default async function ContractsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Contracts</h2>
           <p className="text-slate-500 text-sm mt-0.5">{contracts.length} contracts</p>
         </div>
-        {canAddContract && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} />}
+        {canAddContract && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} defaultCurrency={defaultCurrency} />}
       </div>
 
       {!hasUnits ? (

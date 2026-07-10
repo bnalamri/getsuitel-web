@@ -56,11 +56,11 @@ export default async function InvoicesPage() {
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4">
           <div className="text-sm text-slate-500">Collected</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">{totalPaid.toLocaleString()} OMR</div>
+          <div className="text-2xl font-bold text-emerald-700 mt-1">{totalPaid.toLocaleString()} {defaultCurrency}</div>
         </div>
         <div className="card p-4">
           <div className="text-sm text-slate-500">Pending</div>
-          <div className="text-2xl font-bold text-orange-600 mt-1">{totalPending.toLocaleString()} OMR</div>
+          <div className="text-2xl font-bold text-orange-600 mt-1">{totalPending.toLocaleString()} {defaultCurrency}</div>
         </div>
       </div>
 

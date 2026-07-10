@@ -43,7 +43,7 @@ export default async function OwnerDashboard() {
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('units').select('id, status', { count: 'exact' }).eq('organization_id', orgId),
     supabase.from('tenants').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
-    supabase.from('invoices').select('id, amount, status').eq('organization_id', orgId),
+    supabase.from('invoices').select('id, amount, status, currency').eq('organization_id', orgId),
     supabase.from('maintenance_requests').select('id, title, status, priority, created_at').eq('organization_id', orgId).in('status', ['open', 'assigned', 'in_progress']).order('created_at', { ascending: false }).limit(5),
   ])
 
@@ -57,7 +57,7 @@ export default async function OwnerDashboard() {
     { label: 'Properties', value: props.count ?? 0, icon: Building2, color: 'bg-navy-50 text-navy-700', href: '/dashboard/owner/properties' },
     { label: 'Total Units', value: totalUnits, sub: `${vacant} vacant`, icon: DoorOpen, color: 'bg-blue-50 text-blue-700', href: '/dashboard/owner/units' },
     { label: 'Tenants', value: tenants.count ?? 0, icon: Users, color: 'bg-purple-50 text-purple-700', href: '/dashboard/owner/tenants' },
-    { label: 'Revenue Collected', value: `${paidRevenue.toLocaleString()} OMR`, sub: `${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
+    { label: 'Revenue Collected', value: `${paidRevenue.toLocaleString()} ${(org.default_currency as string) ?? 'OMR'}`, sub: `${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
     { label: 'Open Maintenance', value: maintenance.count ?? maintenance.data?.length ?? 0, icon: Wrench, color: 'bg-orange-50 text-orange-700', href: '/dashboard/owner/maintenance' },
   ]
 
@@ -138,7 +138,7 @@ export default async function OwnerDashboard() {
               {recentInvoices.map(inv => (
                 <div key={inv.id} className="p-3 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900">{Number(inv.amount).toLocaleString()} OMR</div>
+                    <div className="text-sm font-medium text-slate-900">{Number(inv.amount).toLocaleString()} {(inv as Record<string, unknown>).currency as string ?? (org.default_currency as string) ?? 'OMR'}</div>
                   </div>
                   <span className={`badge ${inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                     {inv.status}

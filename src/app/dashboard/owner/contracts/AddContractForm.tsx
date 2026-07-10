@@ -7,7 +7,7 @@ import DateInput from '@/components/DateInput'
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
 type Tenant = { id: string; full_name: string }
 
-export default function AddContractForm({ orgId, units, tenants }: { orgId: string; units: Unit[]; tenants: Tenant[] }) {
+export default function AddContractForm({ orgId, units, tenants, defaultCurrency = 'OMR' }: { orgId: string; units: Unit[]; tenants: Tenant[]; defaultCurrency?: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -17,7 +17,7 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
   const initialForm = {
     unit_id: units[0]?.id ?? '', tenant_id: tenants[0]?.id ?? '',
     start_date: today, end_date: nextYear,
-    rent_amount: '', currency: 'OMR', deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
+    rent_amount: '', currency: defaultCurrency, deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
   }
   const [form, setForm] = useState(initialForm)
 
@@ -26,7 +26,7 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
       unit_id: units[0]?.id ?? '', tenant_id: tenants[0]?.id ?? '',
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
-      rent_amount: '', currency: 'OMR', deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
+      rent_amount: '', currency: defaultCurrency, deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
     }
   }
 
@@ -100,7 +100,8 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
             <div><label className="label">Rent Amount</label><input className="input" type="number" required value={form.rent_amount} onChange={e => setForm(f => ({ ...f, rent_amount: e.target.value }))} placeholder="500" /></div>
             <div><label className="label">Currency</label>
               <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                <option>OMR</option><option>USD</option><option>AED</option><option>SAR</option>
+                <option>OMR</option><option>SAR</option><option>AED</option><option>KWD</option>
+                <option>QAR</option><option>BHD</option><option>USD</option><option>GBP</option><option>EUR</option>
               </select>
             </div>
           </div>
