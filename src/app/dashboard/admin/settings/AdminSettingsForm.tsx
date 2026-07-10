@@ -24,35 +24,26 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
   const [psError, setPsError] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/platform-settings')
-      .then(r => r.json())
-      .then(d => { if (d.default_currency) setPlatformCurrency(d.default_currency) })
-      .catch(() => {})
+    const supabase = createClient()
+    supabase.from('platform_settings').select('value').eq('key', 'default_currency').single()
+      .then(({ data }) => { if (data?.value) setPlatformCurrency(data.value) })
   }, [])
 
   async function handlePlatformSettings(e: React.FormEvent) {
     e.preventDefault()
     setPsLoading(true)
     setPsError('')
-    try {
-      const res = await fetch('/api/admin/platform-settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ default_currency: platformCurrency }),
-      })
-      if (!res.ok) {
-        let errMsg = `HTTP ${res.status}`
-        try { const j = await res.json(); errMsg = j.error ?? errMsg } catch { /* non-JSON response */ }
-        setPsError(errMsg)
-        return
-      }
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('platform_settings')
+      .upsert({ key: 'default_currency', value: platformCurrency }, { onConflict: 'key' })
+    if (error) {
+      setPsError(error.message)
+    } else {
       setPsSaved(true)
       setTimeout(() => setPsSaved(false), 3000)
-    } catch (e) {
-      setPsError('Network error: ' + String(e))
-    } finally {
-      setPsLoading(false)
     }
+    setPsLoading(false)
   }
 
   // Password change state
