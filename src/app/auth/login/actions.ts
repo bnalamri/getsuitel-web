@@ -18,7 +18,13 @@ export async function signInAction(
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) return { error: error.message }
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes('banned')) {
+      return { error: 'This account has been deactivated. Please contact your organization administrator.' }
+    }
+    return { error: error.message }
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Session not established. Please try again.' }
