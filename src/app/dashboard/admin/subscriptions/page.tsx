@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { CreditCard, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Subscriptions' }
 
 const planColor: Record<string, string> = {
