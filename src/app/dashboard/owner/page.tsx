@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -10,29 +10,43 @@ export default async function OwnerDashboard() {
   if (!user) return null
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const role = profile?.role as string ?? 'owner'
+  const isOwner = role === 'owner'
+  const isPropertyManager = role === 'property_manager'
+  const isFinancialManager = role === 'financial_manager'
 
-  // Fetch org via two fallbacks: profile.organization_id (primary) or owner_id (in case org exists but link wasn't set)
+  // Use admin client for org lookup so staff (property_manager / financial_manager) bypass RLS
+  const admin = createAdminClient()
   let org: Record<string, unknown> | null = null
   if (profile?.organization_id) {
-    const { data } = await supabase.from('organizations').select('*').eq('id', profile.organization_id).single()
+    const { data } = await admin.from('organizations').select('*').eq('id', profile.organization_id).single()
     org = data
   }
-  if (!org) {
-    const { data } = await supabase.from('organizations').select('*').eq('owner_id', user.id).single()
+  // Owner fallback: org exists but profile link wasn't set (shouldn't happen for staff)
+  if (!org && isOwner) {
+    const { data } = await admin.from('organizations').select('*').eq('owner_id', user.id).single()
     if (data) {
       org = data
-      // Back-fill the missing link on the profile
       await supabase.from('profiles').update({ organization_id: data.id }).eq('id', user.id)
     }
   }
 
   if (!org) {
+    if (isOwner) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+          <Building2 size={48} className="text-slate-300" />
+          <h2 className="text-xl font-bold text-slate-900">Set up your organization</h2>
+          <p className="text-slate-500 max-w-sm">Create your company profile to start managing properties and tenants.</p>
+          <Link href="/dashboard/owner/settings" className="btn-primary">Set Up Organization</Link>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
         <Building2 size={48} className="text-slate-300" />
-        <h2 className="text-xl font-bold text-slate-900">Set up your organization</h2>
-        <p className="text-slate-500 max-w-sm">Create your company profile to start managing properties and tenants.</p>
-        <Link href="/dashboard/owner/settings" className="btn-primary">Set Up Organization</Link>
+        <h2 className="text-xl font-bold text-slate-900">Account setup in progress</h2>
+        <p className="text-slate-500 max-w-sm">Your account hasn&apos;t been linked to an organization yet. Please contact your owner to resolve this.</p>
       </div>
     )
   }
@@ -75,14 +89,16 @@ export default async function OwnerDashboard() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">{org.name as string}</h2>
-        <p className="text-slate-500 text-sm mt-0.5 capitalize">
-          {org.subscription_plan as string} plan · {(org.subscription_status as string).replace('_', ' ')}
-          {org.subscription_status === 'active' && org.subscription_expires_at && (
-            <span className="ml-2 not-italic normal-case">
-              · Active until <strong>{new Date(org.subscription_expires_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
-            </span>
-          )}
-        </p>
+        {isOwner && (
+          <p className="text-slate-500 text-sm mt-0.5 capitalize">
+            {org.subscription_plan as string} plan · {(org.subscription_status as string).replace('_', ' ')}
+            {org.subscription_status === 'active' && org.subscription_expires_at && (
+              <span className="ml-2 not-italic normal-case">
+                · Active until <strong>{new Date(org.subscription_expires_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Stats */}
@@ -167,21 +183,28 @@ export default async function OwnerDashboard() {
         </div>
       )}
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Add Property', href: '/dashboard/owner/properties', icon: Building2 },
-          { label: 'Add Tenant', href: '/dashboard/owner/tenants', icon: Users },
-          { label: 'Create Invoice', href: '/dashboard/owner/invoices', icon: Receipt },
-          { label: 'New Maintenance', href: '/dashboard/owner/maintenance', icon: AlertCircle },
-        ].map(a => (
-          <Link key={a.label} href={a.href}
-            className="card p-4 flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow cursor-pointer">
-            <a.icon size={20} className="text-navy-700" />
-            <span className="text-sm font-medium text-slate-700">{a.label}</span>
-          </Link>
-        ))}
-      </div>
+      {/* Quick actions — filtered by role */}
+      {(() => {
+        const allActions = [
+          { label: 'Add Property',    href: '/dashboard/owner/properties',  icon: Building2,   roles: ['owner'] },
+          { label: 'Add Tenant',      href: '/dashboard/owner/tenants',      icon: Users,       roles: ['owner', 'property_manager'] },
+          { label: 'Create Invoice',  href: '/dashboard/owner/invoices',     icon: Receipt,     roles: ['owner', 'financial_manager'] },
+          { label: 'New Maintenance', href: '/dashboard/owner/maintenance',  icon: AlertCircle, roles: ['owner', 'property_manager'] },
+        ]
+        const visible = allActions.filter(a => a.roles.includes(role))
+        if (visible.length === 0) return null
+        return (
+          <div className={`grid grid-cols-2 sm:grid-cols-${visible.length} gap-3`}>
+            {visible.map(a => (
+              <Link key={a.label} href={a.href}
+                className="card p-4 flex flex-col items-center gap-2 text-center hover:shadow-md transition-shadow cursor-pointer">
+                <a.icon size={20} className="text-navy-700" />
+                <span className="text-sm font-medium text-slate-700">{a.label}</span>
+              </Link>
+            ))}
+          </div>
+        )
+      })()}
     </div>
   )
 }

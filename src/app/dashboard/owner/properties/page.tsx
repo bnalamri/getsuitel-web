@@ -10,8 +10,9 @@ export default async function PropertiesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const isOwner = profile?.role === 'owner'
 
   if (!orgId) {
     return (
@@ -41,7 +42,7 @@ export default async function PropertiesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Properties</h2>
           <p className="text-slate-500 text-sm mt-0.5">{properties?.length ?? 0} properties</p>
         </div>
-        <AddPropertyForm orgId={orgId} />
+        {isOwner && <AddPropertyForm orgId={orgId} />}
       </div>
 
       {properties?.length === 0 ? (
@@ -49,7 +50,7 @@ export default async function PropertiesPage() {
           <Building2 size={40} className="mx-auto text-slate-300 mb-3" />
           <h3 className="font-semibold text-slate-700 mb-1">No properties yet</h3>
           <p className="text-slate-400 text-sm mb-4">Add your first property to start managing units and tenants.</p>
-          <AddPropertyForm orgId={orgId} inline />
+          {isOwner && <AddPropertyForm orgId={orgId} inline />}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
