@@ -33,13 +33,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Cannot deactivate this account type' }, { status: 400 })
   }
 
-  // Remove org link and reset role (keeps the auth user but strips access)
-  const { error } = await admin
+  // 1. Strip org link and role from profile
+  const { error: profileError } = await admin
     .from('profiles')
-    .update({ organization_id: null, role: 'tenant' }) // revoke to inactive tenant
+    .update({ organization_id: null, role: 'tenant' })
     .eq('id', staffId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 })
+
+  // 2. Ban the auth user — invalidates all active sessions immediately
+  //    and blocks any future login attempts
+  const { error: banError } = await admin.auth.admin.updateUserById(staffId, {
+    ban_duration: '87600h', // 10 years = effectively permanent
+  })
+
+  if (banError) return NextResponse.json({ error: banError.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }
