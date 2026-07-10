@@ -2,13 +2,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
+import PhoneInput from '@/components/PhoneInput'
 
 export default function AddTenantForm({ orgId }: { orgId: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', nationality: '', national_id: '', emergency_contact: '' })
+  const initialForm = { full_name: '', email: '', phone: '', nationality: '', national_id: '', emergency_contact: '' }
+  const [form, setForm] = useState(initialForm)
+
+  function closeAndReset() { setForm(initialForm); setError(''); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,7 +25,7 @@ export default function AddTenantForm({ orgId }: { orgId: string }) {
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to add tenant'); setLoading(false); return }
-    setOpen(false)
+    closeAndReset()
     setForm({ full_name: '', email: '', phone: '', nationality: '', national_id: '', emergency_contact: '' })
     router.refresh()
     setLoading(false)
@@ -38,20 +42,20 @@ export default function AddTenantForm({ orgId }: { orgId: string }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Add Tenant</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div><label className="label">Full Name</label><input className="input" required value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ahmed Al-Rashid" /></div>
           <div><label className="label">Email</label><input className="input" type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ahmed@email.com" /></div>
-          <div><label className="label">Phone</label><input className="input" required value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+968 9000 0000" /></div>
+          <div><label className="label">Phone</label><PhoneInput value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} required /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Nationality</label><input className="input" value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} placeholder="Omani" /></div>
             <div><label className="label">National ID</label><input className="input" value={form.national_id} onChange={e => setForm(f => ({ ...f, national_id: e.target.value }))} /></div>
           </div>
-          <div><label className="label">Emergency Contact</label><input className="input" value={form.emergency_contact} onChange={e => setForm(f => ({ ...f, emergency_contact: e.target.value }))} placeholder="+968 9000 0001" /></div>
+          <div><label className="label">Emergency Contact</label><PhoneInput value={form.emergency_contact} onChange={v => setForm(f => ({ ...f, emergency_contact: v }))} placeholder="5XXXXXXXX" /></div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Add Tenant'}
             </button>

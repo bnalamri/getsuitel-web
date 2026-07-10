@@ -1,7 +1,11 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Users, Phone, Mail, ArrowRight, UserCheck } from 'lucide-react'
+import { Users, Phone, Mail, ArrowRight, UserCheck, AlertTriangle } from 'lucide-react'
 import AddTenantForm from './AddTenantForm'
+import EditTenantForm from './EditTenantForm'
+import DeleteTenantButton from './DeleteTenantButton'
 import AcceptMemberButton from './AcceptMemberButton'
+import ResendVerificationButton from './ResendVerificationButton'
+import RemovePendingButton from './RemovePendingButton'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -21,15 +25,23 @@ export default async function TenantsPage() {
   const [{ data: tenants }, { count: unitsCount }, { data: pendingProfiles }] = await Promise.all([
     supabase.from('tenants').select('*, contracts(id, status, unit_id, units(unit_number, properties(name)))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
-    // Use admin client to bypass RLS — owner cannot read other users' profiles via user client
     admin.from('profiles').select('id, full_name, email, phone').eq('organization_id', orgId).eq('role', 'tenant'),
   ])
+
+  // Check email verification only for the pending profiles (targeted, not all users)
+  const confirmedEmails = new Set<string>()
+  if (pendingProfiles && pendingProfiles.length > 0) {
+    const checks = await Promise.all(pendingProfiles.map(p => admin.auth.admin.getUserById(p.id)))
+    checks.forEach(r => { if (r.data?.user?.email_confirmed_at) confirmedEmails.add(r.data.user.id) })
+  }
 
   // Filter out profiles that already have a tenant record
   const linkedProfileIds = new Set(
     (tenants ?? []).map((t: { profile_id?: string | null }) => t.profile_id).filter(Boolean)
   )
-  const pendingMembers = (pendingProfiles ?? []).filter(p => !linkedProfileIds.has(p.id))
+  const pendingMembers = (pendingProfiles ?? [])
+    .filter(p => !linkedProfileIds.has(p.id))
+    .map(p => ({ ...p, emailVerified: confirmedEmails.has(p.id) }))
 
   const hasUnits = (unitsCount ?? 0) > 0
 
@@ -49,20 +61,48 @@ export default async function TenantsPage() {
           <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200">
             <UserCheck size={16} className="text-amber-600" />
             <span className="font-semibold text-amber-800 text-sm">
-              {pendingMembers.length} pending member{pendingMembers.length > 1 ? 's' : ''} — registered but not yet added as tenant
+              {(() => {
+                const ready = pendingMembers.filter(p => p.emailVerified).length
+                const unverified = pendingMembers.filter(p => !p.emailVerified).length
+                if (ready > 0 && unverified > 0)
+                  return `${ready} ready to add · ${unverified} awaiting email verification`
+                if (ready > 0)
+                  return `${ready} member${ready > 1 ? 's' : ''} ready to add as tenant`
+                return `${unverified} member${unverified > 1 ? 's' : ''} awaiting email verification`
+              })()}
             </span>
           </div>
           <div className="divide-y divide-amber-100">
             {pendingMembers.map(p => (
               <div key={p.id} className="flex items-center justify-between px-4 py-3 gap-4">
                 <div className="min-w-0">
-                  <div className="font-medium text-slate-900">{p.full_name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-900">{p.full_name}</span>
+                    {!p.emailVerified && (
+                      <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                        <AlertTriangle size={10} /> Email not verified
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="flex items-center gap-1 text-xs text-slate-500"><Mail size={11} />{p.email}</span>
                     {p.phone && <span className="flex items-center gap-1 text-xs text-slate-400"><Phone size={11} />{p.phone}</span>}
                   </div>
+                  {!p.emailVerified && (
+                    <div className="text-xs text-red-500 mt-1">
+                      This tenant must verify their email before they can be added.
+                    </div>
+                  )}
                 </div>
-                <AcceptMemberButton profile={p} />
+                {p.emailVerified
+                  ? <AcceptMemberButton profile={p} />
+                  : (
+                    <div className="flex items-center gap-2">
+                      <ResendVerificationButton userId={p.id} email={p.email} name={p.full_name} />
+                      <RemovePendingButton userId={p.id} name={p.full_name} />
+                    </div>
+                  )
+                }
               </div>
             ))}
           </div>
@@ -95,6 +135,7 @@ export default async function TenantsPage() {
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Contact</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Contract</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -123,6 +164,20 @@ export default async function TenantsPage() {
                       ) : (
                         <span className="text-slate-400 text-xs">No contract</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <EditTenantForm tenant={{
+                          id: t.id,
+                          full_name: t.full_name,
+                          email: t.email,
+                          phone: t.phone,
+                          nationality: t.nationality ?? null,
+                          national_id: t.national_id ?? null,
+                          emergency_contact: t.emergency_contact ?? null,
+                        }} />
+                        <DeleteTenantButton id={t.id} name={t.full_name} />
+                      </div>
                     </td>
                   </tr>
                 )

@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 import { PLANS } from '@/lib/utils/plans'
+import PhoneInput from '@/components/PhoneInput'
 
 const t = {
   en: {
@@ -69,6 +69,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [sentEmail, setSentEmail] = useState('')
+  const [userId, setUserId] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
   const [resendSent, setResendSent] = useState(false)
   const T = t[lang]
@@ -109,12 +110,16 @@ export default function RegisterPage() {
 
   async function handleResend() {
     setResendLoading(true); setResendSent(false)
-    const supabase = createClient()
-    await supabase.auth.resend({ type: 'signup', email: sentEmail, options: {
-      emailRedirectTo: `${window.location.origin}/auth/verify-email`,
-    }})
-    setResendLoading(false); setResendSent(true)
-    setTimeout(() => setResendSent(false), 5000)
+    const res = await fetch('/api/auth/resend-signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: sentEmail, name: form.name, lang }),
+    })
+    setResendLoading(false)
+    if (res.ok) {
+      setResendSent(true)
+      setTimeout(() => setResendSent(false), 5000)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -125,36 +130,30 @@ export default function RegisterPage() {
     }
     setLoading(true); setError('')
 
-try {
-      const supabase = createClient()
-      const { data, error: err } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            full_name: form.name,
-            role,
-            lang_pref: lang,
-            organization_id: inviteOrg?.id ?? null,
-            plan: role === 'owner' ? plan : null,
-            org_name: role === 'owner' ? form.org : null,
-            phone: form.phone,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/verify-email`,
-        },
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          name: form.name,
+          role,
+          lang,
+          organization_id: inviteOrg?.id ?? null,
+          plan: role === 'owner' ? plan : null,
+          org_name: role === 'owner' ? form.org : null,
+          phone: form.phone,
+        }),
       })
+      const data = await res.json()
       setLoading(false)
-      if (err) {
-        const raw = typeof err.message === 'string' ? err.message.trim() : ''
-        const msg = (raw && raw !== '{}' && raw !== '{ }') ? raw : 'Registration failed. Please try again.'
-        setError(msg)
+
+      if (!res.ok) {
+        setError(data.error || 'Registration failed. Please try again.')
         return
       }
-      // Supabase returns 200 for duplicate emails but identities will be empty
-      if (data?.user?.identities?.length === 0) {
-        setError('An account with this email already exists. Please sign in instead.')
-        return
-      }
+
       // Notify super admin of new owner registration
       if (role === 'owner') {
         fetch('/api/auth/new-owner-notify', {
@@ -167,9 +166,10 @@ try {
             orgName: form.org,
             plan,
           }),
-        }).catch(() => {}) // fire-and-forget, don't block UX
+        }).catch(() => {})
       }
 
+      setUserId(data.userId ?? '')
       setSentEmail(form.email)
       setStep(3)
     } catch (e: unknown) {
@@ -395,7 +395,7 @@ try {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.phone}</label>
-                    <input value={form.phone} onChange={e=>set('phone',e.target.value)} className="input" placeholder="+968 9xxx xxxx"/>
+                    <PhoneInput value={form.phone} onChange={v => set('phone', v)} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.pass}</label>

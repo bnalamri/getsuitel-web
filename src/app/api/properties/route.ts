@@ -28,6 +28,20 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient()
+
+  // Enforce property limit for the org's plan
+  const [{ data: org }, { count: propCount }] = await Promise.all([
+    admin.from('organizations').select('max_properties').eq('id', profile.organization_id).single(),
+    admin.from('properties').select('*', { count: 'exact', head: true }).eq('organization_id', profile.organization_id),
+  ])
+
+  const maxProperties = org?.max_properties ?? 2
+  if (maxProperties !== -1 && (propCount ?? 0) >= maxProperties) {
+    return NextResponse.json({
+      error: `Your plan allows up to ${maxProperties} propert${maxProperties === 1 ? 'y' : 'ies'}. Upgrade your plan to add more.`,
+    }, { status: 403 })
+  }
+
   const { data, error } = await admin
     .from('properties')
     .insert({ name, type, address, city, country, organization_id: profile.organization_id })

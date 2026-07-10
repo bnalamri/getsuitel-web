@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle } from 'lucide-react'
+import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle, FileCheck } from 'lucide-react'
 import Link from 'next/link'
+import MarkProofReviewedButton from './MarkProofReviewedButton'
 
 export const metadata = { title: 'Admin Dashboard' }
 
@@ -24,13 +25,17 @@ export default async function AdminDashboard() {
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
 
-  const [orgsRes, usersRes, propsRes, unitsRes, tenantsRes, recentOrgsRes] = await Promise.all([
+  const [orgsRes, usersRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
     admin.from('organizations').select('*', { count: 'exact', head: true }),
     admin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'owner'),
     admin.from('properties').select('*', { count: 'exact', head: true }),
     admin.from('units').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }),
     admin.from('organizations').select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
+    admin.from('subscription_payment_proofs')
+      .select('*, organizations(name, subscription_plan)')
+      .eq('status', 'pending')
+      .order('submitted_at', { ascending: false }),
   ])
 
   const [activeRes, trialingRes, pastDueRes] = await Promise.all([
@@ -48,7 +53,8 @@ export default async function AdminDashboard() {
     { label: 'Past Due', value: pastDueRes.count ?? 0, icon: AlertCircle, color: 'bg-red-50 text-red-600', href: '/dashboard/admin/subscriptions' },
   ]
 
-  const recentOrgs = recentOrgsRes.data ?? []
+  const recentOrgs  = recentOrgsRes.data ?? []
+  const pendingProofs = proofsRes.data ?? []
 
   return (
     <div className="space-y-6">
@@ -89,6 +95,59 @@ export default async function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Pending subscription payment proofs */}
+      {pendingProofs.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              <FileCheck size={16} className="text-amber-500"/>
+              Pending Payment Proofs
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{pendingProofs.length}</span>
+            </h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="text-left px-5 py-3 text-slate-600 font-semibold">Organization</th>
+                <th className="text-left px-5 py-3 text-slate-600 font-semibold">Owner</th>
+                <th className="text-left px-5 py-3 text-slate-600 font-semibold">Plan</th>
+                <th className="text-left px-5 py-3 text-slate-600 font-semibold">Submitted</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {pendingProofs.map((p: Record<string, unknown>) => {
+                const org = p.organizations as { name: string; subscription_plan: string } | null
+                return (
+                  <tr key={p.id as string} className="hover:bg-slate-50">
+                    <td className="px-5 py-3 font-medium text-slate-900">{org?.name}</td>
+                    <td className="px-5 py-3">
+                      <div className="text-slate-700">{p.owner_name as string}</div>
+                      <div className="text-xs text-slate-400">{p.owner_email as string}</div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`badge capitalize ${planColor[org?.subscription_plan ?? ''] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {org?.subscription_plan}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-xs text-slate-400">
+                      {new Date(p.submitted_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2 justify-end">
+                        <a href={p.receipt_url as string} target="_blank" rel="noreferrer"
+                          className="text-xs text-blue-600 hover:underline">View Proof</a>
+                        <MarkProofReviewedButton proofId={p.id as string} orgId={p.organization_id as string} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Recent organizations */}
       <div className="card overflow-hidden">

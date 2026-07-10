@@ -8,7 +8,10 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', type: 'residential', address: '', city: '', country: 'Oman' })
+  const initialForm = { name: '', type: 'residential', address: '', address_line2: '', city: '', country: 'Oman' }
+  const [form, setForm] = useState(initialForm)
+
+  function closeAndReset() { setForm(initialForm); setError(''); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,8 +24,7 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to add property'); setLoading(false); return }
-    setOpen(false)
-    setForm({ name: '', type: 'residential', address: '', city: '', country: 'Oman' })
+    closeAndReset()
     router.refresh()
     setLoading(false)
   }
@@ -40,7 +42,7 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <h2 className="font-bold text-slate-900">Add Property</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
@@ -56,8 +58,12 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
             </select>
           </div>
           <div>
-            <label className="label">Address</label>
-            <input className="input" required value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Main St" />
+            <label className="label">Address Line 1</label>
+            <input className="input" required value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Building / Street name" />
+          </div>
+          <div>
+            <label className="label">Address Line 2 <span className="text-slate-400 font-normal text-xs">(optional)</span></label>
+            <input className="input" value={form.address_line2} onChange={e => setForm(f => ({ ...f, address_line2: e.target.value }))} placeholder="District / Landmark" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -71,7 +77,7 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Add Property'}
             </button>

@@ -1,9 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Receipt } from 'lucide-react'
 import AddInvoiceForm from './AddInvoiceForm'
+import EditInvoiceForm from './EditInvoiceForm'
 import MarkPaidButton from './MarkPaidButton'
 
 export const metadata = { title: 'Invoices' }
+export const dynamic = 'force-dynamic'
 
 const statusColor: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-600',
@@ -22,9 +24,11 @@ export default async function InvoicesPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
+  const admin = createAdminClient()
+
   const [invoicesRes, tenantsRes, unitsRes] = await Promise.all([
     supabase.from('invoices').select('*, tenants(full_name), units(unit_number, properties(name))').eq('organization_id', orgId).order('created_at', { ascending: false }),
-    supabase.from('tenants').select('id, full_name').eq('organization_id', orgId),
+    admin.from('tenants').select('id, full_name, email, contracts(unit_id, status)').eq('organization_id', orgId).order('full_name'),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
   ])
 
@@ -93,9 +97,16 @@ export default async function InvoicesPage() {
                     <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span></td>
                     <td className="px-4 py-3">
-                      {['sent', 'overdue', 'draft'].includes(inv.status) && (
-                        <MarkPaidButton invoiceId={inv.id} />
-                      )}
+                      <div className="flex items-center gap-1">
+                        <EditInvoiceForm
+                          invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, status: inv.status, notes: inv.notes }}
+                          tenants={tenants}
+                          units={units as never}
+                        />
+                        {['sent', 'overdue', 'draft'].includes(inv.status) && (
+                          <MarkPaidButton invoiceId={inv.id} />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

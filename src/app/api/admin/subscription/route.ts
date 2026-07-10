@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { orgId, plan, status, maxUnits, maxTenants } = await req.json()
+  const { orgId, plan, status, maxUnits, maxTenants, maxProperties } = await req.json()
   if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })
 
   const admin = createAdminClient()
@@ -93,12 +93,56 @@ export async function POST(req: Request) {
     .eq('id', orgId)
     .single()
 
+  // Plan limits map
+  const PLAN_LIMITS: Record<string, { maxProperties: number; maxUnits: number; maxTenants: number }> = {
+    basic:      { maxProperties: 2,    maxUnits: 10,   maxTenants: 15 },
+    pro:        { maxProperties: 10,   maxUnits: 50,   maxTenants: 75 },
+    enterprise: { maxProperties: 20, maxUnits: 9999, maxTenants: 9999 },
+  }
+
+  // Downgrade check — only when changing to a more restrictive plan
+  if (plan && org?.subscription_plan && plan !== org.subscription_plan) {
+    const targetLimits = PLAN_LIMITS[plan]
+    const currentLimits = PLAN_LIMITS[org.subscription_plan]
+    const isDowngrade = targetLimits && currentLimits &&
+      (targetLimits.maxProperties < currentLimits.maxProperties ||
+       targetLimits.maxUnits < currentLimits.maxUnits ||
+       targetLimits.maxTenants < currentLimits.maxTenants)
+
+    if (isDowngrade && targetLimits) {
+      const [{ count: propCount }, { count: unitCount }, { count: tenantCount }] = await Promise.all([
+        admin.from('properties').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+        admin.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+        admin.from('tenants').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+      ])
+
+      const violations: string[] = []
+      if ((propCount ?? 0) > targetLimits.maxProperties)
+        violations.push(`${propCount} properties (${plan} limit: ${targetLimits.maxProperties})`)
+      if ((unitCount ?? 0) > targetLimits.maxUnits)
+        violations.push(`${unitCount} units (${plan} limit: ${targetLimits.maxUnits})`)
+      if ((tenantCount ?? 0) > targetLimits.maxTenants)
+        violations.push(`${tenantCount} tenants (${plan} limit: ${targetLimits.maxTenants})`)
+
+      if (violations.length > 0) {
+        return NextResponse.json({
+          error: `Cannot downgrade to ${plan}. Current usage exceeds the plan limits: ${violations.join(', ')}. Please reduce usage before downgrading.`,
+        }, { status: 400 })
+      }
+    }
+  }
+
   const updates: Record<string, unknown> = {
     subscription_plan: plan,
     subscription_status: status,
   }
   if (maxUnits) updates.max_units = Number(maxUnits)
   if (maxTenants) updates.max_tenants = Number(maxTenants)
+  if (maxProperties) updates.max_properties = Number(maxProperties)
+  // Auto-set limits from plan if not manually overridden
+  if (plan && PLAN_LIMITS[plan] && !maxUnits) updates.max_units = PLAN_LIMITS[plan].maxUnits
+  if (plan && PLAN_LIMITS[plan] && !maxTenants) updates.max_tenants = PLAN_LIMITS[plan].maxTenants
+  if (plan && PLAN_LIMITS[plan] && !maxProperties) updates.max_properties = PLAN_LIMITS[plan].maxProperties
   if (status === 'active') updates.subscription_ends_at = new Date(Date.now() + 365 * 86400000).toISOString()
 
   // Set canceled_at when newly canceled

@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Smartphone, Receipt, Copy, Check, Loader2, Send, ChevronDown, ChevronUp, Banknote, Info } from 'lucide-react'
+import { Building2, Smartphone, Receipt, Copy, Check, Loader2, Send, ChevronDown, ChevronUp, Banknote, Info, Paperclip, X } from 'lucide-react'
 
 interface OrgPayment {
   bank_account_name?: string | null
@@ -41,6 +41,42 @@ function CopyField({ label, value }: { label: string; value: string }) {
   )
 }
 
+function FilePickerField({
+  file, onFile, label,
+}: { file: File | null; onFile: (f: File | null) => void; label: string }) {
+  const ref = useRef<HTMLInputElement>(null)
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={e => onFile(e.target.files?.[0] ?? null)}
+      />
+      {file ? (
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+          <Paperclip size={14} className="text-emerald-600 flex-shrink-0"/>
+          <span className="text-emerald-700 font-medium flex-1 truncate">{file.name}</span>
+          <button onClick={() => { onFile(null); if (ref.current) ref.current.value = '' }}
+            className="text-slate-400 hover:text-slate-600">
+            <X size={14}/>
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => ref.current?.click()}
+          className="flex items-center gap-2 w-full border-2 border-dashed border-slate-200 rounded-lg px-3 py-3 text-sm text-slate-500 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+        >
+          <Paperclip size={14}/>
+          Attach transaction slip (image or PDF)
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function PaymentPanel({
   invoiceId, tenantId, orgId, amount, currency, org,
 }: {
@@ -51,28 +87,45 @@ export default function PaymentPanel({
   currency: string
   org: OrgPayment | null
 }) {
-  const [open, setOpen]         = useState(false)
-  const [method, setMethod]     = useState<Method | null>(null)
-  const [notes, setNotes]       = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [submitted, setSubmit]  = useState(false)
+  const [open, setOpen]        = useState(false)
+  const [method, setMethod]    = useState<Method | null>(null)
+  const [notes, setNotes]      = useState('')
+  const [file, setFile]        = useState<File | null>(null)
+  const [loading, setLoading]  = useState(false)
+  const [submitted, setSubmit] = useState(false)
   const router = useRouter()
 
   async function submit() {
     if (!method || method === 'cheque' || method === 'cash') return
     setLoading(true)
-    await fetch('/api/payments/receipts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+
+    let body: BodyInit
+    const headers: Record<string, string> = {}
+
+    if (file) {
+      // Send as FormData so server can upload file with admin client (bypasses storage RLS)
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('invoice_id', invoiceId)
+      fd.append('tenant_id', tenantId)
+      fd.append('organization_id', orgId)
+      fd.append('method', method)
+      fd.append('amount', String(amount))
+      if (notes) fd.append('notes', notes)
+      body = fd
+    } else {
+      body = JSON.stringify({
         invoice_id: invoiceId,
         tenant_id: tenantId,
         organization_id: orgId,
         method,
         notes: notes || undefined,
         amount,
-      }),
-    })
+      })
+      headers['Content-Type'] = 'application/json'
+    }
+
+    await fetch('/api/payments/receipts', { method: 'POST', headers, body })
     setLoading(false)
     setSubmit(true)
     setTimeout(() => router.refresh(), 1500)
@@ -116,7 +169,6 @@ export default function PaymentPanel({
             })}
           </div>
 
-          {/* Method details */}
           {method === 'bank_transfer' && (
             <div className="space-y-2">
               {org?.bank_account_name   && <CopyField label="Account Name"   value={org.bank_account_name} />}
@@ -133,6 +185,7 @@ export default function PaymentPanel({
                 <textarea className="input mt-1" rows={2} placeholder="Add transaction reference or note (optional)"
                   value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
+              <FilePickerField file={file} onFile={setFile} label="Transaction Slip (optional)" />
               <button onClick={submit} disabled={loading || !org?.bank_account_number}
                 className="btn-primary flex items-center gap-2 text-sm w-full justify-center">
                 {loading ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}
@@ -156,6 +209,7 @@ export default function PaymentPanel({
                 <textarea className="input mt-1" rows={2} placeholder="Add transaction ID or note (optional)"
                   value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
+              <FilePickerField file={file} onFile={setFile} label="Transaction Slip (optional)" />
               <button onClick={submit} disabled={loading || !org?.mobile_wallet_number}
                 className="btn-primary flex items-center gap-2 text-sm w-full justify-center">
                 {loading ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}

@@ -55,7 +55,7 @@ export default async function TenantContractPage() {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div><div className="text-slate-500">Property</div><div className="font-semibold text-slate-900 mt-0.5">{unit?.properties?.name}</div></div>
           <div><div className="text-slate-500">Unit</div><div className="font-semibold text-slate-900 mt-0.5">Unit {unit?.unit_number}</div></div>
-          <div><div className="text-slate-500">Address</div><div className="font-semibold text-slate-900 mt-0.5">{unit?.properties?.address}, {unit?.properties?.city}</div></div>
+          <div><div className="text-slate-500">Address</div><div className="font-semibold text-slate-900 mt-0.5">{unit?.properties?.address}{unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}, {unit?.properties?.city}</div></div>
           <div><div className="text-slate-500">Floor</div><div className="font-semibold text-slate-900 mt-0.5">{unit?.floor ?? '—'}</div></div>
           {unit?.area_sqm && <div><div className="text-slate-500">Area</div><div className="font-semibold text-slate-900 mt-0.5">{unit.area_sqm} m²</div></div>}
           {unit?.bedrooms && <div><div className="text-slate-500">Bedrooms / Bathrooms</div><div className="font-semibold text-slate-900 mt-0.5">{unit.bedrooms} BR / {unit.bathrooms} BA</div></div>}

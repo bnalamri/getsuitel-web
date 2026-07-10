@@ -4,13 +4,13 @@ import { NextResponse } from 'next/server'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
-  const { to, tenantName, amount, currency, dueDate, type, status } = await req.json()
+  const { to, tenantName, amount, currency, dueDate, type, status, corrected } = await req.json()
   if (!to || !amount) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const isPaid = status === 'paid'
   const isOverdue = status === 'overdue'
-  const headerColor = isPaid ? '#059669' : isOverdue ? '#dc2626' : '#1B3A6B'
-  const badgeLabel = isPaid ? 'Payment Confirmed' : isOverdue ? 'Payment Overdue' : 'New Invoice'
+  const headerColor = corrected ? '#7c3aed' : isPaid ? '#059669' : isOverdue ? '#dc2626' : '#1B3A6B'
+  const badgeLabel = corrected ? 'Corrected Invoice' : isPaid ? 'Payment Confirmed' : isOverdue ? 'Payment Overdue' : 'New Invoice'
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -24,7 +24,9 @@ export async function POST(req: Request) {
 <tr><td style="padding:32px">
   <div style="font-size:15px;color:#334155;margin-bottom:24px;line-height:1.6">
     Dear ${tenantName || 'Tenant'},<br><br>
-    ${isPaid
+    ${corrected
+      ? `Your invoice has been updated by your property manager. Please refer to the corrected details below.`
+      : isPaid
       ? 'Your payment has been received and confirmed. Thank you!'
       : isOverdue
       ? 'Your payment is overdue. Please arrange payment as soon as possible to avoid further action.'
@@ -56,7 +58,9 @@ export async function POST(req: Request) {
     const { data, error } = await resend.emails.send({
       from: 'GetSuitel <invoices@getsuitel.com>',
       to: [to],
-      subject: isPaid
+      subject: corrected
+        ? `Corrected Invoice — ${Number(amount).toLocaleString()} ${currency}`
+        : isPaid
         ? `Payment Confirmed — ${Number(amount).toLocaleString()} ${currency}`
         : `Invoice: ${Number(amount).toLocaleString()} ${currency} due ${dueDate}`,
       html,

@@ -76,7 +76,7 @@ export default async function TechnicianSchedulePage() {
                         <span>
                           {unit?.properties?.name} — Unit {unit?.unit_number}
                           {unit?.floor ? `, Floor ${unit.floor}` : ''}
-                          {unit?.properties?.address ? ` · ${unit.properties.address}` : ''}
+                          {unit?.properties?.address ? ` · ${unit.properties.address}${unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}` : ''}
                           {unit?.properties?.city ? `, ${unit.properties.city}` : ''}
                         </span>
                       </div>

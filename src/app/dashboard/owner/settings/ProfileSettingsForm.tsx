@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Save } from 'lucide-react'
+import PhoneInput from '@/components/PhoneInput'
 
 export default function ProfileSettingsForm({ profile }: { profile: Record<string, unknown> | null }) {
   const [loading, setLoading] = useState(false)
@@ -30,7 +31,7 @@ export default function ProfileSettingsForm({ profile }: { profile: Record<strin
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><label className="label">Full Name</label><input className="input" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} /></div>
         <div><label className="label">Email</label><input className="input" value={profile?.email as string} disabled className="input bg-slate-50 text-slate-400 cursor-not-allowed" /></div>
-        <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+968 9000 0000" /></div>
+        <div><label className="label">Phone</label><PhoneInput value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} /></div>
         <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {saved ? 'Saved!' : 'Save Profile'}

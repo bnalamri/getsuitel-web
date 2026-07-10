@@ -2,9 +2,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
+import DateInput from '@/components/DateInput'
 
-type Tenant = { id: string; full_name: string }
+type Contract = { unit_id: string; status: string }
+type Tenant = { id: string; full_name: string; email?: string; contracts?: Contract[] }
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
+
+function activeUnitForTenant(tenant: Tenant | undefined, units: Unit[]): string {
+  if (!tenant?.contracts) return units[0]?.id ?? ''
+  const active = tenant.contracts.find(c => c.status === 'active')
+  return active?.unit_id ?? units[0]?.id ?? ''
+}
 
 export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: string; tenants: Tenant[]; units: Unit[] }) {
   const [open, setOpen] = useState(false)
@@ -12,10 +20,28 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
   const [error, setError] = useState('')
   const router = useRouter()
   const today = new Date().toISOString().split('T')[0]
-  const [form, setForm] = useState({
-    tenant_id: tenants[0]?.id ?? '', unit_id: units[0]?.id ?? '',
+
+  const firstTenant = tenants[0]
+  const initialForm = {
+    tenant_id: firstTenant?.id ?? '',
+    unit_id: activeUnitForTenant(firstTenant, units),
     type: 'rent', amount: '', currency: 'OMR', due_date: today, status: 'sent', notes: '',
-  })
+  }
+  const [form, setForm] = useState(initialForm)
+
+  function freshForm() {
+    const t = tenants[0]
+    return { tenant_id: t?.id ?? '', unit_id: activeUnitForTenant(t, units), type: 'rent', amount: '', currency: 'OMR', due_date: new Date().toISOString().split('T')[0], status: 'sent', notes: '' }
+  }
+
+  function handleOpen() { setForm(freshForm()); setError(''); setOpen(true) }
+  function closeAndReset() { setError(''); setOpen(false) }
+
+  function handleTenantChange(tenant_id: string) {
+    const tenant = tenants.find(t => t.id === tenant_id)
+    const unit_id = activeUnitForTenant(tenant, units)
+    setForm(f => ({ ...f, tenant_id, unit_id }))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,7 +66,7 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
 
     // Send email to tenant
     const tenant = tenants.find(t => t.id === form.tenant_id)
-    if (tenant && form.status !== 'draft') {
+    if (tenant?.email && form.status !== 'draft') {
       await fetch('/api/email/invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,13 +82,13 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
       })
     }
 
-    setOpen(false)
+    closeAndReset()
     router.refresh()
     setLoading(false)
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="btn-primary flex items-center gap-2">
+    <button onClick={handleOpen} className="btn-primary flex items-center gap-2">
       <Plus size={16} /> Create Invoice
     </button>
   )
@@ -72,11 +98,11 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Create Invoice</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div><label className="label">Tenant</label>
-            <select className="input" required value={form.tenant_id} onChange={e => setForm(f => ({ ...f, tenant_id: e.target.value }))}>
+            <select className="input" required value={form.tenant_id} onChange={e => handleTenantChange(e.target.value)}>
               {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
             </select>
           </div>
@@ -106,11 +132,11 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
               </select>
             </div>
           </div>
-          <div><label className="label">Due Date</label><input className="input" type="date" required value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} /></div>
+          <div><label className="label">Due Date</label><DateInput value={form.due_date} onChange={v => setForm(f => ({ ...f, due_date: v }))} required /></div>
           <div><label className="label">Notes</label><textarea className="input" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create Invoice'}
             </button>

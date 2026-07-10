@@ -5,6 +5,7 @@ import { Pencil, X, Loader2 } from 'lucide-react'
 
 type Unit = {
   id: string
+  unit_type: string
   unit_number: string
   floor: number | null
   area_sqm: number | null
@@ -22,6 +23,7 @@ export default function EditUnitForm({ unit, occupied }: { unit: Unit; occupied:
   const router = useRouter()
 
   const [form, setForm] = useState({
+    unit_type: unit.unit_type ?? 'flat',
     unit_number: unit.unit_number,
     floor: unit.floor?.toString() ?? '',
     area_sqm: unit.area_sqm?.toString() ?? '',
@@ -40,6 +42,7 @@ export default function EditUnitForm({ unit, occupied }: { unit: Unit; occupied:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: unit.id,
+        unit_type: form.unit_type,
         unit_number: form.unit_number,
         floor: form.floor ? Number(form.floor) : null,
         area_sqm: form.area_sqm ? Number(form.area_sqm) : null,
@@ -75,6 +78,19 @@ export default function EditUnitForm({ unit, occupied }: { unit: Unit; occupied:
           <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="label">Unit Type</label>
+            <select className="input" value={form.unit_type} onChange={e => setForm(f => ({ ...f, unit_type: e.target.value }))}>
+              <option value="flat">Flat / Apartment</option>
+              <option value="room">Room</option>
+              <option value="studio">Studio</option>
+              <option value="villa">Villa</option>
+              <option value="office">Office</option>
+              <option value="shop">Shop</option>
+              <option value="warehouse">Warehouse</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Unit Number</label>
@@ -85,20 +101,27 @@ export default function EditUnitForm({ unit, occupied }: { unit: Unit; occupied:
               <input className="input" type="number" value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} placeholder="1" />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="label">Area (m²)</label>
-              <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} />
+          {form.unit_type !== 'room' ? (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="label">Area (m²)</label>
+                <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Bedrooms</label>
+                <input className="input" type="number" value={form.bedrooms} onChange={e => setForm(f => ({ ...f, bedrooms: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Bathrooms</label>
+                <input className="input" type="number" value={form.bathrooms} onChange={e => setForm(f => ({ ...f, bathrooms: e.target.value }))} />
+              </div>
             </div>
+          ) : (
             <div>
-              <label className="label">Bedrooms</label>
-              <input className="input" type="number" value={form.bedrooms} onChange={e => setForm(f => ({ ...f, bedrooms: e.target.value }))} />
+              <label className="label">Area (m²) <span className="text-slate-400 font-normal text-xs">(optional)</span></label>
+              <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} placeholder="20" />
             </div>
-            <div>
-              <label className="label">Bathrooms</label>
-              <input className="input" type="number" value={form.bathrooms} onChange={e => setForm(f => ({ ...f, bathrooms: e.target.value }))} />
-            </div>
-          </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Rent Amount</label>

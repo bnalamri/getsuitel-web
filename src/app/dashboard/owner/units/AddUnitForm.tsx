@@ -12,11 +12,14 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const [form, setForm] = useState({
+  const initialForm = {
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
-    unit_number: '', floor: '', area_sqm: '', bedrooms: '', bathrooms: '',
+    unit_type: 'flat', unit_number: '', floor: '', area_sqm: '', bedrooms: '', bathrooms: '',
     rent_amount: '', currency: 'OMR', status: 'vacant',
-  })
+  }
+  const [form, setForm] = useState(initialForm)
+
+  function closeAndReset() { setForm(initialForm); setError(''); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -27,6 +30,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         property_id: form.property_id,
+        unit_type: form.unit_type,
         unit_number: form.unit_number,
         floor: form.floor ? Number(form.floor) : null,
         area_sqm: form.area_sqm ? Number(form.area_sqm) : null,
@@ -39,7 +43,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to add unit'); setLoading(false); return }
-    setOpen(false)
+    closeAndReset()
     router.refresh()
     setLoading(false)
   }
@@ -55,13 +59,26 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Add Unit</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="label">Property</label>
             <select className="input" value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Unit Type</label>
+            <select className="input" value={form.unit_type} onChange={e => setForm(f => ({ ...f, unit_type: e.target.value }))}>
+              <option value="flat">Flat / Apartment</option>
+              <option value="room">Room</option>
+              <option value="studio">Studio</option>
+              <option value="villa">Villa</option>
+              <option value="office">Office</option>
+              <option value="shop">Shop</option>
+              <option value="warehouse">Warehouse</option>
+              <option value="other">Other</option>
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -74,20 +91,28 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
               <input className="input" type="number" value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} placeholder="1" />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="label">Area (m²)</label>
-              <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} placeholder="85" />
+          {form.unit_type !== 'room' && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="label">Area (m²)</label>
+                <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} placeholder="85" />
+              </div>
+              <div>
+                <label className="label">Bedrooms</label>
+                <input className="input" type="number" value={form.bedrooms} onChange={e => setForm(f => ({ ...f, bedrooms: e.target.value }))} placeholder="2" />
+              </div>
+              <div>
+                <label className="label">Bathrooms</label>
+                <input className="input" type="number" value={form.bathrooms} onChange={e => setForm(f => ({ ...f, bathrooms: e.target.value }))} placeholder="1" />
+              </div>
             </div>
+          )}
+          {form.unit_type === 'room' && (
             <div>
-              <label className="label">Bedrooms</label>
-              <input className="input" type="number" value={form.bedrooms} onChange={e => setForm(f => ({ ...f, bedrooms: e.target.value }))} placeholder="2" />
+              <label className="label">Area (m²) <span className="text-slate-400 font-normal text-xs">(optional)</span></label>
+              <input className="input" type="number" value={form.area_sqm} onChange={e => setForm(f => ({ ...f, area_sqm: e.target.value }))} placeholder="20" />
             </div>
-            <div>
-              <label className="label">Bathrooms</label>
-              <input className="input" type="number" value={form.bathrooms} onChange={e => setForm(f => ({ ...f, bathrooms: e.target.value }))} placeholder="1" />
-            </div>
-          </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Rent Amount</label>
@@ -111,7 +136,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Add Unit'}
             </button>

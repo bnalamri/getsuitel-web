@@ -7,7 +7,7 @@ const content = {
   en: {
     dir: 'ltr', lang: 'ع',
     nav: { features: 'Features', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up' },
-    hero: { badge: 'Smart Real Estate Management Platform', h1a: 'Manage Properties', h1b: 'Effortlessly', sub: 'GetSuitel brings owners, tenants, and service teams together in one powerful platform. From contracts to maintenance — all in one place.', cta1: 'Start Free Trial', cta2: 'Sign In', stats: [{ v:'30', s:'-day', l:'Free Trial' },{ v:'4', s:'', l:'User Roles' },{ v:'∞', s:'', l:'Properties' }] },
+    hero: { badge: 'Smart Real Estate Management Platform', h1a: 'Manage Properties', h1b: 'Effortlessly', sub: 'GetSuitel brings owners, tenants, and service teams together in one powerful platform. From contracts to maintenance — all in one place.', cta1: 'Start Free Trial', cta2: 'Sign In', stats: [{ v:'30', s:'-day', l:'Free Trial' },{ v:'4', s:'', l:'User Roles' },{ v:'∞', s:'', l:'Units' }] },
     features: {
       title: 'Everything you need to run your properties',
       sub: 'One platform replacing spreadsheets, WhatsApp groups, and scattered paperwork.',
@@ -34,9 +34,9 @@ const content = {
     pricing: {
       title: 'Simple, transparent pricing', sub: '30-day free trial on all plans. No credit card required.', popular: 'MOST POPULAR', cta: 'Start Free Trial', month: '/month',
       plans: [
-        { name:'Basic', price:'$29', desc:'Perfect for individual landlords', features:['Up to 10 units','Up to 15 tenants','Invoicing & contracts','Maintenance requests','Email notices','Standard support'] },
-        { name:'Pro', price:'$79', desc:'For growing property portfolios', features:['Up to 50 units','Up to 75 tenants','Everything in Basic','Advanced reports','Team management','File attachments','Priority support'] },
-        { name:'Enterprise', price:'$199', desc:'For large real estate companies', features:['Unlimited units & tenants','Everything in Pro','Custom branding','Dedicated account manager','API access','SLA guarantee'] },
+        { name:'Basic', price:'$29', desc:'Perfect for individual landlords', features:['Up to 2 properties','Up to 10 units','Up to 15 tenants','Invoicing & contracts','Maintenance requests','Email notices','Standard support'] },
+        { name:'Pro', price:'$79', desc:'For growing property portfolios', features:['Up to 10 properties','Up to 50 units','Up to 75 tenants','Everything in Basic','Advanced reports','Team management','File attachments','Priority support'] },
+        { name:'Enterprise', price:'$199', desc:'For large real estate companies', features:['Up to 20 properties','Unlimited units','Unlimited tenants','Everything in Pro','Custom branding','Dedicated account manager','API access','SLA guarantee'] },
       ],
       exclusive: {
         badge: 'EXCLUSIVE', name: 'Fully Managed', price: 'Custom',
@@ -58,7 +58,7 @@ const content = {
   ar: {
     dir: 'rtl', lang: 'EN',
     nav: { features: 'المميزات', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب' },
-    hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'٣٠', s:'', l:'يوم تجربة مجانية' },{ v:'٤', s:'', l:'أدوار مستخدمين' },{ v:'لا محدود', s:'', l:'عقارات' }] },
+    hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'30', s:'', l:'يوم تجربة مجانية' },{ v:'4', s:'', l:'أدوار مستخدمين' },{ v:'∞', s:'', l:'وحدات' }] },
     features: {
       title: 'كل ما تحتاجه لإدارة عقاراتك',
       sub: 'منصة واحدة تحل محل جداول البيانات ومجموعات واتساب والأوراق المبعثرة.',
@@ -85,9 +85,9 @@ const content = {
     pricing: {
       title: 'أسعار بسيطة وشفافة', sub: 'تجربة مجانية لمدة 30 يوماً على جميع الخطط. لا يلزم بطاقة ائتمانية.', popular: 'الأكثر شعبية', cta: 'ابدأ التجربة المجانية', month: '/ شهر',
       plans: [
-        { name:'أساسي', price:'$29', desc:'مثالي للملاك الأفراد', features:['حتى 10 وحدات','حتى 15 مستأجراً','الفوترة والعقود','طلبات الصيانة','إشعارات البريد الإلكتروني','دعم عادي'] },
-        { name:'احترافي', price:'$79', desc:'للمحافظ العقارية المتنامية', features:['حتى 50 وحدة','حتى 75 مستأجراً','كل مميزات الأساسي','تقارير متقدمة','إدارة الفريق','المرفقات','دعم ذو أولوية'] },
-        { name:'مؤسسي', price:'$199', desc:'للشركات العقارية الكبيرة', features:['وحدات ومستأجرون غير محدودين','كل مميزات الاحترافي','علامة تجارية مخصصة','مدير حساب مخصص','الوصول للـ API','ضمان مستوى الخدمة'] },
+        { name:'أساسي', price:'$29', desc:'مثالي للملاك الأفراد', features:['حتى عقارين','حتى 10 وحدات','حتى 15 مستأجراً','الفوترة والعقود','طلبات الصيانة','إشعارات البريد الإلكتروني','دعم عادي'] },
+        { name:'احترافي', price:'$79', desc:'للمحافظ العقارية المتنامية', features:['حتى 10 عقارات','حتى 50 وحدة','حتى 75 مستأجراً','كل مميزات الأساسي','تقارير متقدمة','إدارة الفريق','المرفقات','دعم ذو أولوية'] },
+        { name:'مؤسسي', price:'$199', desc:'للشركات العقارية الكبيرة', features:['حتى 20 عقاراً','وحدات غير محدودة','مستأجرون غير محدودين','كل مميزات الاحترافي','علامة تجارية مخصصة','مدير حساب مخصص','الوصول للـ API','ضمان مستوى الخدمة'] },
       ],
       exclusive: {
         badge: 'حصري', name: 'إدارة متكاملة', price: 'تسعير خاص',

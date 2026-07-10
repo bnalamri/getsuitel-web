@@ -33,6 +33,7 @@ export default async function PaymentsPage() {
       .select('*, tenants(full_name), units(unit_number, properties(name))')
       .eq('organization_id', orgId)
       .in('status', ['sent', 'overdue'])
+      .or('payment_method.eq.cash,payment_method.is.null')
       .order('due_date', { ascending: true }),
   ])
 

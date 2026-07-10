@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserCheck, X, Loader2 } from 'lucide-react'
+import PhoneInput from '@/components/PhoneInput'
 
 type PendingProfile = {
   id: string
@@ -70,7 +71,7 @@ export default function AcceptMemberButton({ profile }: { profile: PendingProfil
           </div>
           <div>
             <label className="label">Phone</label>
-            <input className="input" required value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+968 9000 0000" />
+            <PhoneInput value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -84,7 +85,7 @@ export default function AcceptMemberButton({ profile }: { profile: PendingProfil
           </div>
           <div>
             <label className="label">Emergency Contact</label>
-            <input className="input" value={form.emergency_contact} onChange={e => setForm(f => ({ ...f, emergency_contact: e.target.value }))} placeholder="+968 9000 0001" />
+            <PhoneInput value={form.emergency_contact} onChange={v => setForm(f => ({ ...f, emergency_contact: v }))} placeholder="5XXXXXXXX" />
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">

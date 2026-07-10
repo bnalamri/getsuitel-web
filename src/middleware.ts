@@ -38,9 +38,12 @@ export async function middleware(request: NextRequest) {
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Make session-only cookies — browser discards them on close
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { maxAge, expires, ...sessionOptions } = options as CookieOptions & { maxAge?: number; expires?: Date }
+            supabaseResponse.cookies.set(name, value, sessionOptions)
+          })
         },
       },
     }

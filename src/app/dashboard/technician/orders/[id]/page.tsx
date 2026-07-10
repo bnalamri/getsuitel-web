@@ -70,7 +70,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               <span className="text-slate-500"> · Unit {unit?.unit_number}</span>
               {unit?.floor && <span className="text-slate-500"> · Floor {unit.floor}</span>}
               {unit?.properties?.address && (
-                <div className="text-slate-400 mt-0.5">{unit.properties.address}</div>
+                <div className="text-slate-400 mt-0.5">{unit.properties.address}{unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}</div>
               )}
             </div>
           </div>

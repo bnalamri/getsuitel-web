@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, CheckCircle } from 'lucide-react'
+import PhoneInput from '@/components/PhoneInput'
 
 const t = {
   en: {
@@ -118,13 +119,11 @@ export default function EarlyAccessPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">{T.gsm}</label>
-                  <input value={form.gsm} onChange={e => set('gsm', e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent" />
+                  <PhoneInput value={form.gsm} onChange={v => set('gsm', v)} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">{T.whatsapp}</label>
-                  <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-500 focus:border-transparent" />
+                  <PhoneInput value={form.whatsapp} onChange={v => set('whatsapp', v)} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1">{T.country}</label>

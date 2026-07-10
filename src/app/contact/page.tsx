@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, CheckCircle, Mail, Phone, MessageSquare, Globe, Clock, User } from 'lucide-react'
+import PhoneInput from '@/components/PhoneInput'
 
 const t = {
   en: {
@@ -140,15 +141,13 @@ export default function ContactPage() {
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
                       <Phone size={13} className="text-navy-600"/> {T.gsm}
                     </label>
-                    <input className="input" value={form.gsm}
-                      onChange={e => set('gsm', e.target.value)} placeholder={T.gsmPh}/>
+                    <PhoneInput value={form.gsm} onChange={v => set('gsm', v)} />
                   </div>
                   <div>
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
                       <MessageSquare size={13} className="text-green-600"/> {T.whatsapp}
                     </label>
-                    <input className="input" value={form.whatsapp}
-                      onChange={e => set('whatsapp', e.target.value)} placeholder={T.whatsappPh}/>
+                    <PhoneInput value={form.whatsapp} onChange={v => set('whatsapp', v)} />
                   </div>
                 </div>
 

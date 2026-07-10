@@ -85,7 +85,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                     <p className="text-sm text-slate-500 mt-1">{order.description}</p>
                     <div className="mt-3 text-xs text-slate-400 space-y-0.5">
                       <div><span className="font-medium text-slate-600">{unit?.properties?.name}</span> · Unit {unit?.unit_number}{unit?.floor ? ` · Floor ${unit.floor}` : ''}</div>
-                      {unit?.properties?.address && <div>{unit.properties.address}</div>}
+                      {unit?.properties?.address && <div>{unit.properties.address}{unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}</div>}
                       <div>Reported: {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                     </div>
                   </div>

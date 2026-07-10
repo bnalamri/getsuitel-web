@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
+import DateInput from '@/components/DateInput'
 
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
 type Tenant = { id: string; full_name: string }
@@ -13,11 +14,24 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
   const router = useRouter()
   const today = new Date().toISOString().split('T')[0]
   const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
-  const [form, setForm] = useState({
+  const initialForm = {
     unit_id: units[0]?.id ?? '', tenant_id: tenants[0]?.id ?? '',
     start_date: today, end_date: nextYear,
-    rent_amount: '', currency: 'OMR', deposit_amount: '0', payment_day: '1', status: 'draft',
-  })
+    rent_amount: '', currency: 'OMR', deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
+  }
+  const [form, setForm] = useState(initialForm)
+
+  function freshForm() {
+    return {
+      unit_id: units[0]?.id ?? '', tenant_id: tenants[0]?.id ?? '',
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+      rent_amount: '', currency: 'OMR', deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
+    }
+  }
+
+  function handleOpen() { setForm(freshForm()); setError(''); setOpen(true) }
+  function closeAndReset() { setError(''); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,18 +49,19 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
         currency: form.currency,
         deposit_amount: Number(form.deposit_amount),
         payment_day: Number(form.payment_day),
+        payment_method: form.payment_method,
         status: form.status,
       }),
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to create contract'); setLoading(false); return }
-    setOpen(false)
+    closeAndReset()
     router.refresh()
     setLoading(false)
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="btn-primary flex items-center gap-2">
+    <button onClick={handleOpen} className="btn-primary flex items-center gap-2">
       <Plus size={16} /> New Contract
     </button>
   )
@@ -56,7 +71,7 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">New Contract</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {units.length === 0 ? (
@@ -78,8 +93,8 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Start Date</label><input className="input" type="date" required value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></div>
-            <div><label className="label">End Date</label><input className="input" type="date" required value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+            <div><label className="label">Start Date</label><DateInput value={form.start_date} onChange={v => setForm(f => ({ ...f, start_date: v }))} required /></div>
+            <div><label className="label">End Date</label><DateInput value={form.end_date} onChange={v => setForm(f => ({ ...f, end_date: v }))} required min={form.start_date} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="label">Rent Amount</label><input className="input" type="number" required value={form.rent_amount} onChange={e => setForm(f => ({ ...f, rent_amount: e.target.value }))} placeholder="500" /></div>
@@ -93,16 +108,27 @@ export default function AddContractForm({ orgId, units, tenants }: { orgId: stri
             <div><label className="label">Deposit</label><input className="input" type="number" value={form.deposit_amount} onChange={e => setForm(f => ({ ...f, deposit_amount: e.target.value }))} /></div>
             <div><label className="label">Payment Day</label><input className="input" type="number" min="1" max="28" value={form.payment_day} onChange={e => setForm(f => ({ ...f, payment_day: e.target.value }))} /></div>
           </div>
-          <div>
-            <label className="label">Status</label>
-            <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              <option value="draft">Draft</option>
-              <option value="active">Active (marks unit as occupied)</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Payment Method</label>
+              <select className="input" value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))}>
+                <option value="cash">Cash</option>
+                <option value="cheque">Cheque</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="mobile_wallet">Mobile Wallet</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Status</label>
+              <select className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                <option value="draft">Draft</option>
+                <option value="active">Active (marks unit as occupied)</option>
+              </select>
+            </div>
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading || units.length === 0 || tenants.length === 0} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create Contract'}
             </button>

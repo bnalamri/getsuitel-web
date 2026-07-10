@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Save, Copy, Check } from 'lucide-react'
+import { DateFormatContext, type DateFormat } from '@/contexts/DateFormatContext'
+import { useContext } from 'react'
 
 export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<string, unknown> | null; userId: string; orgId: string | null }) {
   const [loading, setLoading] = useState(false)
@@ -17,7 +19,12 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-  const [form, setForm] = useState({ name: (org?.name as string) ?? '', name_ar: (org?.name_ar as string) ?? '' })
+  const { dateFormat, setDateFormat } = useContext(DateFormatContext)
+  const [form, setForm] = useState({
+    name: (org?.name as string) ?? '',
+    name_ar: (org?.name_ar as string) ?? '',
+    date_format: (org?.date_format as DateFormat) ?? dateFormat,
+  })
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -25,6 +32,7 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
     const supabase = createClient()
     if (orgId) {
       await supabase.from('organizations').update(form).eq('id', orgId)
+      setDateFormat(form.date_format as DateFormat)
     } else {
       const { data } = await supabase.from('organizations').insert({ ...form, owner_id: userId }).select('id').single()
       if (data?.id) await supabase.from('profiles').update({ organization_id: data.id }).eq('id', userId)
@@ -42,6 +50,14 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><label className="label">Company Name (English)</label><input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Al Noor Properties LLC" /></div>
         <div><label className="label">Company Name (Arabic)</label><input className="input" dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} placeholder="شركة النور للعقارات" /></div>
+        <div>
+          <label className="label">Date Format</label>
+          <select className="input" value={form.date_format} onChange={e => setForm(f => ({ ...f, date_format: e.target.value as DateFormat }))}>
+            <option value="dd/mm/yyyy">DD/MM/YYYY — e.g. 25/07/2026</option>
+            <option value="mm/dd/yyyy">MM/DD/YYYY — e.g. 07/25/2026</option>
+            <option value="yyyy-mm-dd">YYYY-MM-DD — e.g. 2026-07-25</option>
+          </select>
+        </div>
         {org && (
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500">Plan</div><div className="font-semibold capitalize text-slate-900 mt-0.5">{org.subscription_plan as string}</div></div>

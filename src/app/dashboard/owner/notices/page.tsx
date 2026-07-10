@@ -1,8 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Bell, Clock, FileText, AlertCircle } from 'lucide-react'
 import AddNoticeForm from './AddNoticeForm'
 
 export const metadata = { title: 'Notices' }
+export const dynamic = 'force-dynamic'
 
 const typeIcon: Record<string, React.ElementType> = {
   late_payment: AlertCircle,
@@ -22,10 +23,12 @@ export default async function NoticesPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
+  const admin = createAdminClient()
+
   // Fetch notices + all tenants + overdue invoices (for pre-filling late payment notice)
   const [noticesRes, tenantsRes, overdueRes] = await Promise.all([
     supabase.from('notices').select('*, tenants(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
-    supabase.from('tenants').select('id, full_name, email').eq('organization_id', orgId),
+    admin.from('tenants').select('id, full_name, email').eq('organization_id', orgId).order('full_name'),
     supabase.from('invoices')
       .select('id, amount, currency, due_date, tenants(id, full_name, email)')
       .eq('organization_id', orgId)

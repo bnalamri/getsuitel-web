@@ -11,12 +11,14 @@ const t = {
     email: 'Email address', pass: 'Password', forgot: 'Forgot password?',
     signin: 'Sign In', noAccount: "Don't have an account?", register: 'Start free',
     lang: 'ع', error: 'Invalid email or password', loading: 'Signing in…',
+    verified: 'Email verified! You can now sign in.',
   },
   ar: {
     title: 'مرحباً بعودتك', sub: 'تسجيل الدخول إلى حسابك',
     email: 'البريد الإلكتروني', pass: 'كلمة المرور', forgot: 'نسيت كلمة المرور؟',
     signin: 'تسجيل الدخول', noAccount: 'ليس لديك حساب؟', register: 'ابدأ مجاناً',
     lang: 'EN', error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', loading: 'جاري الدخول…',
+    verified: 'تم التحقق من بريدك! يمكنك الآن تسجيل الدخول.',
   },
 }
 
@@ -70,6 +72,12 @@ function LoginForm() {
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <h1 className="text-xl font-bold text-slate-900 mb-1">{T.title}</h1>
           <p className="text-slate-500 text-sm mb-6">{T.sub}</p>
+
+          {params.get('verified') === '1' && (
+            <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-4 text-center font-medium">
+              {'✓ '}{T.verified}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

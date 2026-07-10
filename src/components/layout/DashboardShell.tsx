@@ -1,5 +1,6 @@
 'use client'
 import { useState, createContext, useContext } from 'react'
+import { DateFormatContext, type DateFormat } from '@/contexts/DateFormatContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -240,8 +241,11 @@ export default function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [lang, setLang] = useState<'ar'|'en'>(profile.lang_pref ?? 'en')
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
+  const org = profile.organizations as Record<string, unknown> | null
+  const [dateFormat, setDateFormat] = useState<DateFormat>((org?.date_format as DateFormat) ?? 'dd/mm/yyyy')
 
   return (
+    <DateFormatContext.Provider value={{ dateFormat, setDateFormat }}>
     <Ctx.Provider value={{ lang, setLang, profile }}>
       <div dir={dir} className="flex h-screen overflow-hidden bg-slate-50">
 
@@ -276,5 +280,6 @@ export default function DashboardShell({
         </div>
       </div>
     </Ctx.Provider>
+    </DateFormatContext.Provider>
   )
 }

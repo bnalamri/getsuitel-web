@@ -33,6 +33,18 @@ export default function AddNoticeForm({
   const [body, setBody] = useState('')
   const [sendToAll, setSendToAll] = useState(false)
 
+  function closeAndReset() {
+    setType('late_payment')
+    setTenantId(overdueInvoices[0]?.tenants?.id ?? tenants[0]?.id ?? '')
+    setSubject('')
+    setBody('')
+    setSendToAll(false)
+    setAttachmentUrl(null)
+    setAttachmentName(null)
+    setError('')
+    setOpen(false)
+  }
+
   function handleTypeChange(newType: 'late_payment' | 'general') {
     setType(newType)
     if (newType === 'late_payment') {
@@ -105,8 +117,7 @@ export default function AddNoticeForm({
       }))
     )
 
-    setOpen(false)
-    setSubject(''); setBody(''); setAttachmentUrl(null); setAttachmentName(null)
+    closeAndReset()
     router.refresh()
     setLoading(false)
   }
@@ -132,7 +143,7 @@ export default function AddNoticeForm({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Send Notice</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -223,7 +234,7 @@ export default function AddNoticeForm({
           {error && <div className="text-red-600 text-sm">{error}</div>}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading || uploading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Send Notice'}
             </button>
