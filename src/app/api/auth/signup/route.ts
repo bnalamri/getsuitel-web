@@ -6,7 +6,21 @@ import { verificationEmailHtml, verificationEmailSubject } from '@/lib/email/ver
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
-  const { email, password, name, role, lang, organization_id, plan, org_name, phone } = await req.json()
+  const { email, password, name, role, lang, organization_id, plan, org_name, phone, staff_token } = await req.json()
+
+  // If staff_token provided, mark invitation as accepted
+  if (staff_token) {
+    const admin = createAdminClient()
+    const { data: inv } = await admin
+      .from('staff_invitations')
+      .select('id, role, organization_id, expires_at, accepted_at')
+      .eq('token', staff_token)
+      .single()
+    if (!inv || inv.accepted_at || new Date(inv.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Invalid or expired invitation' }, { status: 400 })
+    }
+    // Mark as accepted after user is created (done below)
+  }
 
   if (!email || !password || !name || !role) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -60,6 +74,15 @@ export async function POST(req: Request) {
       subject: verificationEmailSubject(emailLang),
       html,
     }).catch(() => {}) // don't block registration if email fails
+  }
+
+  // Mark staff invitation as accepted
+  if (staff_token) {
+    const admin = createAdminClient()
+    await admin
+      .from('staff_invitations')
+      .update({ accepted_at: new Date().toISOString() })
+      .eq('token', staff_token)
   }
 
   return NextResponse.json({ ok: true, userId })

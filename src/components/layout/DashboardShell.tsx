@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -55,6 +55,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
     ]},
     { en:'Account', ar:'الحساب', items:[
+      { href:'/dashboard/owner/staff', icon:UserCog, en:'Staff', ar:'الموظفون' },
       { href:'/dashboard/owner/subscription', icon:CreditCard, en:'Subscription', ar:'الاشتراك' },
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
     ]},
@@ -81,6 +82,40 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/technician/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
     ]},
   ],
+  property_manager: [
+    { en:'Overview', ar:'نظرة عامة', items:[
+      { href:'/dashboard/owner', icon:LayoutDashboard, en:'Dashboard', ar:'لوحة التحكم' },
+    ]},
+    { en:'Properties', ar:'العقارات', items:[
+      { href:'/dashboard/owner/properties', icon:Building2, en:'Properties', ar:'العقارات' },
+      { href:'/dashboard/owner/units', icon:DoorOpen, en:'Units', ar:'الوحدات' },
+      { href:'/dashboard/owner/tenants', icon:Users, en:'Tenants', ar:'المستأجرون' },
+      { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
+    ]},
+    { en:'Operations', ar:'العمليات', items:[
+      { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
+      { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
+      { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
+      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+    ]},
+    { en:'Account', ar:'الحساب', items:[
+      { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
+    ]},
+  ],
+  financial_manager: [
+    { en:'Overview', ar:'نظرة عامة', items:[
+      { href:'/dashboard/owner', icon:LayoutDashboard, en:'Dashboard', ar:'لوحة التحكم' },
+    ]},
+    { en:'Finance', ar:'المالية', items:[
+      { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
+      { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
+      { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
+      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+    ]},
+    { en:'Account', ar:'الحساب', items:[
+      { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
+    ]},
+  ],
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
@@ -92,10 +127,12 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
   const groups = NAV[profile.role] ?? NAV.owner
 
   const ROLE_COLORS: Record<string, string> = {
-    superadmin: 'from-slate-900 to-slate-700',
-    owner:      'from-navy-900 to-navy-700',
-    tenant:     'from-emerald-900 to-emerald-700',
-    technician: 'from-orange-900 to-orange-700',
+    superadmin:        'from-slate-900 to-slate-700',
+    owner:             'from-navy-900 to-navy-700',
+    tenant:            'from-emerald-900 to-emerald-700',
+    technician:        'from-orange-900 to-orange-700',
+    property_manager:  'from-teal-900 to-teal-700',
+    financial_manager: 'from-purple-900 to-purple-700',
   }
   const gradient = ROLE_COLORS[profile.role] ?? ROLE_COLORS.owner
 
@@ -133,7 +170,10 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
             )}
             <div className="space-y-0.5">
               {group.items.map(item => {
-                const roleHome = profile.role === 'superadmin' ? '/dashboard/admin' : '/dashboard/' + profile.role
+                const staffRoles = ['property_manager', 'financial_manager']
+                const roleHome = profile.role === 'superadmin' ? '/dashboard/admin'
+                  : staffRoles.includes(profile.role) ? '/dashboard/owner'
+                  : '/dashboard/' + profile.role
                 const active = pathname === item.href || (item.href !== roleHome && pathname.startsWith(item.href))
                 return (
                   <Link key={item.href} href={item.href}
@@ -159,7 +199,12 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold truncate">{profile.full_name}</div>
-              <div className="text-white/50 text-xs capitalize">{profile.role}</div>
+              <div className="text-white/50 text-xs capitalize">
+                {profile.role === 'property_manager' ? 'Property Manager'
+                 : profile.role === 'financial_manager' ? 'Financial Manager'
+                 : profile.role === 'superadmin' ? 'Super Admin'
+                 : profile.role}
+              </div>
             </div>
             <button onClick={signOut} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors" title="Sign out">
               <LogOut size={15}/>
@@ -203,6 +248,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     schedule:     {en:'Schedule',ar:'الجدول'},
     contract:     {en:'My Contract',ar:'عقدي'},
     cheques:      {en:'Cheque Tracker',ar:'سجل الشيكات'},
+    staff:        {en:'Staff Management',ar:'إدارة الموظفين'},
   }
   const title = labels[segment]?.[lang] ?? segment
 

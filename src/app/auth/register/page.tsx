@@ -17,12 +17,15 @@ const t = {
     passWeak: 'Minimum 8 characters', lang: 'ع', loading: 'Creating account…',
     perMonth: '/mo', popular: 'Popular',
     inviteLabel: 'Organization Invite Code', inviteHint: 'Ask your property manager for the invite code.',
+    staffTokenLabel: 'Staff Invitation Token', staffTokenHint: 'Paste the token from your invitation email.',
     verify: 'Verify', inviteRequired: 'Please verify your organization invite code first',
-    invalidCode: 'Invalid code',
+    staffTokenRequired: 'Please verify your staff invitation token first',
+    invalidCode: 'Invalid code', invalidToken: 'Invalid or expired invitation',
     didntReceive: "Didn't receive it? Check your spam folder or",
     resend: 'Resend verification email', resentOk: '✓ Sent!',
     wrongEmail: 'Wrong email? Go back and fix it',
     terms: 'By signing up you agree to our', termsLink: 'Terms', privacyLink: 'Privacy Policy',
+    staffTitle: 'New GetSuitel Staff Account', staffDesc: 'Property Manager or Financial Manager',
   },
   ar: {
     step0Title: '…أنا', step0Sub: 'اختر نوع حسابك للبدء',
@@ -35,12 +38,15 @@ const t = {
     passWeak: '٨ أحرف على الأقل', lang: 'EN', loading: 'جاري الإنشاء…',
     perMonth: '/شهر', popular: 'الأكثر شعبية',
     inviteLabel: 'رمز دعوة المنظمة', inviteHint: 'اطلب رمز الدعوة من مدير العقار.',
+    staffTokenLabel: 'رمز دعوة الموظف', staffTokenHint: 'الصق الرمز من بريد الدعوة.',
     verify: 'تحقق', inviteRequired: 'يرجى التحقق من رمز الدعوة أولاً',
-    invalidCode: 'رمز غير صالح',
+    staffTokenRequired: 'يرجى التحقق من رمز دعوة الموظف أولاً',
+    invalidCode: 'رمز غير صالح', invalidToken: 'الدعوة غير صالحة أو منتهية الصلاحية',
     didntReceive: 'لم يصل الإيميل؟ تحقق من مجلد الرسائل غير المرغوب فيها أو',
     resend: 'إعادة إرسال رابط التحقق', resentOk: '✓ تم الإرسال!',
     wrongEmail: 'بريد خاطئ؟ عدّل بياناتك',
     terms: 'بالتسجيل توافق على', termsLink: 'الشروط', privacyLink: 'سياسة الخصوصية',
+    staffTitle: 'GETSUITEL موظف جديد في', staffDesc: 'مدير عقارات أو مدير مالي',
   },
 }
 
@@ -49,6 +55,13 @@ export default function RegisterPage() {
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
+    // Auto-handle staff invitation link
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('staff_token')
+    if (token) {
+      setStaffToken(token)
+      setRole('staff')
+    }
   }, [])
   function toggleLang() {
     const next = lang === 'en' ? 'ar' : 'en'
@@ -59,11 +72,15 @@ export default function RegisterPage() {
   const [pilotCode, setPilotCode] = useState('')
   const [pilotError, setPilotError] = useState('')
   const [pilotLoading, setPilotLoading] = useState(false)
-  const [role, setRole] = useState<'owner'|'tenant'|'technician'>('owner')
+  const [role, setRole] = useState<'owner'|'tenant'|'technician'|'staff'>('owner')
   const [plan, setPlan] = useState('basic')
   const [inviteCode, setInviteCode] = useState('')
   const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
   const [inviteErr, setInviteErr] = useState('')
+  // Staff invitation state
+  const [staffToken, setStaffToken] = useState('')
+  const [staffInfo, setStaffInfo] = useState<{role:string;orgName:string;orgId:string;email:string}|null>(null)
+  const [staffTokenErr, setStaffTokenErr] = useState('')
   const [form, setForm] = useState({ name:'', email:'', password:'', org:'', phone:'' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -108,6 +125,19 @@ export default function RegisterPage() {
     setInviteOrg(data.org)
   }
 
+  async function verifyStaffToken(token?: string) {
+    const t = (token ?? staffToken).trim()
+    if (!t) return
+    setLoading(true); setStaffTokenErr('')
+    const res = await fetch(`/api/staff/validate?token=${encodeURIComponent(t)}`)
+    const data = await res.json()
+    setLoading(false)
+    if (!res.ok) { setStaffTokenErr(data.error || T.invalidToken); return }
+    setStaffInfo({ role: data.role, orgName: data.orgName, orgId: data.orgId, email: data.email })
+    // Pre-fill email from invitation
+    if (data.email) setForm(f => ({ ...f, email: data.email }))
+  }
+
   async function handleResend() {
     setResendLoading(true); setResendSent(false)
     const res = await fetch('/api/auth/resend-signup', {
@@ -128,7 +158,13 @@ export default function RegisterPage() {
     if ((role === 'tenant' || role === 'technician') && !inviteOrg) {
       setError(T.inviteRequired); return
     }
+    if (role === 'staff' && !staffInfo) {
+      setError(T.staffTokenRequired); return
+    }
     setLoading(true); setError('')
+
+    // For staff, use the role from the invitation token
+    const effectiveRole = role === 'staff' ? (staffInfo?.role ?? 'property_manager') : role
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -138,12 +174,13 @@ export default function RegisterPage() {
           email: form.email,
           password: form.password,
           name: form.name,
-          role,
+          role: effectiveRole,
           lang,
-          organization_id: inviteOrg?.id ?? null,
+          organization_id: role === 'staff' ? (staffInfo?.orgId ?? null) : (inviteOrg?.id ?? null),
           plan: role === 'owner' ? plan : null,
           org_name: role === 'owner' ? form.org : null,
           phone: form.phone,
+          staff_token: role === 'staff' ? staffToken : undefined,
         }),
       })
       const data = await res.json()
@@ -255,8 +292,9 @@ export default function RegisterPage() {
                   { role: 'owner', emoji: '🏢', title: lang==='ar'?'مالك عقار':'Property Owner', desc: lang==='ar'?'أدر عقاراتك وعقودك وفواتيرك':'Manage your properties, contracts, and invoices' },
                   { role: 'tenant', emoji: '🏠', title: lang==='ar'?'مستأجر':'Tenant', desc: lang==='ar'?'اعرض عقدك وادفع الإيجار وأبلغ عن الصيانة':'View your contract, pay rent, submit maintenance' },
                   { role: 'technician', emoji: '🔧', title: lang==='ar'?'فني صيانة':'Technician', desc: lang==='ar'?'اعرض أوامر العمل وحدّث حالة الإصلاح':'View work orders and update repair status' },
+                  { role: 'staff', emoji: '💼', title: T.staffTitle, desc: T.staffDesc },
                 ] as const).map(r => (
-                  <button key={r.role} type="button" onClick={() => setRole(r.role)}
+                  <button key={r.role} type="button" onClick={() => setRole(r.role as typeof role)}
                     className={`w-full text-start p-4 rounded-xl border-2 transition-all flex items-start gap-3 ${role===r.role ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
                     <span className="text-2xl">{r.emoji}</span>
                     <div>
@@ -349,6 +387,35 @@ export default function RegisterPage() {
                   <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full font-medium capitalize">{role}</span>
                 )}
               </div>
+
+              {/* Staff invitation token */}
+              {role === 'staff' && (
+                <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    {T.staffTokenLabel}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1 font-mono text-sm"
+                      placeholder="Paste your invitation token"
+                      value={staffToken}
+                      onChange={e => { setStaffToken(e.target.value); setStaffInfo(null); setStaffTokenErr('') }}
+                    />
+                    <button type="button" onClick={() => verifyStaffToken()} disabled={loading || !staffToken}
+                      className="btn-secondary px-3 text-sm whitespace-nowrap">
+                      {loading ? '...' : T.verify}
+                    </button>
+                  </div>
+                  {staffTokenErr && <div className="text-red-600 text-xs mt-1">{staffTokenErr}</div>}
+                  {staffInfo && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                      <span>✓</span>
+                      <span><strong>{staffInfo.orgName}</strong> — {staffInfo.role === 'property_manager' ? 'Property Manager' : 'Financial Manager'}</span>
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-400 mt-2">{T.staffTokenHint}</div>
+                </div>
+              )}
 
               {/* Invite code for tenant/technician */}
               {(role === 'tenant' || role === 'technician') && (

@@ -8,10 +8,12 @@ const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-passwo
 const ALWAYS_PUBLIC = ['/auth/logout']
 
 const ROLE_HOME: Record<string, string> = {
-  superadmin:  '/dashboard/admin',
-  owner:       '/dashboard/owner',
-  tenant:      '/dashboard/tenant',
-  technician:  '/dashboard/technician',
+  superadmin:        '/dashboard/admin',
+  owner:             '/dashboard/owner',
+  tenant:            '/dashboard/tenant',
+  technician:        '/dashboard/technician',
+  property_manager:  '/dashboard/owner',
+  financial_manager: '/dashboard/owner',
 }
 
 /** Copy Supabase cookies onto any redirect so refreshed tokens are never dropped */
@@ -96,7 +98,7 @@ export async function middleware(request: NextRequest) {
     const segment = path.split('/')[2]
     const allowed: Record<string, string[]> = {
       admin:       ['superadmin'],
-      owner:       ['superadmin', 'owner'],
+      owner:       ['superadmin', 'owner', 'property_manager', 'financial_manager'],
       tenant:      ['superadmin', 'tenant'],
       technician:  ['superadmin', 'technician'],
     }
