@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Owners' }
 
 const planColor: Record<string, string> = {
@@ -52,6 +53,8 @@ export default async function OwnersPage() {
         <div className="space-y-4">
           {(orgs ?? []).map(org => {
             const owner = org.profiles as { full_name: string; email: string; phone: string } | null
+            const isActive = org.subscription_status === 'active'
+            const expiresAt = org.subscription_expires_at
             const trialDays = org.trial_ends_at
               ? Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / 86400000)
               : null
@@ -65,9 +68,13 @@ export default async function OwnersPage() {
                     </div>
                     <div className="text-sm text-slate-500 mt-1">{owner?.full_name} · {owner?.email}</div>
                     {owner?.phone && <div className="text-xs text-slate-400">{owner.phone}</div>}
-                    {trialDays !== null && trialDays > 0 && org.subscription_status === 'trialing' && (
+                    {isActive && expiresAt ? (
+                      <div className="text-xs text-green-700 mt-1">
+                        Active until {new Date(expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </div>
+                    ) : trialDays !== null && trialDays > 0 && org.subscription_status === 'trialing' ? (
                       <div className="text-xs text-yellow-700 mt-1">Trial ends in {trialDays} days</div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`badge capitalize ${planColor[org.subscription_plan] ?? 'bg-slate-100 text-slate-600'}`}>
