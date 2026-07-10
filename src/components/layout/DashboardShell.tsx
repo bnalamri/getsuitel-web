@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types'
 import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
-  CreditCard, Wrench, HardHat, BarChart2, Settings, Bell,
+  CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
   ClipboardList, Calendar, Shield, AlertCircle,
 } from 'lucide-react'
@@ -28,6 +28,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/owners', icon:Shield, en:'Owners', ar:'الملاك' },
       { href:'/dashboard/admin/subscriptions', icon:CreditCard, en:'Subscriptions', ar:'الاشتراكات' },
       { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/admin/financial-report', icon:TrendingUp, en:'Financial', ar:'المالية' },
     ]},
     { en:'System', ar:'النظام', items:[
       { href:'/dashboard/admin/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -195,7 +196,8 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     settings:     {en:'Settings',ar:'الإعدادات'},
     subscription: {en:'Subscription',ar:'الاشتراك'},
     owners:       {en:'Owners',ar:'الملاك'},
-    subscriptions:{en:'Subscriptions',ar:'الاشتراكات'},
+    subscriptions:     {en:'Subscriptions',ar:'الاشتراكات'},
+    'financial-report':{en:'Financial Report',ar:'التقرير المالي'},
     notices:      {en:'Notices',ar:'الإشعارات'},
     orders:       {en:'Work Orders',ar:'أوامر العمل'},
     schedule:     {en:'Schedule',ar:'الجدول'},
