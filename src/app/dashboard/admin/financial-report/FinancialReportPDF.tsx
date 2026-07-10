@@ -1,9 +1,13 @@
 'use client'
-import { TrendingUp, Download, BarChart2, CreditCard, Receipt } from 'lucide-react'
+import { TrendingUp, Download, BarChart2, CreditCard, Receipt, Layers } from 'lucide-react'
 
-type Org     = { id: string; name: string; subscription_plan: string; subscription_status: string }
-type Invoice = { organization_id: string; amount: number; currency: string; status: string; type: string; created_at: string; due_date: string }
+type Org        = { id: string; name: string; subscription_plan: string; subscription_status: string; subscription_expires_at?: string }
+type Invoice    = { organization_id: string; amount: number; currency: string; status: string; type: string; created_at: string; due_date: string }
 type PayReceipt = { organization_id: string; amount: number; method: string; status: string; confirmed_at: string }
+type Proof      = { plan: string; status: string; submitted_at: string }
+
+// Plan pricing (OMR/month) — matches src/lib/utils/plans.ts
+const PLAN_PRICE: Record<string, number> = { basic: 29, pro: 79, enterprise: 199 }
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
@@ -23,11 +27,12 @@ const PLAN_COLOR: Record<string, string> = {
 }
 
 export default function FinancialReportPDF({
-  orgs, invoices, receipts, printDate,
+  orgs, invoices, receipts, proofs, printDate,
 }: {
   orgs: Org[]
   invoices: Invoice[]
   receipts: PayReceipt[]
+  proofs: Proof[]
   printDate: string
 }) {
   // ── KPIs ────────────────────────────────────────────────────────────────────
@@ -82,6 +87,42 @@ export default function FinancialReportPDF({
     byType[i.type].amount += Number(i.amount)
   })
 
+  // ── Subscription metrics ────────────────────────────────────────────────────
+  // MRR = active orgs × their plan price
+  const activeOrgs  = orgs.filter(o => o.subscription_status === 'active')
+  const mrr         = activeOrgs.reduce((s, o) => s + (PLAN_PRICE[o.subscription_plan] ?? 0), 0)
+  const arr         = mrr * 12
+
+  // Revenue received = reviewed proofs × plan price (each proof ≈ 1 month payment)
+  const reviewedProofs  = proofs.filter(p => p.status === 'reviewed')
+  const pendingProofs   = proofs.filter(p => p.status === 'pending')
+  const subRevenueReceived = reviewedProofs.reduce((s, p) => s + (PLAN_PRICE[p.plan] ?? 0), 0)
+  const subRevenuePending  = pendingProofs.reduce((s,  p) => s + (PLAN_PRICE[p.plan] ?? 0), 0)
+
+  // Per-plan breakdown
+  const planBreakdown = ['basic', 'pro', 'enterprise'].map(plan => {
+    const planOrgs    = orgs.filter(o => o.subscription_plan === plan)
+    const activePlanOrgs = planOrgs.filter(o => o.subscription_status === 'active')
+    return {
+      plan,
+      total:  planOrgs.length,
+      active: activePlanOrgs.length,
+      mrr:    activePlanOrgs.length * (PLAN_PRICE[plan] ?? 0),
+      price:  PLAN_PRICE[plan] ?? 0,
+    }
+  })
+
+  // Proof submissions by month (last 6)
+  const subByMonth = last6.map(m => {
+    const mProofs = proofs.filter(p => p.submitted_at?.startsWith(m.key))
+    return {
+      ...m,
+      submitted: mProofs.length,
+      reviewed:  mProofs.filter(p => p.status === 'reviewed').length,
+      revenue:   mProofs.filter(p => p.status === 'reviewed').reduce((s, p) => s + (PLAN_PRICE[p.plan] ?? 0), 0),
+    }
+  })
+
   // ── PDF export ──────────────────────────────────────────────────────────────
   function handleSavePDF() {
     const orgRows = byOrg.map((o, idx) => `
@@ -117,6 +158,23 @@ export default function FinancialReportPDF({
         <td style="text-transform:capitalize">${type}</td>
         <td style="text-align:right">${d.count}</td>
         <td style="text-align:right;font-weight:600">${fmt(d.amount)}</td>
+      </tr>`).join('')
+
+    const planRows = planBreakdown.map(p => `
+      <tr>
+        <td style="text-transform:capitalize;font-weight:600">${p.plan}</td>
+        <td style="text-align:right">${p.price} OMR/mo</td>
+        <td style="text-align:right">${p.total}</td>
+        <td style="text-align:right;color:#15803d;font-weight:600">${p.active}</td>
+        <td style="text-align:right;font-weight:700;color:#1B3A6B">${p.mrr.toLocaleString()} OMR</td>
+      </tr>`).join('')
+
+    const subMonthRows = subByMonth.map(m => `
+      <tr>
+        <td style="white-space:nowrap">${m.label}</td>
+        <td style="text-align:right">${m.submitted}</td>
+        <td style="text-align:right;color:#15803d;font-weight:600">${m.reviewed}</td>
+        <td style="text-align:right;font-weight:600">${m.revenue.toLocaleString()} OMR</td>
       </tr>`).join('')
 
     const html = `<!DOCTYPE html>
@@ -220,6 +278,45 @@ export default function FinancialReportPDF({
           <tr><td>Overdue amount (OMR)</td><td style="text-align:right;color:#b91c1c;font-weight:600">${fmt(totalOverdue)}</td></tr>
           <tr><td>Draft (unsent) invoices</td><td style="text-align:right">${invoices.filter(i => i.status === 'draft').length}</td></tr>
           <tr><td>Total organizations</td><td style="text-align:right;font-weight:600">${orgs.length}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="page-break-before:always"></div>
+
+  <h3>Platform Subscription Revenue</h3>
+  <div class="kpi-grid" style="margin-bottom:16px">
+    <div class="kpi"><div class="kpi-value">${mrr.toLocaleString()}</div><div class="kpi-label">MRR (OMR)</div></div>
+    <div class="kpi"><div class="kpi-value green">${arr.toLocaleString()}</div><div class="kpi-label">ARR (OMR)</div></div>
+    <div class="kpi"><div class="kpi-value">${subRevenueReceived.toLocaleString()}</div><div class="kpi-label">Payments Received (OMR)</div></div>
+    <div class="kpi"><div class="kpi-value orange">${subRevenuePending.toLocaleString()}</div><div class="kpi-label">Pending Payments (OMR)</div></div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h3>Revenue by Plan</h3>
+      <table>
+        <thead><tr><th>Plan</th><th class="r">Price</th><th class="r">Total Orgs</th><th class="r">Active</th><th class="r">MRR (OMR)</th></tr></thead>
+        <tbody>${planRows}</tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Subscription Payments by Month</h3>
+      <table>
+        <thead><tr><th>Month</th><th class="r">Submitted</th><th class="r">Approved</th><th class="r">Revenue (OMR)</th></tr></thead>
+        <tbody>${subMonthRows.length ? subMonthRows : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;font-style:italic;padding:10px">No data</td></tr>'}</tbody>
+      </table>
+
+      <h3>Subscription Status Summary</h3>
+      <table>
+        <thead><tr><th>Status</th><th class="r">Count</th></tr></thead>
+        <tbody>
+          ${['active','trialing','past_due','canceled'].map(s => `
+          <tr>
+            <td style="text-transform:capitalize">${s.replace('_',' ')}</td>
+            <td style="text-align:right;font-weight:600">${orgs.filter(o => o.subscription_status === s).length}</td>
+          </tr>`).join('')}
         </tbody>
       </table>
     </div>
@@ -413,6 +510,101 @@ export default function FinancialReportPDF({
               <div className="text-xs text-red-500">{invoices.filter(i => i.status === 'overdue').length} invoice{invoices.filter(i => i.status === 'overdue').length !== 1 ? 's' : ''}</div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Subscription Revenue section ─────────────────────────────────── */}
+      <div>
+        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <Layers size={18} className="text-navy-700" />Platform Subscription Revenue
+        </h3>
+
+        {/* Subscription KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="card p-4 border-t-2 border-navy-700">
+            <div className="text-2xl font-black text-navy-700">{mrr.toLocaleString()} OMR</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Monthly Recurring Revenue</div>
+          </div>
+          <div className="card p-4 border-t-2 border-emerald-500">
+            <div className="text-2xl font-black text-emerald-700">{arr.toLocaleString()} OMR</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Annual Recurring Revenue</div>
+          </div>
+          <div className="card p-4 border-t-2 border-blue-400">
+            <div className="text-2xl font-black text-blue-700">{subRevenueReceived.toLocaleString()} OMR</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Payments Received</div>
+          </div>
+          <div className="card p-4 border-t-2 border-amber-400">
+            <div className="text-2xl font-black text-amber-600">{subRevenuePending.toLocaleString()} OMR</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Pending Payments</div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Plan breakdown table */}
+          <div className="card overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+              <CreditCard size={15} className="text-slate-400" />
+              <h4 className="font-semibold text-slate-900">Revenue by Plan</h4>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-4 py-3 text-slate-600 font-semibold">Plan</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Price/mo</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Total</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Active</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">MRR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {planBreakdown.map(p => (
+                  <tr key={p.plan} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <span className={`badge capitalize ${PLAN_COLOR[p.plan] ?? 'bg-slate-100 text-slate-600'}`}>{p.plan}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-500 tabular-nums">{p.price} OMR</td>
+                    <td className="px-4 py-3 text-right text-slate-700">{p.total}</td>
+                    <td className="px-4 py-3 text-right text-emerald-700 font-semibold">{p.active}</td>
+                    <td className="px-4 py-3 text-right font-bold text-navy-700 tabular-nums">{p.mrr.toLocaleString()} OMR</td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-50 font-semibold">
+                  <td className="px-4 py-3 text-slate-700" colSpan={4}>Total MRR</td>
+                  <td className="px-4 py-3 text-right font-black text-navy-700 tabular-nums">{mrr.toLocaleString()} OMR</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Subscription payments by month */}
+          <div className="card overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+              <TrendingUp size={15} className="text-slate-400" />
+              <h4 className="font-semibold text-slate-900">Subscription Payments by Month</h4>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-4 py-3 text-slate-600 font-semibold">Month</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Submitted</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Approved</th>
+                  <th className="text-right px-4 py-3 text-slate-600 font-semibold">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {subByMonth.map(m => (
+                  <tr key={m.key} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-700">{m.label}</td>
+                    <td className="px-4 py-3 text-right text-slate-500">{m.submitted || '—'}</td>
+                    <td className="px-4 py-3 text-right text-emerald-700 font-semibold">{m.reviewed || '—'}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
+                      {m.revenue > 0 ? `${m.revenue.toLocaleString()} OMR` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
