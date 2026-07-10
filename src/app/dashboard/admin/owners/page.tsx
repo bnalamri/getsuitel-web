@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
+import { unstable_noStore as noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Owners' }
@@ -18,6 +19,7 @@ const statusColor: Record<string, string> = {
 }
 
 export default async function OwnersPage() {
+  noStore()
   const admin = createAdminClient()
 
   const { data: orgs } = await admin

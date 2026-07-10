@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { CreditCard, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { unstable_noStore as noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Subscriptions' }
@@ -18,6 +19,7 @@ const statusColor: Record<string, string> = {
 }
 
 export default async function SubscriptionsPage() {
+  noStore()
   const admin = createAdminClient()
 
   const { data: orgs } = await admin
