@@ -267,7 +267,7 @@ export default function FinancialReportPDF({
       هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
     </div>
     <div dir="ltr" style="font-size:9px;color:#64748b;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">
-      Printed by: <strong>${printerName}</strong> &nbsp;·&nbsp; ${printDate} &nbsp;·&nbsp; GetSuitel Platform Report
+      Printed by: <strong style="unicode-bidi:isolate">${printerName}</strong> &nbsp;·&nbsp; <span style="unicode-bidi:isolate">${printDate}</span> &nbsp;·&nbsp; GetSuitel Platform Report
     </div>
   </div>
 
