@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -55,10 +56,12 @@ async function purgeOrganization(admin: ReturnType<typeof createAdminClient>, or
 }
 
 export async function GET(req: Request) {
-  // Verify cron secret
+  // Allow cron job via secret OR authenticated superadmin
   const authHeader = req.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
+  if (!isCron) {
+    const auth = await requireSuperadmin()
+    if (!auth.ok) return auth.response
   }
 
   const admin = createAdminClient()

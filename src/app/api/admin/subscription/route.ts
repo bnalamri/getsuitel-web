@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -72,14 +73,8 @@ async function sendCancellationEmailToAdmin(orgName: string, ownerName: string, 
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || profile.role !== 'super_admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
 
   const { orgId, plan, status, maxUnits, maxTenants, maxProperties } = await req.json()
   if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })

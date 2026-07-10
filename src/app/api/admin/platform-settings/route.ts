@@ -1,7 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/api-auth'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
   try {
     const admin = createAdminClient()
     const { data, error } = await admin.from('platform_settings').select('key, value')
@@ -15,6 +19,9 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
   try {
     const body = await req.json()
     const admin = createAdminClient()
