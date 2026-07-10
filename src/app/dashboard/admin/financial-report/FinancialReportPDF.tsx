@@ -47,6 +47,9 @@ export default function FinancialReportPDF({
   // Primary currency (most invoices) — used for single KPI display
   const primary = byCurrency.sort((a, b) => b.count - a.count)[0]
 
+  // Total overdue across all currencies (used as an alert indicator)
+  const totalOverdue = byCurrency.reduce((s, c) => s + c.overdue, 0)
+
   // ── By org ──────────────────────────────────────────────────────────────────
   const byOrg = orgs.map(org => {
     const orgInv      = invoices.filter(i => i.organization_id === org.id)
