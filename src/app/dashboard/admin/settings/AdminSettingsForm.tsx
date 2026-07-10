@@ -40,11 +40,16 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ default_currency: platformCurrency }),
       })
-      if (!res.ok) { const j = await res.json(); setPsError(j.error ?? 'Failed to save'); return }
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`
+        try { const j = await res.json(); errMsg = j.error ?? errMsg } catch { /* non-JSON response */ }
+        setPsError(errMsg)
+        return
+      }
       setPsSaved(true)
       setTimeout(() => setPsSaved(false), 3000)
-    } catch {
-      setPsError('Failed to save settings')
+    } catch (e) {
+      setPsError('Network error: ' + String(e))
     } finally {
       setPsLoading(false)
     }
