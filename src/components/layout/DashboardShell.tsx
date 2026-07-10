@@ -132,7 +132,8 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
             )}
             <div className="space-y-0.5">
               {group.items.map(item => {
-                const active = pathname === item.href || (item.href !== '/dashboard/'+profile.role && pathname.startsWith(item.href))
+                const roleHome = profile.role === 'superadmin' ? '/dashboard/admin' : '/dashboard/' + profile.role
+                const active = pathname === item.href || (item.href !== roleHome && pathname.startsWith(item.href))
                 return (
                   <Link key={item.href} href={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
