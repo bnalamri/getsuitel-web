@@ -238,13 +238,13 @@ export default async function ReportsPage() {
       <div className="hidden print:block mb-4">
         <h2 className="text-xl font-bold text-slate-900">GetSuitel Management Reports</h2>
         <p className="text-xs text-slate-500 mt-0.5">Generated: {printDate} &nbsp;·&nbsp; Printed by: <strong>{printerName}</strong></p>
-        <div className="mt-3 border border-red-500 rounded-md px-4 py-2 bg-red-50">
+        <div className="mt-3 border border-red-500 rounded-md px-4 py-2 bg-red-50 text-center">
           <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</p>
           <p className="text-xs text-red-800 mt-1 leading-relaxed">
             This document is intended solely for authorised internal use within the organisation.
             Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
           </p>
-          <p dir="rtl" className="text-xs text-red-800 mt-1 leading-relaxed text-center">
+          <p className="text-xs text-red-800 mt-1 leading-relaxed">
             هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
           </p>
         </div>
