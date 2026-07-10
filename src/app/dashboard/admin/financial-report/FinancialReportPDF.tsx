@@ -119,6 +119,17 @@ export default function FinancialReportPDF({
     subPendingByCurrency[c] = (subPendingByCurrency[c] ?? 0) + Number(p.amount ?? 0)
   })
 
+  // ── PDF scalar aggregates (primary currency) ────────────────────────────────
+  // Used in the PDF template which needs single values per section
+  const totalInvoiced    = primary?.invoiced    ?? 0
+  const totalCollected   = primary?.collected   ?? 0
+  const totalOutstanding = primary?.outstanding ?? 0
+  const collectionRate   = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0
+
+  // Subscription revenue scalars (USD first, fallback to sum)
+  const subRevenueReceived = subRevByCurrency['USD'] ?? Object.values(subRevByCurrency).reduce((s, v) => s + v, 0)
+  const subRevenuePending  = subPendingByCurrency['USD'] ?? Object.values(subPendingByCurrency).reduce((s, v) => s + v, 0)
+
   // Per-plan breakdown (MRR uses USD plan prices)
   const planBreakdown = ['basic', 'pro', 'enterprise'].map(plan => {
     const planOrgs       = orgs.filter(o => o.subscription_plan === plan)

@@ -1,14 +1,54 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Save, Shield, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe } from 'lucide-react'
+
+const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
+const CURRENCY_LABELS: Record<string, string> = {
+  OMR:'OMR — Omani Rial', SAR:'SAR — Saudi Riyal', AED:'AED — UAE Dirham',
+  KWD:'KWD — Kuwaiti Dinar', QAR:'QAR — Qatari Riyal', BHD:'BHD — Bahraini Dinar',
+  USD:'USD — US Dollar', GBP:'GBP — British Pound', EUR:'EUR — Euro',
+}
 
 export default function AdminSettingsForm({ profile }: { profile: Record<string, unknown> | null }) {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const router = useRouter()
   const [fullName, setFullName] = useState((profile?.full_name as string) ?? '')
+
+  // Platform settings
+  const [platformCurrency, setPlatformCurrency] = useState('OMR')
+  const [psLoading, setPsLoading] = useState(false)
+  const [psSaved, setPsSaved] = useState(false)
+  const [psError, setPsError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/admin/platform-settings')
+      .then(r => r.json())
+      .then(d => { if (d.default_currency) setPlatformCurrency(d.default_currency) })
+      .catch(() => {})
+  }, [])
+
+  async function handlePlatformSettings(e: React.FormEvent) {
+    e.preventDefault()
+    setPsLoading(true)
+    setPsError('')
+    try {
+      const res = await fetch('/api/admin/platform-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ default_currency: platformCurrency }),
+      })
+      if (!res.ok) { const j = await res.json(); setPsError(j.error ?? 'Failed to save'); return }
+      setPsSaved(true)
+      setTimeout(() => setPsSaved(false), 3000)
+    } catch {
+      setPsError('Failed to save settings')
+    } finally {
+      setPsLoading(false)
+    }
+  }
 
   // Password change state
   const [pwLoading, setPwLoading]   = useState(false)
@@ -48,6 +88,30 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
 
   return (
     <div className="space-y-6">
+      {/* Platform Settings */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Globe size={16} className="text-navy-700" />
+          <h3 className="font-semibold text-slate-900">Platform Settings</h3>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">Default settings inherited by new organizations on signup.</p>
+        <form onSubmit={handlePlatformSettings} className="space-y-4">
+          <div>
+            <label className="label">Default Currency for New Organizations</label>
+            <select className="input" value={platformCurrency} onChange={e => setPlatformCurrency(e.target.value)}>
+              {CURRENCIES.map(c => <option key={c} value={c}>{CURRENCY_LABELS[c]}</option>)}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">New owners will have this currency pre-selected when they set up their organization. They can change it in their own settings.</p>
+          </div>
+          {psError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2.5 rounded-lg">{psError}</div>}
+          {psSaved && <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-3 py-2.5 rounded-lg">Platform settings saved!</div>}
+          <button type="submit" disabled={psLoading} className="btn-primary flex items-center gap-2">
+            {psLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {psSaved ? 'Saved!' : 'Save Platform Settings'}
+          </button>
+        </form>
+      </div>
+
       {/* Profile */}
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-4">

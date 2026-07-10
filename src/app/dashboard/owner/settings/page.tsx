@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import OrgSettingsForm from './OrgSettingsForm'
 import ProfileSettingsForm from './ProfileSettingsForm'
 import PaymentSettingsForm from './PaymentSettingsForm'
@@ -14,6 +14,14 @@ export default async function SettingsPage() {
   const { data: org } = profile?.organization_id
     ? await supabase.from('organizations').select('*').eq('id', profile.organization_id).single()
     : { data: null }
+
+  // Fetch platform default currency (used as fallback for new orgs)
+  let platformCurrency = 'OMR'
+  try {
+    const admin = createAdminClient()
+    const { data: ps } = await admin.from('platform_settings').select('value').eq('key', 'default_currency').single()
+    if (ps?.value) platformCurrency = ps.value
+  } catch { /* table may not exist yet */ }
 
   // Always use auth user email; fall back to registration metadata for new users
   const displayProfile = {
@@ -32,7 +40,7 @@ export default async function SettingsPage() {
       </div>
 
       <ProfileSettingsForm profile={displayProfile} />
-      <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} />
+      <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} platformCurrency={platformCurrency} />
       <PaymentSettingsForm org={org} orgId={profile?.organization_id ?? null} />
     </div>
   )

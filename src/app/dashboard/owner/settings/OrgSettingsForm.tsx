@@ -6,7 +6,7 @@ import { Loader2, Save, Copy, Check } from 'lucide-react'
 import { DateFormatContext, type DateFormat } from '@/contexts/DateFormatContext'
 import { useContext } from 'react'
 
-export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<string, unknown> | null; userId: string; orgId: string | null }) {
+export default function OrgSettingsForm({ org, userId, orgId, platformCurrency = 'OMR' }: { org: Record<string, unknown> | null; userId: string; orgId: string | null; platformCurrency?: string }) {
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -24,7 +24,7 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
     name: (org?.name as string) ?? '',
     name_ar: (org?.name_ar as string) ?? '',
     date_format: (org?.date_format as DateFormat) ?? dateFormat,
-    default_currency: (org?.default_currency as string) ?? 'OMR',
+    default_currency: (org?.default_currency as string) ?? platformCurrency,
   })
 
   async function handleSubmit(e: React.FormEvent) {
