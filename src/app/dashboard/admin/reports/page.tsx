@@ -1,29 +1,52 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { BarChart2, TrendingUp } from 'lucide-react'
+import { BarChart2, TrendingUp, CreditCard } from 'lucide-react'
+import { unstable_noStore as noStore } from 'next/cache'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Reports' }
 
 export default async function AdminReportsPage() {
+  noStore()
   const admin = createAdminClient()
 
-  const [orgs, props, units, tenants, contracts, maintenance] = await Promise.all([
-    admin.from('organizations').select('subscription_plan, subscription_status, created_at'),
+  const [orgs, props, units, tenants, contracts, maintenance, proofs] = await Promise.all([
+    admin.from('organizations').select('subscription_plan, subscription_status, subscription_expires_at, created_at'),
     admin.from('properties').select('id, created_at'),
     admin.from('units').select('id, status'),
     admin.from('tenants').select('id, created_at'),
     admin.from('contracts').select('id, status'),
     admin.from('maintenance_requests').select('id, status, priority'),
+    admin.from('subscription_payment_proofs').select('id, status, submitted_at'),
   ])
 
   const orgList = orgs.data ?? []
   const unitList = units.data ?? []
   const contractList = contracts.data ?? []
   const maintList = maintenance.data ?? []
+  const proofList = proofs.data ?? []
 
   // Plan breakdown
   const byPlan = orgList.reduce((acc: Record<string, number>, o) => {
     acc[o.subscription_plan] = (acc[o.subscription_plan] ?? 0) + 1; return acc
   }, {})
+
+  // Subscription status breakdown
+  const bySubStatus = orgList.reduce((acc: Record<string, number>, o) => {
+    acc[o.subscription_status] = (acc[o.subscription_status] ?? 0) + 1; return acc
+  }, {})
+
+  // Expiring within 30 days
+  const in30days = new Date(Date.now() + 30 * 86400000)
+  const expiringSoon = orgList.filter(o =>
+    o.subscription_status === 'active' &&
+    o.subscription_expires_at &&
+    new Date(o.subscription_expires_at) <= in30days &&
+    new Date(o.subscription_expires_at) > new Date()
+  ).length
+
+  // Payment proofs
+  const pendingProofs  = proofList.filter(p => p.status === 'pending').length
+  const reviewedProofs = proofList.filter(p => p.status === 'reviewed').length
 
   // Unit status breakdown
   const byUnitStatus = unitList.reduce((acc: Record<string, number>, u) => {
@@ -128,6 +151,74 @@ export default async function AdminReportsPage() {
               )
             })}
             {Object.keys(byPriority).length === 0 && <div className="text-slate-400 text-sm text-center py-4">No data</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription section */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Status breakdown */}
+        <div className="card p-5">
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={16}/>Subscription Status</h3>
+          <div className="space-y-3">
+            {[
+              { key: 'active',   label: 'Active',   color: 'bg-green-500' },
+              { key: 'trialing', label: 'Trialing', color: 'bg-yellow-400' },
+              { key: 'past_due', label: 'Past Due', color: 'bg-red-500' },
+              { key: 'canceled', label: 'Canceled', color: 'bg-slate-300' },
+            ].map(({ key, label, color }) => {
+              const count = bySubStatus[key] ?? 0
+              return (
+                <div key={key}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-700">{label}</span>
+                    <span className="font-semibold">{count}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full">
+                    <div className={`h-full rounded-full ${color}`}
+                      style={{ width: orgList.length > 0 ? `${(count / orgList.length) * 100}%` : '0%' }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Expiry & renewals */}
+        <div className="card p-5">
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={16}/>Renewals</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+              <span className="text-sm text-amber-800 font-medium">Expiring in 30 days</span>
+              <span className="text-2xl font-black text-amber-700">{expiringSoon}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+              <span className="text-sm text-green-800 font-medium">Active subscriptions</span>
+              <span className="text-2xl font-black text-green-700">{bySubStatus['active'] ?? 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
+              <span className="text-sm text-red-800 font-medium">Past due</span>
+              <span className="text-2xl font-black text-red-700">{bySubStatus['past_due'] ?? 0}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment proofs */}
+        <div className="card p-5">
+          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={16}/>Payment Proofs</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+              <span className="text-sm text-amber-800 font-medium">Pending review</span>
+              <span className="text-2xl font-black text-amber-700">{pendingProofs}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+              <span className="text-sm text-green-800 font-medium">Reviewed & approved</span>
+              <span className="text-2xl font-black text-green-700">{reviewedProofs}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+              <span className="text-sm text-slate-600 font-medium">Total submitted</span>
+              <span className="text-2xl font-black text-slate-700">{proofList.length}</span>
+            </div>
           </div>
         </div>
       </div>
