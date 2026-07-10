@@ -76,9 +76,15 @@ export async function POST(req: Request) {
     }).catch(() => {}) // don't block registration if email fails
   }
 
+  // For staff roles: the DB trigger doesn't handle property_manager/financial_manager,
+  // so explicitly set organization_id on the profile after a brief delay for trigger to run.
+  if (['property_manager', 'financial_manager'].includes(role) && organization_id) {
+    await new Promise(r => setTimeout(r, 600))
+    await admin.from('profiles').update({ organization_id }).eq('id', userId)
+  }
+
   // Mark staff invitation as accepted
   if (staff_token) {
-    const admin = createAdminClient()
     await admin
       .from('staff_invitations')
       .update({ accepted_at: new Date().toISOString() })
