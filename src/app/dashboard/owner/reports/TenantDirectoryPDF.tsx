@@ -20,9 +20,11 @@ const STATUS_COLORS: Record<string, string> = {
 export default function TenantDirectoryPDF({
   tenants,
   printDate,
+  printerName = 'Unknown',
 }: {
   tenants: AnyRow[]
   printDate: string
+  printerName?: string
 }) {
   const dash = '—'
 
@@ -124,7 +126,17 @@ export default function TenantDirectoryPDF({
     </tbody>
   </table>
 
-  <div class="footer">GetSuitel Property Management &nbsp;•&nbsp; Confidential &nbsp;•&nbsp; ${printDate}</div>
+  <div style="margin-top:24px;border:1.5px solid #dc2626;border-radius:6px;padding:10px 14px;background:#fff5f5;">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;letter-spacing:0.05em;">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</div>
+    <div style="font-size:9px;color:#7f1d1d;margin-top:4px;line-height:1.6;">
+      This document is intended solely for authorised internal use within the organisation.
+      Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.<br/>
+      <span dir="rtl">هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.</span>
+    </div>
+    <div style="font-size:9px;color:#64748b;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">
+      Printed by: <strong>${printerName}</strong> &nbsp;·&nbsp; ${printDate} &nbsp;·&nbsp; GetSuitel Property Management
+    </div>
+  </div>
 
   <script>
     window.onload = function() { window.print(); }

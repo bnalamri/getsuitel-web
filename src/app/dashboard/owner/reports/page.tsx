@@ -83,7 +83,7 @@ export default async function ReportsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, full_name').eq('id', user.id).single()
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
@@ -220,6 +220,7 @@ export default async function ReportsPage() {
   }
 
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+  const printerName = (profile?.full_name as string) || user.email || 'Unknown'
   const dash = '—'
 
   return (
@@ -234,9 +235,17 @@ export default async function ReportsPage() {
         </div>
         <PrintButton />
       </div>
-      <div className="hidden print:block mb-2">
+      <div className="hidden print:block mb-4">
         <h2 className="text-xl font-bold text-slate-900">GetSuitel Management Reports</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Generated: {printDate}</p>
+        <p className="text-xs text-slate-500 mt-0.5">Generated: {printDate} &nbsp;·&nbsp; Printed by: <strong>{printerName}</strong></p>
+        <div className="mt-3 border border-red-500 rounded-md px-4 py-2 bg-red-50">
+          <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</p>
+          <p className="text-xs text-red-800 mt-1 leading-relaxed">
+            This document is intended solely for authorised internal use within the organisation.
+            Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.<br />
+            <span dir="rtl">هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.</span>
+          </p>
+        </div>
       </div>
 
       {/* 1. KPI Summary */}
@@ -695,7 +704,7 @@ export default async function ReportsPage() {
       </div>
 
       {/* 10. Tenant Directory */}
-      <TenantDirectoryPDF tenants={tenants} printDate={printDate} />
+      <TenantDirectoryPDF tenants={tenants} printDate={printDate} printerName={printerName} />
 
       {/* Print footer */}
       <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">

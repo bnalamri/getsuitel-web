@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
 import FinancialReportPDF from './FinancialReportPDF'
 
@@ -7,6 +7,13 @@ export const metadata = { title: 'Financial Report' }
 
 export default async function FinancialReportPage() {
   noStore()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: adminProfile } = user
+    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    : { data: null }
+  const printerName = (adminProfile?.full_name as string) || user?.email || 'Unknown'
+
   const admin = createAdminClient()
 
   const [orgsRes, invoicesRes, receiptsRes, proofsRes] = await Promise.all([
@@ -27,6 +34,7 @@ export default async function FinancialReportPage() {
       receipts={receiptsRes.data ?? []}
       proofs={proofsRes.data ?? []}
       printDate={printDate}
+      printerName={printerName}
     />
   )
 }
