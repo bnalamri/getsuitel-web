@@ -46,7 +46,7 @@ const t = {
     resend: 'إعادة إرسال رابط التحقق', resentOk: '✓ تم الإرسال!',
     wrongEmail: 'بريد خاطئ؟ عدّل بياناتك',
     terms: 'بالتسجيل توافق على', termsLink: 'الشروط', privacyLink: 'سياسة الخصوصية',
-    staffTitle: 'GETSUITEL موظف جديد في', staffDesc: 'مدير عقارات أو مدير مالي',
+    staffTitle: 'موظف جديد في GETSUITEL', staffDesc: 'مدير عقارات أو مدير مالي',
   },
 }
 
