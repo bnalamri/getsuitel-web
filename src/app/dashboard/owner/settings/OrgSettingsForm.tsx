@@ -24,6 +24,7 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
     name: (org?.name as string) ?? '',
     name_ar: (org?.name_ar as string) ?? '',
     date_format: (org?.date_format as DateFormat) ?? dateFormat,
+    default_currency: (org?.default_currency as string) ?? 'OMR',
   })
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,6 +58,21 @@ export default function OrgSettingsForm({ org, userId, orgId }: { org: Record<st
             <option value="mm/dd/yyyy">MM/DD/YYYY — e.g. 07/25/2026</option>
             <option value="yyyy-mm-dd">YYYY-MM-DD — e.g. 2026-07-25</option>
           </select>
+        </div>
+        <div>
+          <label className="label">Default Currency</label>
+          <select className="input" value={form.default_currency} onChange={e => setForm(f => ({ ...f, default_currency: e.target.value }))}>
+            <option value="OMR">OMR — Omani Rial</option>
+            <option value="SAR">SAR — Saudi Riyal</option>
+            <option value="AED">AED — UAE Dirham</option>
+            <option value="KWD">KWD — Kuwaiti Dinar</option>
+            <option value="QAR">QAR — Qatari Riyal</option>
+            <option value="BHD">BHD — Bahraini Dinar</option>
+            <option value="USD">USD — US Dollar</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="EUR">EUR — Euro</option>
+          </select>
+          <p className="text-xs text-slate-400 mt-1">Used as the default currency for invoices and financial reports.</p>
         </div>
         {org && (
           <div className="grid grid-cols-2 gap-4 text-sm">

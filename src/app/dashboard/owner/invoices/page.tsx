@@ -26,6 +26,9 @@ export default async function InvoicesPage() {
 
   const admin = createAdminClient()
 
+  const { data: org } = await supabase.from('organizations').select('default_currency').eq('id', orgId).single()
+  const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
+
   const [invoicesRes, tenantsRes, unitsRes] = await Promise.all([
     supabase.from('invoices').select('*, tenants(full_name), units(unit_number, properties(name))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     admin.from('tenants').select('id, full_name, email, contracts(unit_id, status)').eq('organization_id', orgId).order('full_name'),
@@ -46,7 +49,7 @@ export default async function InvoicesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
           <p className="text-slate-500 text-sm mt-0.5">{invoices.length} invoices</p>
         </div>
-        <AddInvoiceForm orgId={orgId} tenants={tenants} units={units as never} />
+        <AddInvoiceForm orgId={orgId} tenants={tenants} units={units as never} defaultCurrency={defaultCurrency} />
       </div>
 
       {/* Summary cards */}

@@ -11,14 +11,16 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const formData = await req.formData()
-  const file          = formData.get('file') as File | null
+  const file            = formData.get('file') as File | null
   const organization_id = formData.get('organization_id') as string
-  const owner_email   = formData.get('owner_email') as string
-  const owner_name    = formData.get('owner_name') as string
-  const plan          = formData.get('plan') as string
-  const notes         = (formData.get('notes') as string) || null
+  const owner_email     = formData.get('owner_email') as string
+  const owner_name      = formData.get('owner_name') as string
+  const plan            = formData.get('plan') as string
+  const amount          = Number(formData.get('amount') ?? 0)
+  const currency        = (formData.get('currency') as string) || 'USD'
+  const notes           = (formData.get('notes') as string) || null
 
-  if (!organization_id || !file)
+  if (!organization_id || !file || !amount)
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
 
   const admin = createAdminClient()
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
   // Insert DB record
   const { data: proof, error } = await admin
     .from('subscription_payment_proofs')
-    .insert({ organization_id, owner_email, owner_name, plan, receipt_url: publicUrl, notes })
+    .insert({ organization_id, owner_email, owner_name, plan, amount, currency, receipt_url: publicUrl, notes })
     .select()
     .single()
 
@@ -74,6 +76,7 @@ export async function POST(req: Request) {
     <strong>Organization:</strong> ${orgName}<br>
     <strong>Owner:</strong> ${owner_name} (${owner_email})<br>
     <strong>Plan:</strong> ${planLabel}<br>
+    <strong>Amount Paid:</strong> ${amount} ${currency}<br>
     ${notes ? `<strong>Notes:</strong> ${notes}<br>` : ''}
   </div>
   <div style="margin:24px 0">

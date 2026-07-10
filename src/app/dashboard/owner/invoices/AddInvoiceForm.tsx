@@ -14,7 +14,7 @@ function activeUnitForTenant(tenant: Tenant | undefined, units: Unit[]): string 
   return active?.unit_id ?? units[0]?.id ?? ''
 }
 
-export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: string; tenants: Tenant[]; units: Unit[] }) {
+export default function AddInvoiceForm({ orgId, tenants, units, defaultCurrency = 'OMR' }: { orgId: string; tenants: Tenant[]; units: Unit[]; defaultCurrency?: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,13 +25,13 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
   const initialForm = {
     tenant_id: firstTenant?.id ?? '',
     unit_id: activeUnitForTenant(firstTenant, units),
-    type: 'rent', amount: '', currency: 'OMR', due_date: today, status: 'sent', notes: '',
+    type: 'rent', amount: '', currency: defaultCurrency, due_date: today, status: 'sent', notes: '',
   }
   const [form, setForm] = useState(initialForm)
 
   function freshForm() {
     const t = tenants[0]
-    return { tenant_id: t?.id ?? '', unit_id: activeUnitForTenant(t, units), type: 'rent', amount: '', currency: 'OMR', due_date: new Date().toISOString().split('T')[0], status: 'sent', notes: '' }
+    return { tenant_id: t?.id ?? '', unit_id: activeUnitForTenant(t, units), type: 'rent', amount: '', currency: defaultCurrency, due_date: new Date().toISOString().split('T')[0], status: 'sent', notes: '' }
   }
 
   function handleOpen() { setForm(freshForm()); setError(''); setOpen(true) }
@@ -128,7 +128,8 @@ export default function AddInvoiceForm({ orgId, tenants, units }: { orgId: strin
             <div><label className="label">Amount</label><input className="input" type="number" required value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="500" /></div>
             <div><label className="label">Currency</label>
               <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                <option>OMR</option><option>USD</option><option>AED</option><option>SAR</option>
+                <option>OMR</option><option>SAR</option><option>AED</option><option>KWD</option>
+                <option>QAR</option><option>BHD</option><option>USD</option><option>GBP</option><option>EUR</option>
               </select>
             </div>
           </div>

@@ -1,13 +1,10 @@
 'use client'
 import { TrendingUp, Download, BarChart2, CreditCard, Receipt, Layers } from 'lucide-react'
 
-type Org        = { id: string; name: string; subscription_plan: string; subscription_status: string; subscription_expires_at?: string }
+type Org        = { id: string; name: string; subscription_plan: string; subscription_status: string; subscription_expires_at?: string; default_currency?: string }
 type Invoice    = { organization_id: string; amount: number; currency: string; status: string; type: string; created_at: string; due_date: string }
 type PayReceipt = { organization_id: string; amount: number; method: string; status: string; confirmed_at: string }
-type Proof      = { plan: string; status: string; submitted_at: string }
-
-// Plan pricing (OMR/month) — matches src/lib/utils/plans.ts
-const PLAN_PRICE: Record<string, number> = { basic: 29, pro: 79, enterprise: 199 }
+type Proof      = { plan: string; status: string; submitted_at: string; amount: number; currency: string }
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
@@ -35,21 +32,30 @@ export default function FinancialReportPDF({
   proofs: Proof[]
   printDate: string
 }) {
-  // ── KPIs ────────────────────────────────────────────────────────────────────
-  const totalInvoiced   = invoices.reduce((s, i) => s + Number(i.amount), 0)
-  const totalCollected  = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-  const totalOutstanding = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
-  const totalOverdue    = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
-  const collectionRate  = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0
+  // ── Per-currency rental revenue (never mix currencies) ──────────────────────
+  const rentalCurrencies = [...new Set(invoices.map(i => i.currency))].sort()
+  const byCurrency = rentalCurrencies.map(currency => {
+    const cInv        = invoices.filter(i => i.currency === currency)
+    const invoiced    = cInv.reduce((s, i) => s + Number(i.amount), 0)
+    const collected   = cInv.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
+    const outstanding = cInv.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
+    const overdue     = cInv.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
+    const rate        = invoiced > 0 ? Math.round((collected / invoiced) * 100) : 0
+    return { currency, invoiced, collected, outstanding, overdue, rate, count: cInv.length }
+  })
+
+  // Primary currency (most invoices) — used for single KPI display
+  const primary = byCurrency.sort((a, b) => b.count - a.count)[0]
 
   // ── By org ──────────────────────────────────────────────────────────────────
   const byOrg = orgs.map(org => {
-    const orgInv     = invoices.filter(i => i.organization_id === org.id)
-    const invoiced   = orgInv.reduce((s, i) => s + Number(i.amount), 0)
-    const collected  = orgInv.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
+    const orgInv      = invoices.filter(i => i.organization_id === org.id)
+    const currency    = orgInv[0]?.currency ?? org.default_currency ?? '—'
+    const invoiced    = orgInv.reduce((s, i) => s + Number(i.amount), 0)
+    const collected   = orgInv.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
     const outstanding = orgInv.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
-    const rate       = invoiced > 0 ? Math.round((collected / invoiced) * 100) : 0
-    return { ...org, invoiced, collected, outstanding, rate, count: orgInv.length }
+    const rate        = invoiced > 0 ? Math.round((collected / invoiced) * 100) : 0
+    return { ...org, currency, invoiced, collected, outstanding, rate, count: orgInv.length }
   }).sort((a, b) => b.invoiced - a.invoiced)
 
   // ── Last 6 months ───────────────────────────────────────────────────────────
@@ -87,39 +93,52 @@ export default function FinancialReportPDF({
     byType[i.type].amount += Number(i.amount)
   })
 
-  // ── Subscription metrics ────────────────────────────────────────────────────
-  // MRR = active orgs × their plan price
+  // ── Subscription metrics (always USD) ───────────────────────────────────────
+  // MRR = active orgs × their plan price in USD
+  const PLAN_PRICE_USD: Record<string, number> = { basic: 29, pro: 79, enterprise: 199 }
   const activeOrgs  = orgs.filter(o => o.subscription_status === 'active')
-  const mrr         = activeOrgs.reduce((s, o) => s + (PLAN_PRICE[o.subscription_plan] ?? 0), 0)
+  const mrr         = activeOrgs.reduce((s, o) => s + (PLAN_PRICE_USD[o.subscription_plan] ?? 0), 0)
   const arr         = mrr * 12
 
-  // Revenue received = reviewed proofs × plan price (each proof ≈ 1 month payment)
-  const reviewedProofs  = proofs.filter(p => p.status === 'reviewed')
-  const pendingProofs   = proofs.filter(p => p.status === 'pending')
-  const subRevenueReceived = reviewedProofs.reduce((s, p) => s + (PLAN_PRICE[p.plan] ?? 0), 0)
-  const subRevenuePending  = pendingProofs.reduce((s,  p) => s + (PLAN_PRICE[p.plan] ?? 0), 0)
+  // Revenue received = actual amounts from reviewed proofs (grouped by currency)
+  const reviewedProofs = proofs.filter(p => p.status === 'reviewed')
+  const pendingProofs  = proofs.filter(p => p.status === 'pending')
 
-  // Per-plan breakdown
+  // Group proof revenue by currency
+  const subRevByCurrency: Record<string, number> = {}
+  reviewedProofs.forEach(p => {
+    const c = p.currency || 'USD'
+    subRevByCurrency[c] = (subRevByCurrency[c] ?? 0) + Number(p.amount ?? 0)
+  })
+  const subPendingByCurrency: Record<string, number> = {}
+  pendingProofs.forEach(p => {
+    const c = p.currency || 'USD'
+    subPendingByCurrency[c] = (subPendingByCurrency[c] ?? 0) + Number(p.amount ?? 0)
+  })
+
+  // Per-plan breakdown (MRR uses USD plan prices)
   const planBreakdown = ['basic', 'pro', 'enterprise'].map(plan => {
-    const planOrgs    = orgs.filter(o => o.subscription_plan === plan)
+    const planOrgs       = orgs.filter(o => o.subscription_plan === plan)
     const activePlanOrgs = planOrgs.filter(o => o.subscription_status === 'active')
     return {
       plan,
       total:  planOrgs.length,
       active: activePlanOrgs.length,
-      mrr:    activePlanOrgs.length * (PLAN_PRICE[plan] ?? 0),
-      price:  PLAN_PRICE[plan] ?? 0,
+      mrr:    activePlanOrgs.length * (PLAN_PRICE_USD[plan] ?? 0),
+      price:  PLAN_PRICE_USD[plan] ?? 0,
     }
   })
 
   // Proof submissions by month (last 6)
   const subByMonth = last6.map(m => {
     const mProofs = proofs.filter(p => p.submitted_at?.startsWith(m.key))
+    const mReviewed = mProofs.filter(p => p.status === 'reviewed')
     return {
       ...m,
       submitted: mProofs.length,
-      reviewed:  mProofs.filter(p => p.status === 'reviewed').length,
-      revenue:   mProofs.filter(p => p.status === 'reviewed').reduce((s, p) => s + (PLAN_PRICE[p.plan] ?? 0), 0),
+      reviewed:  mReviewed.length,
+      revenue:   mReviewed.reduce((s, p) => s + Number(p.amount ?? 0), 0),
+      currency:  mReviewed[0]?.currency ?? 'USD',
     }
   })
 
@@ -335,8 +354,6 @@ export default function FinancialReportPDF({
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-  const rateColor = collectionRate >= 80 ? 'text-emerald-700' : collectionRate >= 50 ? 'text-amber-600' : 'text-red-600'
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -354,25 +371,39 @@ export default function FinancialReportPDF({
         </button>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <div className="text-2xl font-black text-slate-900">{fmt(totalInvoiced)}</div>
-          <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Total Invoiced (OMR)</div>
+      {/* Per-currency KPI summary */}
+      {byCurrency.length === 0 ? (
+        <div className="card p-8 text-center text-slate-400">No invoice data yet</div>
+      ) : (
+        <div className="space-y-4">
+          {byCurrency.map(c => {
+            const rateColor = c.rate >= 80 ? 'text-emerald-700' : c.rate >= 50 ? 'text-amber-600' : 'text-red-600'
+            return (
+              <div key={c.currency}>
+                <div className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">{c.currency} — {c.count} invoice{c.count !== 1 ? 's' : ''}</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="card p-4">
+                    <div className="text-2xl font-black text-slate-900">{fmt(c.invoiced)}</div>
+                    <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Invoiced ({c.currency})</div>
+                  </div>
+                  <div className="card p-4">
+                    <div className="text-2xl font-black text-emerald-700">{fmt(c.collected)}</div>
+                    <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Collected ({c.currency})</div>
+                  </div>
+                  <div className="card p-4">
+                    <div className="text-2xl font-black text-orange-600">{fmt(c.outstanding)}</div>
+                    <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Outstanding ({c.currency})</div>
+                  </div>
+                  <div className="card p-4">
+                    <div className={`text-2xl font-black ${rateColor}`}>{c.rate}%</div>
+                    <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Collection Rate</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
-        <div className="card p-4">
-          <div className="text-2xl font-black text-emerald-700">{fmt(totalCollected)}</div>
-          <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Collected (OMR)</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-2xl font-black text-orange-600">{fmt(totalOutstanding)}</div>
-          <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Outstanding (OMR)</div>
-        </div>
-        <div className="card p-4">
-          <div className={`text-2xl font-black ${rateColor}`}>{collectionRate}%</div>
-          <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Collection Rate</div>
-        </div>
-      </div>
+      )}
 
       {/* By-org table */}
       <div className="card overflow-hidden">
@@ -385,6 +416,7 @@ export default function FinancialReportPDF({
             <tr>
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Organization</th>
               <th className="text-left px-4 py-3 text-slate-600 font-semibold">Plan</th>
+              <th className="text-left px-4 py-3 text-slate-600 font-semibold">Currency</th>
               <th className="text-right px-4 py-3 text-slate-600 font-semibold">Invoiced</th>
               <th className="text-right px-4 py-3 text-slate-600 font-semibold">Collected</th>
               <th className="text-right px-4 py-3 text-slate-600 font-semibold">Outstanding</th>
@@ -395,7 +427,7 @@ export default function FinancialReportPDF({
           <tbody className="divide-y divide-slate-100">
             {byOrg.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">No invoice data yet</td>
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">No invoice data yet</td>
               </tr>
             ) : byOrg.map(o => {
               const oRate = o.rate >= 80 ? 'text-emerald-600' : o.rate >= 50 ? 'text-amber-600' : 'text-red-600'
@@ -406,6 +438,9 @@ export default function FinancialReportPDF({
                     <span className={`badge capitalize ${PLAN_COLOR[o.subscription_plan] ?? 'bg-slate-100 text-slate-600'}`}>
                       {o.subscription_plan}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="badge bg-slate-100 text-slate-600 font-mono text-xs">{o.currency}</span>
                   </td>
                   <td className="px-4 py-3 text-right text-slate-700 tabular-nums">{fmt(o.invoiced)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700 tabular-nums">{fmt(o.collected)}</td>
@@ -522,19 +557,31 @@ export default function FinancialReportPDF({
         {/* Subscription KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="card p-4 border-t-2 border-navy-700">
-            <div className="text-2xl font-black text-navy-700">{mrr.toLocaleString()} OMR</div>
-            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Monthly Recurring Revenue</div>
+            <div className="text-2xl font-black text-navy-700">${mrr.toLocaleString()}</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">MRR (USD)</div>
           </div>
           <div className="card p-4 border-t-2 border-emerald-500">
-            <div className="text-2xl font-black text-emerald-700">{arr.toLocaleString()} OMR</div>
-            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Annual Recurring Revenue</div>
+            <div className="text-2xl font-black text-emerald-700">${arr.toLocaleString()}</div>
+            <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">ARR (USD)</div>
           </div>
           <div className="card p-4 border-t-2 border-blue-400">
-            <div className="text-2xl font-black text-blue-700">{subRevenueReceived.toLocaleString()} OMR</div>
+            <div className="space-y-0.5">
+              {Object.keys(subRevByCurrency).length === 0
+                ? <div className="text-2xl font-black text-blue-700">—</div>
+                : Object.entries(subRevByCurrency).map(([c, v]) => (
+                  <div key={c} className="text-lg font-black text-blue-700">{v.toLocaleString()} <span className="text-sm font-semibold">{c}</span></div>
+                ))}
+            </div>
             <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Payments Received</div>
           </div>
           <div className="card p-4 border-t-2 border-amber-400">
-            <div className="text-2xl font-black text-amber-600">{subRevenuePending.toLocaleString()} OMR</div>
+            <div className="space-y-0.5">
+              {Object.keys(subPendingByCurrency).length === 0
+                ? <div className="text-2xl font-black text-amber-600">—</div>
+                : Object.entries(subPendingByCurrency).map(([c, v]) => (
+                  <div key={c} className="text-lg font-black text-amber-600">{v.toLocaleString()} <span className="text-sm font-semibold">{c}</span></div>
+                ))}
+            </div>
             <div className="text-xs text-slate-400 font-medium uppercase tracking-wide mt-1">Pending Payments</div>
           </div>
         </div>
