@@ -75,7 +75,14 @@ export default async function OwnerDashboard() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900">{org.name as string}</h2>
-        <p className="text-slate-500 text-sm mt-0.5 capitalize">{org.subscription_plan as string} plan · {org.subscription_status as string}</p>
+        <p className="text-slate-500 text-sm mt-0.5 capitalize">
+          {org.subscription_plan as string} plan · {(org.subscription_status as string).replace('_', ' ')}
+          {org.subscription_status === 'active' && org.subscription_expires_at && (
+            <span className="ml-2 not-italic normal-case">
+              · Active until <strong>{new Date(org.subscription_expires_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Stats */}
