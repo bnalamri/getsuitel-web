@@ -26,6 +26,14 @@ const t = {
     wrongEmail: 'Wrong email? Go back and fix it',
     terms: 'By signing up you agree to our', termsLink: 'Terms', privacyLink: 'Privacy Policy',
     staffTitle: 'New GetSuitel Staff Account', staffDesc: 'Property Manager or Financial Manager',
+    // Owner type
+    ownerTypeLabel: 'Account type',
+    individual: 'Individual', individualDesc: 'A person who owns properties',
+    company: 'Company / Organization', companyDesc: 'A business or real estate firm',
+    nationalId: 'National ID / Passport No.', nationalIdPlaceholder: 'e.g. 12345678',
+    crNumber: 'Commercial Registration (CR) No.', crPlaceholder: 'e.g. 1234567',
+    authorizedRep: 'Authorized Representative', authorizedRepPlaceholder: 'Full name of authorized signatory',
+    companyName: 'Company name', companyNamePlaceholder: 'Al-Ameri Real Estate LLC',
   },
   ar: {
     step0Title: '…أنا', step0Sub: 'اختر نوع حسابك للبدء',
@@ -47,6 +55,14 @@ const t = {
     wrongEmail: 'بريد خاطئ؟ عدّل بياناتك',
     terms: 'بالتسجيل توافق على', termsLink: 'الشروط', privacyLink: 'سياسة الخصوصية',
     staffTitle: 'موظف جديد في GETSUITEL', staffDesc: 'مدير عقارات أو مدير مالي',
+    // Owner type
+    ownerTypeLabel: 'نوع الحساب',
+    individual: 'فرد', individualDesc: 'شخص يملك عقارات بصفة شخصية',
+    company: 'شركة / مؤسسة', companyDesc: 'شركة أو مؤسسة عقارية',
+    nationalId: 'رقم الهوية / جواز السفر', nationalIdPlaceholder: 'مثال: ١٢٣٤٥٦٧٨',
+    crNumber: 'رقم السجل التجاري', crPlaceholder: 'مثال: ١٢٣٤٥٦٧',
+    authorizedRep: 'المفوّض بالتوقيع', authorizedRepPlaceholder: 'الاسم الكامل للمفوّض',
+    companyName: 'اسم الشركة', companyNamePlaceholder: 'شركة العامري للعقارات',
   },
 }
 
@@ -77,6 +93,7 @@ export default function RegisterPage() {
   const [pilotError, setPilotError] = useState('')
   const [pilotLoading, setPilotLoading] = useState(false)
   const [role, setRole] = useState<'owner'|'tenant'|'technician'|'staff'>('owner')
+  const [ownerType, setOwnerType] = useState<'individual'|'company'>('individual')
   const [plan, setPlan] = useState('basic')
   const [inviteCode, setInviteCode] = useState('')
   const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
@@ -85,7 +102,10 @@ export default function RegisterPage() {
   const [staffToken, setStaffToken] = useState('')
   const [staffInfo, setStaffInfo] = useState<{role:string;orgName:string;orgId:string;email:string}|null>(null)
   const [staffTokenErr, setStaffTokenErr] = useState('')
-  const [form, setForm] = useState({ name:'', email:'', password:'', org:'', phone:'' })
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', org: '', phone: '',
+    nationalId: '', crNumber: '', authorizedRep: '',
+  })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -170,6 +190,11 @@ export default function RegisterPage() {
     // For staff, use the role from the invitation token
     const effectiveRole = role === 'staff' ? (staffInfo?.role ?? 'property_manager') : role
 
+    // For individual owners, org_name = their full name
+    const orgName = role === 'owner'
+      ? (ownerType === 'company' ? form.org : form.name)
+      : null
+
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -182,9 +207,13 @@ export default function RegisterPage() {
           lang,
           organization_id: role === 'staff' ? (staffInfo?.orgId ?? null) : (inviteOrg?.id ?? null),
           plan: role === 'owner' ? plan : null,
-          org_name: role === 'owner' ? form.org : null,
+          org_name: orgName,
           phone: form.phone,
           staff_token: role === 'staff' ? staffToken : undefined,
+          owner_type: role === 'owner' ? ownerType : undefined,
+          national_id: role === 'owner' && ownerType === 'individual' ? (form.nationalId || undefined) : undefined,
+          cr_number: role === 'owner' && ownerType === 'company' ? (form.crNumber || undefined) : undefined,
+          authorized_rep: role === 'owner' && ownerType === 'company' ? (form.authorizedRep || undefined) : undefined,
         }),
       })
       const data = await res.json()
@@ -204,8 +233,9 @@ export default function RegisterPage() {
             ownerName: form.name,
             ownerEmail: form.email,
             ownerPhone: form.phone,
-            orgName: form.org,
+            orgName,
             plan,
+            ownerType,
           }),
         }).catch(() => {})
       }
@@ -392,6 +422,26 @@ export default function RegisterPage() {
                 )}
               </div>
 
+              {/* Owner type toggle */}
+              {role === 'owner' && (
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">{T.ownerTypeLabel}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { type: 'individual' as const, emoji: '👤', title: T.individual, desc: T.individualDesc },
+                      { type: 'company' as const, emoji: '🏢', title: T.company, desc: T.companyDesc },
+                    ]).map(o => (
+                      <button key={o.type} type="button" onClick={() => setOwnerType(o.type)}
+                        className={`text-start p-3 rounded-xl border-2 transition-all ${ownerType === o.type ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                        <div className="text-lg mb-1">{o.emoji}</div>
+                        <div className="text-sm font-semibold text-slate-900">{o.title}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">{o.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Staff invitation token */}
               {role === 'staff' && (
                 <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -452,14 +502,55 @@ export default function RegisterPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name}</label>
-                    <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
-                  </div>
-                  {role === 'owner' && <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.org}</label>
-                    <input value={form.org} onChange={e=>set('org',e.target.value)} required className="input" placeholder={lang==='ar'?'شركة العقارات':'Real Estate Co.'}/>
-                  </div>}
+
+                  {/* Individual owner fields */}
+                  {role === 'owner' && ownerType === 'individual' && (
+                    <>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name}</label>
+                        <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          {T.nationalId} <span className="text-slate-400 font-normal">({lang==='ar'?'اختياري':'optional'})</span>
+                        </label>
+                        <input value={form.nationalId} onChange={e=>set('nationalId',e.target.value)} className="input" placeholder={T.nationalIdPlaceholder}/>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Company owner fields */}
+                  {role === 'owner' && ownerType === 'company' && (
+                    <>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.companyName}</label>
+                        <input value={form.org} onChange={e=>set('org',e.target.value)} required className="input" placeholder={T.companyNamePlaceholder}/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          {T.crNumber} <span className="text-slate-400 font-normal">({lang==='ar'?'اختياري':'optional'})</span>
+                        </label>
+                        <input value={form.crNumber} onChange={e=>set('crNumber',e.target.value)} className="input" placeholder={T.crPlaceholder}/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.authorizedRep}</label>
+                        <input value={form.authorizedRep} onChange={e=>set('authorizedRep',e.target.value)} required className="input" placeholder={T.authorizedRepPlaceholder}/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name} ({lang==='ar'?'للتواصل':'for contact'})</label>
+                        <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Non-owner name field */}
+                  {role !== 'owner' && (
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name}</label>
+                      <input value={form.name} onChange={e=>set('name',e.target.value)} required className="input" placeholder={lang==='ar'?'أنور العامري':'Anwar Al-Ameri'}/>
+                    </div>
+                  )}
+
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.email}</label>
                     <input type="email" value={form.email} onChange={e=>set('email',e.target.value)} required className="input" placeholder="you@example.com"/>

@@ -6,7 +6,8 @@ import { verificationEmailHtml, verificationEmailSubject } from '@/lib/email/ver
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
-  const { email, password, name, role, lang, organization_id, plan, org_name, phone, staff_token } = await req.json()
+  const { email, password, name, role, lang, organization_id, plan, org_name, phone, staff_token,
+          owner_type, cr_number, authorized_rep, national_id } = await req.json()
 
   // If staff_token provided, mark invitation as accepted
   if (staff_token) {
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
       plan: role === 'owner' ? plan : null,
       org_name: role === 'owner' ? org_name : null,
       phone: phone ?? null,
+      owner_type: role === 'owner' ? (owner_type ?? 'individual') : null,
+      cr_number: role === 'owner' && owner_type === 'company' ? (cr_number ?? null) : null,
+      authorized_rep: role === 'owner' && owner_type === 'company' ? (authorized_rep ?? null) : null,
+      national_id: role === 'owner' && owner_type === 'individual' ? (national_id ?? null) : null,
     },
   })
 
