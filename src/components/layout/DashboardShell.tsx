@@ -106,6 +106,10 @@ const NAV: Record<string, NavGroup[]> = {
     { en:'Overview', ar:'نظرة عامة', items:[
       { href:'/dashboard/owner', icon:LayoutDashboard, en:'Dashboard', ar:'لوحة التحكم' },
     ]},
+    { en:'Portfolio', ar:'المحفظة', items:[
+      { href:'/dashboard/owner/properties', icon:Building2, en:'Properties', ar:'العقارات' },
+      { href:'/dashboard/owner/units', icon:DoorOpen, en:'Units', ar:'الوحدات' },
+    ]},
     { en:'Finance', ar:'المالية', items:[
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
