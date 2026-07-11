@@ -20,8 +20,9 @@ export default async function InvoicesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const canManage = profile?.role === 'owner' || profile?.role === 'financial_manager'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const admin = createAdminClient()
@@ -49,7 +50,7 @@ export default async function InvoicesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Invoices</h2>
           <p className="text-slate-500 text-sm mt-0.5">{invoices.length} invoices</p>
         </div>
-        <AddInvoiceForm orgId={orgId} tenants={tenants} units={units as never} defaultCurrency={defaultCurrency} />
+        {canManage && <AddInvoiceForm orgId={orgId} tenants={tenants} units={units as never} defaultCurrency={defaultCurrency} />}
       </div>
 
       {/* Summary cards */}
@@ -100,16 +101,18 @@ export default async function InvoicesPage() {
                     <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <EditInvoiceForm
-                          invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, status: inv.status, notes: inv.notes }}
-                          tenants={tenants}
-                          units={units as never}
-                        />
-                        {['sent', 'overdue', 'draft'].includes(inv.status) && (
-                          <MarkPaidButton invoiceId={inv.id} />
-                        )}
-                      </div>
+                      {canManage && (
+                        <div className="flex items-center gap-1">
+                          <EditInvoiceForm
+                            invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, status: inv.status, notes: inv.notes }}
+                            tenants={tenants}
+                            units={units as never}
+                          />
+                          {['sent', 'overdue', 'draft'].includes(inv.status) && (
+                            <MarkPaidButton invoiceId={inv.id} />
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )

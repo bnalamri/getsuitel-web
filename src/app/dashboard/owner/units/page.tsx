@@ -21,7 +21,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
 
   const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
-  const canEdit = profile?.role === 'owner' || profile?.role === 'property_manager'
+  const canEdit = profile?.role === 'owner'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const [{ data: org }, { data: properties }] = await Promise.all([

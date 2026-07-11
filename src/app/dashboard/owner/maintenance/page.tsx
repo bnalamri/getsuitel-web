@@ -21,8 +21,9 @@ export default async function MaintenancePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const canManage = profile?.role === 'owner' || profile?.role === 'property_manager'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const admin = createAdminClient()
@@ -47,7 +48,7 @@ export default async function MaintenancePage() {
           <h2 className="text-2xl font-bold text-slate-900">Maintenance</h2>
           <p className="text-slate-500 text-sm mt-0.5">{requests.length} requests</p>
         </div>
-        <AddMaintenanceForm orgId={orgId} units={units as never} technicians={technicians} />
+        {canManage && <AddMaintenanceForm orgId={orgId} units={units as never} technicians={technicians} />}
       </div>
 
       {requests.length === 0 ? (
@@ -144,7 +145,7 @@ export default async function MaintenancePage() {
                             : <span className="text-slate-300">—</span>
                           }
                         </div>
-                      ) : (
+                      ) : canManage ? (
                         <AssignTechnicianForm
                           requestId={r.id}
                           currentTechId={r.technician_id ?? null}
@@ -152,6 +153,8 @@ export default async function MaintenancePage() {
                           currentChargePayer={chargePayer}
                           currentChargeAmount={chargeAmount}
                         />
+                      ) : (
+                        <span className="text-xs text-slate-400">{r.technician_id ? techProfile?.full_name ?? '—' : '—'}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">

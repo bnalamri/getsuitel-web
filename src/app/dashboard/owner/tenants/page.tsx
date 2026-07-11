@@ -16,8 +16,9 @@ export default async function TenantsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const canManage = profile?.role === 'owner' || profile?.role === 'property_manager'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const admin = createAdminClient()
@@ -52,11 +53,11 @@ export default async function TenantsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Tenants</h2>
           <p className="text-slate-500 text-sm mt-0.5">{tenants?.length ?? 0} tenants</p>
         </div>
-        {hasUnits && <AddTenantForm orgId={orgId} />}
+        {hasUnits && canManage && <AddTenantForm orgId={orgId} />}
       </div>
 
-      {/* Pending members — registered via invite but not yet linked */}
-      {pendingMembers.length > 0 && (
+      {/* Pending members — registered via invite but not yet linked (owner/PM only) */}
+      {canManage && pendingMembers.length > 0 && (
         <div className="border border-amber-200 bg-amber-50 rounded-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200">
             <UserCheck size={16} className="text-amber-600" />
@@ -165,20 +166,23 @@ export default async function TenantsPage() {
                         <span className="text-slate-400 text-xs">No contract</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <EditTenantForm tenant={{
-                          id: t.id,
-                          full_name: t.full_name,
-                          email: t.email,
-                          phone: t.phone,
-                          nationality: t.nationality ?? null,
-                          national_id: t.national_id ?? null,
-                          emergency_contact: t.emergency_contact ?? null,
-                        }} />
-                        <DeleteTenantButton id={t.id} name={t.full_name} />
-                      </div>
-                    </td>
+                    {canManage && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <EditTenantForm tenant={{
+                            id: t.id,
+                            full_name: t.full_name,
+                            email: t.email,
+                            phone: t.phone,
+                            nationality: t.nationality ?? null,
+                            national_id: t.national_id ?? null,
+                            emergency_contact: t.emergency_contact ?? null,
+                          }} />
+                          <DeleteTenantButton id={t.id} name={t.full_name} />
+                        </div>
+                      </td>
+                    )}
+                    {!canManage && <td className="px-4 py-3" />}
                   </tr>
                 )
               })}

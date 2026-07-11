@@ -12,8 +12,9 @@ export default async function ContractsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const canManage = profile?.role === 'owner' || profile?.role === 'property_manager'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const admin = createAdminClient()
@@ -44,7 +45,7 @@ export default async function ContractsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Contracts</h2>
           <p className="text-slate-500 text-sm mt-0.5">{contracts.length} contracts</p>
         </div>
-        {canAddContract && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} defaultCurrency={defaultCurrency} />}
+        {canAddContract && canManage && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} defaultCurrency={defaultCurrency} />}
       </div>
 
       {!hasUnits ? (
@@ -72,7 +73,7 @@ export default async function ContractsPage() {
           <p className="text-slate-400 text-sm">Create a contract to link a tenant to a unit.</p>
         </div>
       ) : (
-        <ContractTable contracts={contracts as never} tenants={tenants} allUnits={allUnits as never} />
+        <ContractTable contracts={contracts as never} tenants={tenants} allUnits={allUnits as never} canManage={canManage} />
       )}
     </div>
   )

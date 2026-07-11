@@ -25,11 +25,12 @@ interface Tenant { id: string; full_name: string }
 interface Unit   { id: string; unit_number: string; properties?: { name: string } | null }
 
 export default function ContractTable({
-  contracts, tenants, allUnits,
+  contracts, tenants, allUnits, canManage = true,
 }: {
   contracts: Contract[]
   tenants: Tenant[]
   allUnits: Unit[]
+  canManage?: boolean
 }) {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterUnit,   setFilterUnit]   = useState('')
@@ -105,25 +106,27 @@ export default function ContractTable({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`badge ${statusColor[c.status]}`}>{c.status}</span>
-                        {c.status === 'draft' && <ActivateContractButton contractId={c.id} unitId={c.unit_id} />}
+                        {canManage && c.status === 'draft' && <ActivateContractButton contractId={c.id} unitId={c.unit_id} />}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <EditContractForm
-                          contract={{
-                            id: c.id, tenant_id: c.tenant_id, unit_id: c.unit_id,
-                            start_date: c.start_date, end_date: c.end_date,
-                            rent_amount: Number(c.rent_amount), currency: c.currency,
-                            deposit_amount: Number(c.deposit_amount ?? 0),
-                            payment_day: Number(c.payment_day ?? 1),
-                            payment_method: c.payment_method ?? 'cash', status: c.status,
-                          }}
-                          tenants={tenants}
-                          units={allUnits as never}
-                        />
-                        <DeleteContractButton contractId={c.id} tenantName={tenant?.full_name ?? '—'} unitNumber={unit?.unit_number ?? '—'} />
-                      </div>
+                      {canManage && (
+                        <div className="flex items-center gap-2">
+                          <EditContractForm
+                            contract={{
+                              id: c.id, tenant_id: c.tenant_id, unit_id: c.unit_id,
+                              start_date: c.start_date, end_date: c.end_date,
+                              rent_amount: Number(c.rent_amount), currency: c.currency,
+                              deposit_amount: Number(c.deposit_amount ?? 0),
+                              payment_day: Number(c.payment_day ?? 1),
+                              payment_method: c.payment_method ?? 'cash', status: c.status,
+                            }}
+                            tenants={tenants}
+                            units={allUnits as never}
+                          />
+                          <DeleteContractButton contractId={c.id} tenantName={tenant?.full_name ?? '—'} unitNumber={unit?.unit_number ?? '—'} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
