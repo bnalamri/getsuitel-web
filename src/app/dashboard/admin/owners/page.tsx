@@ -94,7 +94,7 @@ export default async function OwnersPage() {
                 </div>
 
                 {/* Stats row */}
-                <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                   {[
                     { icon: Building2, label: 'Properties', value: propCount(org.id), max: null },
                     { icon: Home, label: 'Units', value: unitCount(org.id), max: org.max_units },

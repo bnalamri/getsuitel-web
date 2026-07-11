@@ -37,7 +37,7 @@ export default async function TechnicianDashboard() {
         <p className="text-slate-500 text-sm mt-1">Today's assignments</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label:'Open Orders', value:open.length, icon:ClipboardList, color:'bg-blue-50 text-blue-700' },
           { label:'Completed', value:done, icon:CheckCircle2, color:'bg-green-50 text-green-700' },

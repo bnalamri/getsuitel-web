@@ -87,7 +87,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
           <p className="text-slate-400 text-sm mb-4">Add units to your properties to start renting.</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

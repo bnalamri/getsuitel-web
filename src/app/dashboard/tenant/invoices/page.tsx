@@ -72,7 +72,7 @@ export default async function TenantInvoicesPage() {
             const Icon = statusIcon[invoice.status] ?? Clock
             const isOpen = ['sent', 'overdue'].includes(invoice.status)
             return (
-              <div key={invoice.id} className="card overflow-hidden">
+              <div key={invoice.id} className="card overflow-x-auto">
                 <div className="p-4 flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${statusColor[invoice.status] ?? 'bg-slate-100 text-slate-500'}`}>
                     <Icon size={18} />

@@ -75,7 +75,7 @@ export default async function NoticesPage() {
           <p className="text-slate-400 text-sm">Send late payment warnings or general notices to your tenants.</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

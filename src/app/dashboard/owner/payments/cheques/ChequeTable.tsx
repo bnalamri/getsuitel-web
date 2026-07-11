@@ -68,7 +68,7 @@ export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; uni
           {cheques.length === 0 ? 'No cheques registered yet.' : 'No cheques for this unit.'}
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

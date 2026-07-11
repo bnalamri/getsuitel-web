@@ -106,7 +106,7 @@ export default async function TenantDashboard() {
       )}
 
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label:'Overdue Invoices', value:overdue, icon:Receipt, color:'bg-red-50 text-red-600', href:'/dashboard/tenant/invoices' },
           { label:'Open Maintenance', value:openMaint, icon:Wrench, color:'bg-orange-50 text-orange-600', href:'/dashboard/tenant/maintenance' },

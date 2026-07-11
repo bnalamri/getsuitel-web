@@ -437,7 +437,7 @@ export default function FinancialReportPDF({
       )}
 
       {/* By-org table */}
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
           <BarChart2 size={16} className="text-slate-400" />
           <h3 className="font-semibold text-slate-900">Revenue by Organization</h3>
@@ -619,7 +619,7 @@ export default function FinancialReportPDF({
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Plan breakdown table */}
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
               <CreditCard size={15} className="text-slate-400" />
               <h4 className="font-semibold text-slate-900">Revenue by Plan</h4>
@@ -655,7 +655,7 @@ export default function FinancialReportPDF({
           </div>
 
           {/* Subscription payments by month */}
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
               <TrendingUp size={15} className="text-slate-400" />
               <h4 className="font-semibold text-slate-900">Subscription Payments by Month</h4>

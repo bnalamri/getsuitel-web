@@ -76,7 +76,7 @@ export default function AddChequeForm({
   }
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-x-auto">
       <button
         type="button"
         onClick={toggleOpen}

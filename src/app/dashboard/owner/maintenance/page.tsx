@@ -58,7 +58,7 @@ export default async function MaintenancePage() {
           <p className="text-slate-400 text-sm">Maintenance requests from tenants will appear here.</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

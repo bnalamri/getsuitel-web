@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
       {/* Subscription summary */}
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><CreditCard size={16} />Subscription Health</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Active', count: activeRes.count ?? 0, color: 'text-green-700 bg-green-50' },
             { label: 'Trialing', count: trialingRes.count ?? 0, color: 'text-yellow-700 bg-yellow-50' },
@@ -98,7 +98,7 @@ export default async function AdminDashboard() {
 
       {/* Pending subscription payment proofs */}
       {pendingProofs.length > 0 && (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <FileCheck size={16} className="text-amber-500"/>
@@ -150,7 +150,7 @@ export default async function AdminDashboard() {
       )}
 
       {/* Recent organizations */}
-      <div className="card overflow-hidden">
+      <div className="card overflow-x-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <h3 className="font-semibold text-slate-900">Recent Organizations</h3>
           <Link href="/dashboard/admin/owners" className="text-xs text-navy-700 hover:underline">View all</Link>

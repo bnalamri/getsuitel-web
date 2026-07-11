@@ -54,7 +54,7 @@ export default async function PaymentsPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4 border-l-4 border-amber-400">
           <div className="text-xs text-slate-500 font-medium uppercase tracking-wide">Pending Review</div>
           <div className="text-3xl font-bold text-amber-600 mt-1">{pending.length}</div>
@@ -122,7 +122,7 @@ export default async function PaymentsPage() {
         {invoices.length === 0 ? (
           <div className="card p-8 text-center text-slate-400 text-sm">No open invoices</div>
         ) : (
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -165,7 +165,7 @@ export default async function PaymentsPage() {
           <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
             <CheckCircle size={16} className="text-green-500"/> Recent Confirmations
           </h3>
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>

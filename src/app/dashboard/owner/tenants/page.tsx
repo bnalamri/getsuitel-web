@@ -128,7 +128,7 @@ export default async function TenantsPage() {
           <p className="text-slate-400 text-sm">Add tenants to assign them to units and create contracts.</p>
         </div>
       ) : hasUnits && (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
