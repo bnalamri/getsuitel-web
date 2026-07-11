@@ -1,12 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen, CheckCircle, ArrowRight, Shield, HardHat, Home } from 'lucide-react'
+import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen, CheckCircle, ArrowRight, Shield, HardHat, Home, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
 
 const content = {
   en: {
     dir: 'ltr', lang: 'ع',
-    nav: { features: 'Features', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up' },
+    nav: { features: 'Features', explore: 'Explore', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up' },
     hero: { badge: 'Smart Real Estate Management Platform', h1a: 'Manage Properties', h1b: 'Effortlessly', sub: 'GetSuitel brings owners, tenants, and service teams together in one powerful platform. From contracts to maintenance — all in one place.', cta1: 'Start Free Trial', cta2: 'Sign In', stats: [{ v:'30', s:'-day', l:'Free Trial' },{ v:'4', s:'', l:'User Roles' },{ v:'∞', s:'', l:'Units' }] },
     features: {
       title: 'Everything you need to run your properties',
@@ -53,11 +53,23 @@ const content = {
         cta: 'Contact Us', ctaHref: '/contact', ctaArrow: '→',
       },
     },
+    explore: {
+      title: 'Explore GetSuitel Features',
+      sub: 'Click any module to see exactly how it works — before you sign up.',
+      tabs: [
+        { key: 'properties', label: 'Properties', headline: 'Your entire portfolio at a glance', desc: 'Organise all your properties in one place. Each property holds units, tracks occupancy in real time, and rolls up into a clear revenue summary.', points: ['Add unlimited properties across any location', 'Track occupancy rates and vacant units instantly', 'Drill down into individual unit details', 'Monitor monthly revenue per property'] },
+        { key: 'tenants',    label: 'Tenants',    headline: 'Complete tenant profiles',         desc: 'Store everything about each tenant — contact details, national ID, emergency contacts — all linked to their active contract and unit.', points: ['Full profile with ID and contact info', 'Linked to units and active contracts', 'Pending invitations for new registrations', 'Tenant self-service portal access'] },
+        { key: 'contracts',  label: 'Contracts',  headline: 'Digital lease agreements',         desc: 'Create and manage rental contracts digitally. Track start and end dates, deposit amounts, and receive alerts before any contract expires.', points: ['Link tenants to units with signed contracts', 'Track deposit amounts and payment terms', 'Automatic alerts before contract expiry', 'Full contract history per unit and tenant'] },
+        { key: 'invoices',   label: 'Invoices',   headline: 'Streamlined rent collection',      desc: 'Generate rent invoices, track payment status, and accept multiple payment methods including bank transfer, cheque, and cash — all in one place.', points: ['Auto-generate monthly rent invoices', 'Accept bank transfer, cheque, cash & card', 'Confirm receipts with proof of payment', 'Track overdue payments with instant alerts'] },
+        { key: 'maintenance',label: 'Maintenance',headline: 'End-to-end maintenance tracking',  desc: 'Tenants submit requests from their portal, owners assign technicians, and technicians update status — a complete workflow with no chasing required.', points: ['Tenants submit with description and photos', 'Assign to your service team instantly', 'Real-time status updates for all parties', 'Track service charges after job completion'] },
+        { key: 'reports',    label: 'Reports',    headline: 'Data-driven decisions',             desc: 'Get a complete financial and operational picture of your portfolio with printable reports, revenue breakdowns, and occupancy analytics.', points: ['Revenue collection and pending reports', 'Occupancy rate charts per property', 'Printable tenant directory with contracts', 'Maintenance cost breakdown by category'] },
+      ],
+    },
     footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
   },
   ar: {
     dir: 'rtl', lang: 'EN',
-    nav: { features: 'المميزات', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب' },
+    nav: { features: 'المميزات', explore: 'استكشف', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب' },
     hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'30', s:'', l:'يوم تجربة مجانية' },{ v:'4', s:'', l:'أدوار مستخدمين' },{ v:'∞', s:'', l:'وحدات' }] },
     features: {
       title: 'كل ما تحتاجه لإدارة عقاراتك',
@@ -104,6 +116,18 @@ const content = {
         cta: 'تواصل معنا', ctaHref: '/contact', ctaArrow: '←',
       },
     },
+    explore: {
+      title: 'استكشف مميزات GetSuitel',
+      sub: 'انقر على أي وحدة لترى كيف تعمل — قبل أن تسجّل.',
+      tabs: [
+        { key: 'properties', label: 'العقارات',   headline: 'محفظتك بالكامل دفعة واحدة',        desc: 'نظّم جميع عقاراتك في مكان واحد. كل عقار يحتوي على وحدات ويتتبع نسبة الإشغال لحظياً مع ملخص إيرادات واضح.', points: ['أضف عقارات غير محدودة في أي موقع', 'اعرض نسب الإشغال والوحدات الشاغرة فوراً', 'تعمّق في تفاصيل كل وحدة على حدة', 'تتبع الإيرادات الشهرية لكل عقار'] },
+        { key: 'tenants',    label: 'المستأجرون', headline: 'ملفات مستأجرين كاملة',             desc: 'احتفظ بكل ما تحتاجه عن كل مستأجر — بيانات الاتصال والهوية وجهة الطوارئ — مرتبطاً بعقده ووحدته الفعّالة.', points: ['ملف شامل مع الهوية وبيانات الاتصال', 'مرتبط بالوحدات والعقود الفعّالة', 'دعوات معلّقة للمستأجرين الجدد', 'وصول المستأجر لبوابته الخاصة'] },
+        { key: 'contracts',  label: 'العقود',     headline: 'عقود إيجار رقمية',                 desc: 'أنشئ وأدر عقود الإيجار رقمياً. تتبع تواريخ البداية والنهاية ومبالغ التأمين واستقبل تنبيهات قبل انتهاء أي عقد.', points: ['اربط المستأجرين بالوحدات بعقود موقّعة', 'تتبع مبالغ التأمين وشروط الدفع', 'تنبيهات تلقائية قبل انتهاء العقد', 'سجل كامل بالعقود لكل وحدة ومستأجر'] },
+        { key: 'invoices',   label: 'الفواتير',   headline: 'تحصيل الإيجار بكل سهولة',          desc: 'أنشئ فواتير الإيجار وتتبع حالة السداد واقبل طرق دفع متعددة تشمل التحويل والشيك والنقد — كل ذلك في مكان واحد.', points: ['إنشاء تلقائي لفواتير الإيجار الشهرية', 'قبول التحويل والشيك والنقد والبطاقة', 'تأكيد الاستلام مع إثبات السداد', 'تتبع المدفوعات المتأخرة مع تنبيهات فورية'] },
+        { key: 'maintenance',label: 'الصيانة',    headline: 'تتبع الصيانة من الألف إلى الياء',  desc: 'يرسل المستأجرون الطلبات من بواباتهم، يُسند الملاك للفنيين، والفنيون يحدّثون الحالة — سير عمل متكامل بدون متابعة يدوية.', points: ['المستأجرون يرسلون مع وصف وصور', 'أسند لفريق الخدمة فوراً', 'تحديثات حالة لحظية لجميع الأطراف', 'تتبع رسوم الخدمة بعد إنجاز العمل'] },
+        { key: 'reports',    label: 'التقارير',   headline: 'قرارات مبنية على البيانات',         desc: 'احصل على صورة مالية وتشغيلية كاملة لمحفظتك مع تقارير قابلة للطباعة وتحليل الإيرادات ونسب الإشغال.', points: ['تقارير الإيرادات والتحصيل والمعلّق', 'رسوم بيانية لنسبة الإشغال لكل عقار', 'دليل مستأجرين قابل للطباعة مع العقود', 'تحليل تكاليف الصيانة حسب الفئة'] },
+      ],
+    },
     footer: { desc:'منصة إدارة العقارات الذكية للملاك والمستأجرين وفرق الخدمة.', product:'المنتج', legal:'قانوني', links:{ features:'المميزات', pricing:'الأسعار', signup:'إنشاء حساب', signin:'تسجيل الدخول' }, legal_links:{ privacy:'سياسة الخصوصية', terms:'شروط الخدمة', contact:'تواصل معنا' }, copyright:'GetSuitel. جميع الحقوق محفوظة.', status:'جميع الأنظمة تعمل' },
   },
 } as const
@@ -115,6 +139,7 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
+  const [activeTab, setActiveTab] = useState(0)
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
@@ -135,6 +160,7 @@ export default function LandingPage() {
           <a href="https://www.getsuitel.com" className="font-black text-xl text-white hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
           <div className="hidden md:flex items-center gap-8 text-sm text-white/70">
             <a href="#features" className="hover:text-white transition-colors">{C.nav.features}</a>
+            <a href="#explore" className="hover:text-white transition-colors">{C.nav.explore}</a>
             <a href="#for-who" className="hover:text-white transition-colors">{C.nav.forWho}</a>
             <a href="#pricing" className="hover:text-white transition-colors">{C.nav.pricing}</a>
           </div>
@@ -201,6 +227,240 @@ export default function LandingPage() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Feature Explorer */}
+      <section id="explore" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-navy-50 border border-navy-100 rounded-full px-4 py-1.5 text-sm text-navy-700 font-medium mb-4">
+              <span className="w-2 h-2 bg-navy-500 rounded-full" /> Interactive Tour
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 mb-4">{C.explore.title}</h2>
+            <p className="text-xl text-slate-500 max-w-2xl mx-auto">{C.explore.sub}</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-hide justify-center flex-wrap">
+            {C.explore.tabs.map((tab, i) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(i)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeTab === i
+                    ? 'bg-navy-700 text-white shadow-lg shadow-navy-700/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          {C.explore.tabs.map((tab, i) => {
+            if (i !== activeTab) return null
+            return (
+              <div key={tab.key} className="grid md:grid-cols-2 gap-10 items-center">
+                {/* Left — description */}
+                <div className={lang === 'ar' ? 'md:order-2' : ''}>
+                  <h3 className="text-2xl font-black text-slate-900 mb-3">{tab.headline}</h3>
+                  <p className="text-slate-500 leading-relaxed mb-6">{tab.desc}</p>
+                  <ul className="space-y-3">
+                    {tab.points.map((p, j) => (
+                      <li key={j} className="flex items-start gap-3">
+                        <CheckCircle2 size={18} className="text-navy-600 shrink-0 mt-0.5" />
+                        <span className="text-slate-700 text-sm">{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/auth/register"
+                    className="inline-flex items-center gap-2 mt-8 bg-navy-700 hover:bg-navy-800 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors">
+                    {C.nav.trial} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
+                  </Link>
+                </div>
+
+                {/* Right — mockup */}
+                <div className={`bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-xl ${lang === 'ar' ? 'md:order-1' : ''}`}>
+                  {/* Mock browser bar */}
+                  <div className="bg-slate-200 px-4 py-2.5 flex items-center gap-2">
+                    <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-400"/><div className="w-3 h-3 rounded-full bg-yellow-400"/><div className="w-3 h-3 rounded-full bg-green-400"/></div>
+                    <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 mx-2">app.getsuitel.com/dashboard</div>
+                  </div>
+
+                  {/* Mock content per tab */}
+                  <div className="p-5" dir="ltr">
+                    {tab.key === 'properties' && (
+                      <div className="space-y-3">
+                        {[
+                          { name: 'Al Noor Tower', loc: 'Muscat, Oman', occ: 80, units: 10, vacant: 2, rev: '12,500' },
+                          { name: 'Marina Residences', loc: 'Muscat, Oman', occ: 100, units: 5, vacant: 0, rev: '7,800' },
+                          { name: 'Green Valley Apts', loc: 'Sohar, Oman', occ: 60, units: 8, vacant: 3, rev: '6,200' },
+                        ].map((p, j) => (
+                          <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <div className="font-bold text-slate-900 text-sm">{p.name}</div>
+                                <div className="text-xs text-slate-400 mt-0.5">{p.loc}</div>
+                              </div>
+                              <span className="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded-full">Active</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full mb-1.5">
+                              <div className="h-full bg-navy-600 rounded-full" style={{ width: `${p.occ}%` }} />
+                            </div>
+                            <div className="flex justify-between text-xs text-slate-500">
+                              <span>{p.occ}% occupied · {p.vacant} vacant</span>
+                              <span className="font-semibold text-slate-700">OMR {p.rev}/mo</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {tab.key === 'tenants' && (
+                      <div className="space-y-3">
+                        {[
+                          { name: 'Ahmed Al Balushi', unit: 'Unit 201 · Al Noor Tower', status: 'Active', id: 'OM-8821934' },
+                          { name: 'Sara Al Rashdi',   unit: 'Unit 102 · Marina Res.',   status: 'Active', id: 'OM-7710023' },
+                          { name: 'Khalid Nasser',    unit: 'Unit 305 · Green Valley',  status: 'Pending', id: 'OM-9934512' },
+                        ].map((t, j) => (
+                          <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold text-sm shrink-0">
+                              {t.name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-slate-900 text-sm">{t.name}</div>
+                              <div className="text-xs text-slate-400 truncate">{t.unit}</div>
+                              <div className="text-xs text-slate-400 mt-0.5">ID: {t.id}</div>
+                            </div>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${t.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{t.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {tab.key === 'contracts' && (
+                      <div className="space-y-3">
+                        {[
+                          { tenant: 'Ahmed Al Balushi', unit: 'Unit 201', start: '01 Jan 2025', end: '31 Dec 2025', rent: '1,200', deposit: '2,400', status: 'Active' },
+                          { tenant: 'Sara Al Rashdi',   unit: 'Unit 102', start: '15 Mar 2025', end: '14 Mar 2026', rent: '950',  deposit: '1,900', status: 'Active' },
+                          { tenant: 'Khalid Nasser',    unit: 'Unit 305', start: '01 Jun 2024', end: '31 May 2025', rent: '800',  deposit: '1,600', status: 'Expired' },
+                        ].map((c, j) => (
+                          <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <div className="font-semibold text-slate-900 text-sm">{c.tenant}</div>
+                                <div className="text-xs text-slate-400">{c.unit}</div>
+                              </div>
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{c.status}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div><span className="text-slate-400">Period: </span><span className="text-slate-700">{c.start} – {c.end}</span></div>
+                              <div><span className="text-slate-400">Rent: </span><span className="font-semibold text-slate-900">OMR {c.rent}/mo</span></div>
+                              <div><span className="text-slate-400">Deposit: </span><span className="text-slate-700">OMR {c.deposit}</span></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {tab.key === 'invoices' && (
+                      <div className="space-y-3">
+                        {[
+                          { tenant: 'Ahmed Al Balushi', amount: '1,200', status: 'Paid',    month: 'June 2025',  statusColor: 'bg-emerald-100 text-emerald-700' },
+                          { tenant: 'Sara Al Rashdi',   amount: '950',   status: 'Overdue', month: 'May 2025',   statusColor: 'bg-red-100 text-red-700' },
+                          { tenant: 'Khalid Nasser',    amount: '800',   status: 'Sent',    month: 'June 2025',  statusColor: 'bg-blue-100 text-blue-700' },
+                          { tenant: 'Fatma Al Busaidi', amount: '1,050', status: 'Paid',    month: 'June 2025',  statusColor: 'bg-emerald-100 text-emerald-700' },
+                        ].map((inv, j) => (
+                          <div key={j} className="bg-white rounded-xl px-4 py-3 border border-slate-100 shadow-sm flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-slate-900 text-sm">{inv.tenant}</div>
+                              <div className="text-xs text-slate-400">{inv.month}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-slate-900 text-sm">OMR {inv.amount}</span>
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${inv.statusColor}`}>{inv.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="bg-navy-50 rounded-xl px-4 py-3 flex justify-between text-sm">
+                          <span className="text-slate-600 font-medium">Total Collected</span>
+                          <span className="font-black text-navy-800">OMR 2,250</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {tab.key === 'maintenance' && (
+                      <div className="space-y-3">
+                        {[
+                          { title: 'AC unit not cooling', unit: 'Unit 201', priority: 'Urgent', status: 'In Progress', icon: AlertCircle, iconColor: 'text-red-500', assigned: 'Mohammed (Tech)' },
+                          { title: 'Leaking pipe under sink', unit: 'Unit 102', priority: 'High',   status: 'Assigned',    icon: Clock,        iconColor: 'text-orange-500', assigned: 'Ali (Tech)' },
+                          { title: 'Broken window latch',    unit: 'Unit 305', priority: 'Medium', status: 'Open',        icon: AlertCircle, iconColor: 'text-yellow-500', assigned: 'Unassigned' },
+                          { title: 'Replace light fixture',  unit: 'Unit 104', priority: 'Low',    status: 'Completed',   icon: CheckCircle2, iconColor: 'text-emerald-500', assigned: 'Saif (Tech)' },
+                        ].map((m, j) => (
+                          <div key={j} className="bg-white rounded-xl p-3.5 border border-slate-100 shadow-sm flex items-start gap-3">
+                            <m.icon size={16} className={`${m.iconColor} shrink-0 mt-0.5`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-slate-900 text-sm">{m.title}</div>
+                              <div className="text-xs text-slate-400 mt-0.5">{m.unit} · {m.assigned}</div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${m.priority === 'Urgent' ? 'bg-red-100 text-red-700' : m.priority === 'High' ? 'bg-orange-100 text-orange-700' : m.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'}`}>{m.priority}</span>
+                              <span className="text-xs text-slate-400">{m.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {tab.key === 'reports' && (
+                      <div className="space-y-4">
+                        {/* KPI row */}
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { label: 'Revenue', value: 'OMR 26,500', sub: 'This month', color: 'text-emerald-700', bg: 'bg-emerald-50' },
+                            { label: 'Occupancy', value: '82%', sub: '18/22 units', color: 'text-navy-700', bg: 'bg-navy-50' },
+                            { label: 'Pending', value: 'OMR 3,800', sub: '4 invoices', color: 'text-orange-700', bg: 'bg-orange-50' },
+                          ].map((k, j) => (
+                            <div key={j} className={`${k.bg} rounded-xl p-3 text-center`}>
+                              <div className={`font-black text-sm ${k.color}`}>{k.value}</div>
+                              <div className="text-xs text-slate-500 mt-0.5">{k.label}</div>
+                              <div className="text-xs text-slate-400">{k.sub}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Bar chart */}
+                        <div className="bg-white rounded-xl p-4 border border-slate-100">
+                          <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp size={14} className="text-navy-600" />
+                            <span className="text-xs font-semibold text-slate-700">Monthly Revenue (OMR)</span>
+                          </div>
+                          <div className="flex items-end gap-2 h-20">
+                            {[55, 70, 60, 85, 75, 100].map((h, j) => (
+                              <div key={j} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full bg-navy-600 rounded-t-sm opacity-80 hover:opacity-100 transition-opacity" style={{ height: `${h}%` }} />
+                                <div className="text-[9px] text-slate-400">{['Jan','Feb','Mar','Apr','May','Jun'][j]}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Maintenance summary */}
+                        <div className="bg-white rounded-xl p-3 border border-slate-100 flex items-center justify-between">
+                          <span className="text-xs text-slate-500">Open maintenance requests</span>
+                          <div className="flex gap-3 text-xs">
+                            <span className="text-red-600 font-semibold">2 Urgent</span>
+                            <span className="text-orange-600 font-semibold">3 High</span>
+                            <span className="text-slate-400">1 Low</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
 
