@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Building2, Users, Receipt, Wrench, X, ArrowRight } from 'lucide-react'
+import { Building2, Users, Receipt, Wrench, UserCog, X, ArrowRight } from 'lucide-react'
 
 export default function WelcomeModal({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false)
@@ -24,6 +24,7 @@ export default function WelcomeModal({ userId }: { userId: string }) {
     { icon: Users,     label: 'Tenants & Contracts', desc: 'Onboard tenants, issue contracts, and set renewal reminders.' },
     { icon: Receipt,   label: 'Invoices & Payments', desc: 'Generate invoices, track payments, cheques and bank receipts.' },
     { icon: Wrench,    label: 'Maintenance',          desc: 'Submit, assign and track maintenance requests end-to-end.' },
+    { icon: UserCog,   label: 'Team & Staff',          desc: 'Invite property managers and financial managers to work with you.' },
   ]
 
   return (
@@ -51,10 +52,13 @@ export default function WelcomeModal({ userId }: { userId: string }) {
           </p>
         </div>
 
-        {/* Features */}
+        {/* Features — 2-col grid; last card spans full width when count is odd */}
         <div className="px-6 py-5 grid grid-cols-2 gap-3">
-          {features.map(f => (
-            <div key={f.label} className="flex gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+          {features.map((f, i) => (
+            <div
+              key={f.label}
+              className={`flex gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors${i === features.length - 1 && features.length % 2 !== 0 ? ' col-span-2' : ''}`}
+            >
               <div className="w-8 h-8 rounded-lg bg-navy-50 flex items-center justify-center shrink-0 mt-0.5">
                 <f.icon size={15} className="text-navy-700" />
               </div>

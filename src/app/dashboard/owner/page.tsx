@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import WelcomeModal from '@/components/WelcomeModal'
+import StaffWelcomeModal from '@/components/StaffWelcomeModal'
 import OnboardingChecklist, { type OnboardingStep } from '@/components/OnboardingChecklist'
 
 export const metadata = { title: 'Owner Dashboard' }
@@ -115,6 +116,10 @@ export default async function OwnerDashboard() {
       {/* Onboarding — owner only */}
       {isOwner && <OnboardingChecklist steps={onboardingSteps} orgId={orgId} />}
       {isOwner && <WelcomeModal userId={user.id} />}
+
+      {/* Welcome modal — staff roles */}
+      {isPropertyManager && <StaffWelcomeModal userId={user.id} role="property_manager" />}
+      {isFinancialManager && <StaffWelcomeModal userId={user.id} role="financial_manager" />}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
