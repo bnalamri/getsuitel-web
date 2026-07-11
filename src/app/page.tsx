@@ -275,7 +275,7 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/auth/register"
+                  <Link href="/auth/register?from=explore"
                     className="inline-flex items-center gap-2 mt-8 bg-navy-700 hover:bg-navy-800 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors">
                     {C.nav.trial} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
                   </Link>

@@ -62,6 +62,10 @@ export default function RegisterPage() {
       setStaffToken(token)
       setRole('staff')
     }
+    // Skip pilot gate for visitors coming from the landing page explorer
+    if (params.get('from') === 'explore') {
+      setStep(0)
+    }
   }, [])
   function toggleLang() {
     const next = lang === 'en' ? 'ar' : 'en'
