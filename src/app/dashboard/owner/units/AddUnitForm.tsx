@@ -3,10 +3,23 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
 
-export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
+const CURRENCIES = [
+  { value: 'OMR', label: 'OMR — Omani Rial' },
+  { value: 'SAR', label: 'SAR — Saudi Riyal' },
+  { value: 'AED', label: 'AED — UAE Dirham' },
+  { value: 'KWD', label: 'KWD — Kuwaiti Dinar' },
+  { value: 'QAR', label: 'QAR — Qatari Riyal' },
+  { value: 'BHD', label: 'BHD — Bahraini Dinar' },
+  { value: 'USD', label: 'USD — US Dollar' },
+  { value: 'GBP', label: 'GBP — British Pound' },
+  { value: 'EUR', label: 'EUR — Euro' },
+]
+
+export default function AddUnitForm({ orgId, properties, defaultPropertyId, defaultCurrency = 'OMR' }: {
   orgId: string
   properties: { id: string; name: string }[]
   defaultPropertyId?: string
+  defaultCurrency?: string
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -15,7 +28,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
   const initialForm = {
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
     unit_type: 'flat', unit_number: '', floor: '', area_sqm: '', bedrooms: '', bathrooms: '',
-    rent_amount: '', currency: 'OMR', status: 'vacant',
+    rent_amount: '', currency: defaultCurrency, status: 'vacant',
   }
   const [form, setForm] = useState(initialForm)
 
@@ -121,7 +134,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId }: {
             <div>
               <label className="label">Currency</label>
               <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                <option>OMR</option><option>USD</option><option>AED</option><option>SAR</option>
+                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
           </div>

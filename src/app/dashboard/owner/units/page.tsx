@@ -23,7 +23,11 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const { data: properties } = await supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name')
+  const [{ data: org }, { data: properties }] = await Promise.all([
+    supabase.from('organizations').select('default_currency').eq('id', orgId).single(),
+    supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
+  ])
+  const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
 
   const hasProperties = (properties?.length ?? 0) > 0
 
@@ -59,7 +63,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
           <h2 className="text-2xl font-bold text-slate-900">Units {selectedProperty ? `— ${selectedProperty.name}` : ''}</h2>
           <p className="text-slate-500 text-sm mt-0.5">{units?.length ?? 0} units</p>
         </div>
-        <AddUnitForm orgId={orgId} properties={properties ?? []} defaultPropertyId={searchParams.property} />
+        <AddUnitForm orgId={orgId} properties={properties ?? []} defaultPropertyId={searchParams.property} defaultCurrency={defaultCurrency} />
       </div>
 
       {/* Filter by property */}
