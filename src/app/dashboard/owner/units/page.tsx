@@ -19,8 +19,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
   const orgId = profile?.organization_id
+  const canEdit = profile?.role === 'owner' || profile?.role === 'property_manager'
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const [{ data: org }, { data: properties }] = await Promise.all([
@@ -63,7 +64,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
           <h2 className="text-2xl font-bold text-slate-900">Units {selectedProperty ? `— ${selectedProperty.name}` : ''}</h2>
           <p className="text-slate-500 text-sm mt-0.5">{units?.length ?? 0} units</p>
         </div>
-        <AddUnitForm orgId={orgId} properties={properties ?? []} defaultPropertyId={searchParams.property} defaultCurrency={defaultCurrency} />
+        {canEdit && <AddUnitForm orgId={orgId} properties={properties ?? []} defaultPropertyId={searchParams.property} defaultCurrency={defaultCurrency} />}
       </div>
 
       {/* Filter by property */}
@@ -113,12 +114,15 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">{Number(u.rent_amount).toLocaleString()} {u.currency}</td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[u.status]}`}>{u.status}</span></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <EditUnitForm unit={u} occupied={isOccupied} />
-                        <DeleteUnitButton unitId={u.id} unitNumber={u.unit_number} occupied={isOccupied} />
-                      </div>
-                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <EditUnitForm unit={u} occupied={isOccupied} />
+                          <DeleteUnitButton unitId={u.id} unitNumber={u.unit_number} occupied={isOccupied} />
+                        </div>
+                      </td>
+                    )}
+                    {!canEdit && <td className="px-4 py-3" />}
                   </tr>
                 )
               })}
