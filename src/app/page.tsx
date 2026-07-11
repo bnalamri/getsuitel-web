@@ -294,9 +294,9 @@ export default function LandingPage() {
                     {tab.key === 'properties' && (
                       <div className="space-y-3">
                         {[
-                          { name: 'Al Noor Tower', loc: 'Muscat, Oman', occ: 80, units: 10, vacant: 2, rev: '12,500' },
-                          { name: 'Marina Residences', loc: 'Muscat, Oman', occ: 100, units: 5, vacant: 0, rev: '7,800' },
-                          { name: 'Green Valley Apts', loc: 'Sohar, Oman', occ: 60, units: 8, vacant: 3, rev: '6,200' },
+                          { name: 'Oakwood Residences', loc: 'New York, USA', occ: 80, units: 10, vacant: 2, rev: '12,500' },
+                          { name: 'Marina Heights',     loc: 'Los Angeles, USA', occ: 100, units: 5, vacant: 0, rev: '7,800' },
+                          { name: 'Green Valley Apts',  loc: 'Chicago, USA', occ: 60, units: 8, vacant: 3, rev: '6,200' },
                         ].map((p, j) => (
                           <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
                             <div className="flex items-start justify-between mb-2">
@@ -321,9 +321,9 @@ export default function LandingPage() {
                     {tab.key === 'tenants' && (
                       <div className="space-y-3">
                         {[
-                          { name: 'Ahmed Al Balushi', unit: 'Unit 201 · Al Noor Tower', status: 'Active', id: 'OM-8821934' },
-                          { name: 'Sara Al Rashdi',   unit: 'Unit 102 · Marina Res.',   status: 'Active', id: 'OM-7710023' },
-                          { name: 'Khalid Nasser',    unit: 'Unit 305 · Green Valley',  status: 'Pending', id: 'OM-9934512' },
+                          { name: 'James Mitchell',  unit: 'Unit 201 · Oakwood Res.',   status: 'Active',  id: 'ID-8821934' },
+                          { name: 'Sarah Thompson',  unit: 'Unit 102 · Marina Heights', status: 'Active',  id: 'ID-7710023' },
+                          { name: 'David Chen',      unit: 'Unit 305 · Green Valley',   status: 'Pending', id: 'ID-9934512' },
                         ].map((t, j) => (
                           <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-navy-100 flex items-center justify-center text-navy-700 font-bold text-sm shrink-0">
@@ -343,9 +343,9 @@ export default function LandingPage() {
                     {tab.key === 'contracts' && (
                       <div className="space-y-3">
                         {[
-                          { tenant: 'Ahmed Al Balushi', unit: 'Unit 201', start: '01 Jan 2025', end: '31 Dec 2025', rent: '1,200', deposit: '2,400', status: 'Active' },
-                          { tenant: 'Sara Al Rashdi',   unit: 'Unit 102', start: '15 Mar 2025', end: '14 Mar 2026', rent: '950',  deposit: '1,900', status: 'Active' },
-                          { tenant: 'Khalid Nasser',    unit: 'Unit 305', start: '01 Jun 2024', end: '31 May 2025', rent: '800',  deposit: '1,600', status: 'Expired' },
+                          { tenant: 'James Mitchell', unit: 'Unit 201', start: '01 Jan 2025', end: '31 Dec 2025', rent: '1,200', deposit: '2,400', status: 'Active' },
+                          { tenant: 'Sarah Thompson', unit: 'Unit 102', start: '15 Mar 2025', end: '14 Mar 2026', rent: '950',  deposit: '1,900', status: 'Active' },
+                          { tenant: 'David Chen',     unit: 'Unit 305', start: '01 Jun 2024', end: '31 May 2025', rent: '800',  deposit: '1,600', status: 'Expired' },
                         ].map((c, j) => (
                           <div key={j} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
                             <div className="flex items-start justify-between mb-2">
@@ -368,10 +368,10 @@ export default function LandingPage() {
                     {tab.key === 'invoices' && (
                       <div className="space-y-3">
                         {[
-                          { tenant: 'Ahmed Al Balushi', amount: '1,200', status: 'Paid',    month: 'June 2025',  statusColor: 'bg-emerald-100 text-emerald-700' },
-                          { tenant: 'Sara Al Rashdi',   amount: '950',   status: 'Overdue', month: 'May 2025',   statusColor: 'bg-red-100 text-red-700' },
-                          { tenant: 'Khalid Nasser',    amount: '800',   status: 'Sent',    month: 'June 2025',  statusColor: 'bg-blue-100 text-blue-700' },
-                          { tenant: 'Fatma Al Busaidi', amount: '1,050', status: 'Paid',    month: 'June 2025',  statusColor: 'bg-emerald-100 text-emerald-700' },
+                          { tenant: 'James Mitchell', amount: '1,200', status: 'Paid',    month: 'June 2025', statusColor: 'bg-emerald-100 text-emerald-700' },
+                          { tenant: 'Sarah Thompson', amount: '950',   status: 'Overdue', month: 'May 2025',  statusColor: 'bg-red-100 text-red-700' },
+                          { tenant: 'David Chen',     amount: '800',   status: 'Sent',    month: 'June 2025', statusColor: 'bg-blue-100 text-blue-700' },
+                          { tenant: 'Emma Wilson',    amount: '1,050', status: 'Paid',    month: 'June 2025', statusColor: 'bg-emerald-100 text-emerald-700' },
                         ].map((inv, j) => (
                           <div key={j} className="bg-white rounded-xl px-4 py-3 border border-slate-100 shadow-sm flex items-center justify-between">
                             <div>
@@ -394,10 +394,10 @@ export default function LandingPage() {
                     {tab.key === 'maintenance' && (
                       <div className="space-y-3">
                         {[
-                          { title: 'AC unit not cooling', unit: 'Unit 201', priority: 'Urgent', status: 'In Progress', icon: AlertCircle, iconColor: 'text-red-500', assigned: 'Mohammed (Tech)' },
+                          { title: 'AC unit not cooling', unit: 'Unit 201', priority: 'Urgent', status: 'In Progress', icon: AlertCircle, iconColor: 'text-red-500', assigned: 'Mike J. (Tech)' },
                           { title: 'Leaking pipe under sink', unit: 'Unit 102', priority: 'High',   status: 'Assigned',    icon: Clock,        iconColor: 'text-orange-500', assigned: 'Ali (Tech)' },
                           { title: 'Broken window latch',    unit: 'Unit 305', priority: 'Medium', status: 'Open',        icon: AlertCircle, iconColor: 'text-yellow-500', assigned: 'Unassigned' },
-                          { title: 'Replace light fixture',  unit: 'Unit 104', priority: 'Low',    status: 'Completed',   icon: CheckCircle2, iconColor: 'text-emerald-500', assigned: 'Saif (Tech)' },
+                          { title: 'Replace light fixture',  unit: 'Unit 104', priority: 'Low',    status: 'Completed',   icon: CheckCircle2, iconColor: 'text-emerald-500', assigned: 'Chris L. (Tech)' },
                         ].map((m, j) => (
                           <div key={j} className="bg-white rounded-xl p-3.5 border border-slate-100 shadow-sm flex items-start gap-3">
                             <m.icon size={16} className={`${m.iconColor} shrink-0 mt-0.5`} />

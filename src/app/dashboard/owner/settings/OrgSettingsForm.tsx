@@ -49,7 +49,7 @@ export default function OrgSettingsForm({ org, userId, orgId, platformCurrency =
       <h3 className="font-semibold text-slate-900 mb-1">Organization</h3>
       <p className="text-slate-500 text-sm mb-4">{orgId ? 'Update your company details' : 'Set up your organization to start managing properties'}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div><label className="label">Company Name (English)</label><input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Al Noor Properties LLC" /></div>
+        <div><label className="label">Company Name (English)</label><input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Oakwood Properties LLC" /></div>
         <div><label className="label">Company Name (Arabic)</label><input className="input" dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} placeholder="شركة النور للعقارات" /></div>
         <div>
           <label className="label">Date Format</label>

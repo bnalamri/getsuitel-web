@@ -47,7 +47,7 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="label">Property Name</label>
-            <input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Al Noor Tower" />
+            <input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Oakwood Tower" />
           </div>
           <div>
             <label className="label">Type</label>
