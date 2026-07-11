@@ -1,6 +1,8 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import WelcomeModal from '@/components/WelcomeModal'
+import OnboardingChecklist, { type OnboardingStep } from '@/components/OnboardingChecklist'
 
 export const metadata = { title: 'Owner Dashboard' }
 
@@ -53,12 +55,13 @@ export default async function OwnerDashboard() {
 
   const orgId = org.id as string
 
-  const [props, units, tenants, invoices, maintenance] = await Promise.all([
+  const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('units').select('id, status', { count: 'exact' }).eq('organization_id', orgId),
     supabase.from('tenants').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('invoices').select('id, amount, status, currency').eq('organization_id', orgId),
     supabase.from('maintenance_requests').select('id, title, status, priority, created_at').eq('organization_id', orgId).in('status', ['open', 'assigned', 'in_progress']).order('created_at', { ascending: false }).limit(5),
+    supabase.from('contracts').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
   ])
 
   const vacant = units.data?.filter(u => u.status === 'vacant').length ?? 0
@@ -84,6 +87,14 @@ export default async function OwnerDashboard() {
 
   const recentInvoices = invoices.data?.filter(i => i.status !== 'paid').slice(0, 5) ?? []
 
+  const onboardingSteps: OnboardingStep[] = [
+    { label: 'Add your first property',  description: 'Create a property to start organising your units.',         href: '/dashboard/owner/properties', done: (props.count ?? 0) > 0 },
+    { label: 'Add a unit',               description: 'Add at least one unit inside your property.',                href: '/dashboard/owner/units',      done: (units.count ?? 0) > 0 },
+    { label: 'Invite a tenant',          description: 'Register a tenant so they can access their portal.',        href: '/dashboard/owner/tenants',    done: (tenants.count ?? 0) > 0 },
+    { label: 'Create a contract',        description: 'Link a tenant to a unit with a signed rental contract.',    href: '/dashboard/owner/contracts',  done: (contracts.count ?? 0) > 0 },
+    { label: 'Send your first invoice',  description: 'Issue a rent invoice to start collecting payments.',        href: '/dashboard/owner/invoices',   done: (invoices.data?.length ?? 0) > 0 },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -100,6 +111,10 @@ export default async function OwnerDashboard() {
           </p>
         )}
       </div>
+
+      {/* Onboarding — owner only */}
+      {isOwner && <OnboardingChecklist steps={onboardingSteps} orgId={orgId} />}
+      {isOwner && <WelcomeModal userId={user.id} />}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
