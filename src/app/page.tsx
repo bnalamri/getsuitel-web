@@ -311,7 +311,7 @@ export default function LandingPage() {
                             </div>
                             <div className="flex justify-between text-xs text-slate-500">
                               <span>{p.occ}% occupied · {p.vacant} vacant</span>
-                              <span className="font-semibold text-slate-700">OMR {p.rev}/mo</span>
+                              <span className="font-semibold text-slate-700">${p.rev}/mo</span>
                             </div>
                           </div>
                         ))}
@@ -357,8 +357,8 @@ export default function LandingPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-xs">
                               <div><span className="text-slate-400">Period: </span><span className="text-slate-700">{c.start} – {c.end}</span></div>
-                              <div><span className="text-slate-400">Rent: </span><span className="font-semibold text-slate-900">OMR {c.rent}/mo</span></div>
-                              <div><span className="text-slate-400">Deposit: </span><span className="text-slate-700">OMR {c.deposit}</span></div>
+                              <div><span className="text-slate-400">Rent: </span><span className="font-semibold text-slate-900">${c.rent}/mo</span></div>
+                              <div><span className="text-slate-400">Deposit: </span><span className="text-slate-700">${c.deposit}</span></div>
                             </div>
                           </div>
                         ))}
@@ -379,14 +379,14 @@ export default function LandingPage() {
                               <div className="text-xs text-slate-400">{inv.month}</div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="font-bold text-slate-900 text-sm">OMR {inv.amount}</span>
+                              <span className="font-bold text-slate-900 text-sm">${inv.amount}</span>
                               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${inv.statusColor}`}>{inv.status}</span>
                             </div>
                           </div>
                         ))}
                         <div className="bg-navy-50 rounded-xl px-4 py-3 flex justify-between text-sm">
                           <span className="text-slate-600 font-medium">Total Collected</span>
-                          <span className="font-black text-navy-800">OMR 2,250</span>
+                          <span className="font-black text-navy-800">$2,250</span>
                         </div>
                       </div>
                     )}
@@ -419,9 +419,9 @@ export default function LandingPage() {
                         {/* KPI row */}
                         <div className="grid grid-cols-3 gap-3">
                           {[
-                            { label: 'Revenue', value: 'OMR 26,500', sub: 'This month', color: 'text-emerald-700', bg: 'bg-emerald-50' },
+                            { label: 'Revenue', value: '$26,500', sub: 'This month', color: 'text-emerald-700', bg: 'bg-emerald-50' },
                             { label: 'Occupancy', value: '82%', sub: '18/22 units', color: 'text-navy-700', bg: 'bg-navy-50' },
-                            { label: 'Pending', value: 'OMR 3,800', sub: '4 invoices', color: 'text-orange-700', bg: 'bg-orange-50' },
+                            { label: 'Pending', value: '$3,800', sub: '4 invoices', color: 'text-orange-700', bg: 'bg-orange-50' },
                           ].map((k, j) => (
                             <div key={j} className={`${k.bg} rounded-xl p-3 text-center`}>
                               <div className={`font-black text-sm ${k.color}`}>{k.value}</div>
@@ -434,7 +434,7 @@ export default function LandingPage() {
                         <div className="bg-white rounded-xl p-4 border border-slate-100">
                           <div className="flex items-center gap-2 mb-3">
                             <TrendingUp size={14} className="text-navy-600" />
-                            <span className="text-xs font-semibold text-slate-700">Monthly Revenue (OMR)</span>
+                            <span className="text-xs font-semibold text-slate-700">Monthly Revenue ($)</span>
                           </div>
                           <div className="flex items-end gap-2 h-20">
                             {[55, 70, 60, 85, 75, 100].map((h, j) => (
