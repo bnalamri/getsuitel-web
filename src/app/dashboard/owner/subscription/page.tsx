@@ -79,7 +79,7 @@ export default async function SubscriptionPage() {
       <div className="grid md:grid-cols-3 gap-4">
         {plans.map(p => {
           const current = orgData?.subscription_plan === p.name.toLowerCase()
-          const subject = encodeURIComponent(`Upgrade Request — ${p.name} Plan`)
+          const subject = encodeURIComponent(`Plan Change Request — ${p.name} Plan`)
           const body = encodeURIComponent(
             `Hello GetSuitel Support,\n\nI would like to upgrade my subscription to the ${p.name} plan ($${p.price}/mo).\n\nAccount details:\nName: ${ownerName}\nOrganization: ${orgName}\nEmail: ${user.email}\n\nPlease process this upgrade at your earliest convenience.\n\nThank you.`
           )
@@ -128,7 +128,7 @@ export default async function SubscriptionPage() {
               </ul>
               {!current && (
                 <a href={mailtoHref} className="btn-secondary w-full mt-4 text-sm text-center block">
-                  Upgrade Request
+                  Plan Change Request
                 </a>
               )}
             </div>
@@ -139,7 +139,7 @@ export default async function SubscriptionPage() {
       <div className="card p-4 flex items-center gap-3 text-sm text-slate-600">
         <Mail size={18} className="text-slate-400 flex-shrink-0" />
         <span>
-          To upgrade, click the &ldquo;Upgrade Request&rdquo; button — it opens a pre-filled email to{' '}
+          To upgrade, click the &ldquo;Plan Change Request&rdquo; button — it opens a pre-filled email to{' '}
           <a href="mailto:billing@getsuitel.com" className="text-navy-700 font-medium hover:underline">billing@getsuitel.com</a>.
           {' '}GetSuitel team will contact you within 24 hours.
         </span>
