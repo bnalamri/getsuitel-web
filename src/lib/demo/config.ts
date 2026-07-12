@@ -37,7 +37,7 @@ export const TOUR_STEPS: TourStep[] = [
     description:
       'Your demo account is pre-loaded with a realistic property portfolio. Hit Next to explore each section.',
     audio:
-      'Welcome to GetSuitel — the property management platform built for Oman. Your demo account is fully set up with a real property, tenants, contracts, and invoices. Click Next to begin the tour.',
+      'Welcome to GetSuitel — the smart property management platform. Your demo account is fully set up with a real property, tenants, contracts, and invoices. Click Next to begin the tour.',
   },
   {
     path: '/dashboard/owner/properties',
@@ -45,7 +45,7 @@ export const TOUR_STEPS: TourStep[] = [
     description:
       'Oakwood Residences is a 4-unit residential complex in Muscat. You can manage multiple buildings, villas, or compounds from one account.',
     audio:
-      'This is the Properties page. Oakwood Residences is a residential complex in Al Khuwair, Muscat. You can add as many buildings or villas as you manage, each with their own units.',
+      'This is the Properties page. Oakwood Residences is a 4-unit residential complex. You can add as many buildings, villas, or compounds as you manage, each with their own units.',
   },
   {
     path: '/dashboard/owner/units',
@@ -83,7 +83,7 @@ export const TOUR_STEPS: TourStep[] = [
     path: '/dashboard/owner',
     title: "You're all set! 🎉",
     description:
-      'Sign up free to start managing your own properties. No credit card needed — your first 30 days are on us.',
+      'You\'ve seen the full platform. Ready to start managing your own properties?',
     audio:
       "That's the full GetSuitel experience. Sign up free today and start managing your own properties in minutes. No credit card required — your first 30 days are completely free.",
   },
