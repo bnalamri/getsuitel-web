@@ -27,7 +27,7 @@ export default async function OwnersPage() {
 
   const { data: orgs } = await admin
     .from('organizations')
-    .select('*, profiles!organizations_owner_id_fkey(full_name, email, phone)')
+    .select('*, profiles!organizations_owner_id_fkey(full_name, email, phone, national_id)')
     .order('created_at', { ascending: false })
 
   // Get counts per org
@@ -57,7 +57,7 @@ export default async function OwnersPage() {
       ) : (
         <div className="space-y-4">
           {(orgs ?? []).map(org => {
-            const owner = org.profiles as { full_name: string; email: string; phone: string } | null
+            const owner = org.profiles as { full_name: string; email: string; phone: string; national_id?: string } | null
             const isActive = org.subscription_status === 'active'
             const expiresAt = org.subscription_expires_at
             const trialDays = org.trial_ends_at
@@ -138,8 +138,13 @@ export default async function OwnersPage() {
                     />
                     <EditOrgForm
                       orgId={org.id}
+                      ownerId={org.owner_id}
+                      ownerType={org.owner_type ?? 'individual'}
                       currentName={org.name}
                       currentNameAr={org.name_ar}
+                      currentCrNumber={org.cr_number}
+                      currentAuthorizedRep={org.authorized_rep}
+                      currentNationalId={owner?.national_id}
                     />
                     {org.subscription_status === 'canceled' && (
                       <ForcePurgeButton orgId={org.id} orgName={org.name} />
