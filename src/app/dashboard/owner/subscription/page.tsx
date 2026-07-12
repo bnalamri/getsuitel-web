@@ -81,7 +81,7 @@ export default async function SubscriptionPage() {
           const current = orgData?.subscription_plan === p.name.toLowerCase()
           const subject = encodeURIComponent(`Plan Change Request — ${p.name} Plan`)
           const body = encodeURIComponent(
-            `Hello GetSuitel Support,\n\nI would like to upgrade my subscription to the ${p.name} plan ($${p.price}/mo).\n\nAccount details:\nName: ${ownerName}\nOrganization: ${orgName}\nEmail: ${user.email}\n\nPlease process this upgrade at your earliest convenience.\n\nThank you.`
+            `Hello GetSuitel Team,\n\nI would like to request a plan change to the ${p.name} plan.\n\nAccount details:\nName: ${ownerName}\nOrganization: ${orgName}\nEmail: ${user.email}\n\nPlease contact me to discuss the details and process this request.\n\nThank you.`
           )
           const mailtoHref = `mailto:billing@getsuitel.com?subject=${subject}&body=${body}`
 
