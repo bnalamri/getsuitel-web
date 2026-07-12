@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, X, Loader2, Paperclip, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react'
+import { Pencil, X, Loader2, Paperclip, CheckCircle, ExternalLink, RefreshCw, Trash2 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 
 type Tenant = { id: string; full_name: string }
@@ -36,6 +36,8 @@ export default function EditContractForm({
   const [error, setError] = useState('')
   const [agreementFile, setAgreementFile] = useState<File | null>(null)
   const [replacingDoc, setReplacingDoc] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [docRemoved, setDocRemoved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -55,6 +57,18 @@ export default function EditContractForm({
   function handleClose() {
     setOpen(false)
     setError('')
+    setAgreementFile(null)
+    setReplacingDoc(false)
+    setDocRemoved(false)
+  }
+
+  async function handleRemoveAgreement() {
+    if (!window.confirm('Remove the Municipality Agreement from this contract?')) return
+    setRemoving(true)
+    const res = await fetch(`/api/contracts/${contract.id}/agreement`, { method: 'DELETE' })
+    setRemoving(false)
+    if (!res.ok) { const j = await res.json(); setError(j.error ?? 'Failed to remove'); return }
+    setDocRemoved(true)
     setAgreementFile(null)
     setReplacingDoc(false)
   }
@@ -115,7 +129,7 @@ export default function EditContractForm({
     </button>
   )
 
-  const hasExistingDoc = !!contract.municipality_agreement_url
+  const hasExistingDoc = !!contract.municipality_agreement_url && !docRemoved
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -186,11 +200,11 @@ export default function EditContractForm({
               ref={fileRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              className="sr-only"
+              style={{ position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden' }}
               onChange={e => { setAgreementFile(e.target.files?.[0] ?? null); setReplacingDoc(true) }}
             />
-            {hasExistingDoc && !replacingDoc ? (
-              <div className="flex items-center gap-2">
+            {hasExistingDoc && !replacingDoc && !docRemoved ? (
+              <div className="flex items-center gap-2 flex-wrap">
                 <a
                   href={contract.municipality_agreement_url!}
                   target="_blank"
@@ -205,6 +219,14 @@ export default function EditContractForm({
                   className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-colors"
                 >
                   <RefreshCw size={12} /> Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveAgreement}
+                  disabled={removing}
+                  className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {removing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Remove
                 </button>
               </div>
             ) : agreementFile ? (
