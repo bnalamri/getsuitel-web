@@ -34,6 +34,8 @@ const t = {
     crNumber: 'Commercial Registration (CR) No.', crPlaceholder: 'e.g. 1234567',
     authorizedRep: 'Authorized Representative', authorizedRepPlaceholder: 'Full name of authorized signatory',
     companyName: 'Company name', companyNamePlaceholder: 'Al-Ameri Real Estate LLC',
+    crDoc: 'CR Certificate / Registration Document', crDocHint: 'Upload a copy of your commercial registration certificate (PDF, JPG, or PNG)',
+    crDocRequired: 'Please upload your company registration document',
   },
   ar: {
     step0Title: '…أنا', step0Sub: 'اختر نوع حسابك للبدء',
@@ -63,6 +65,8 @@ const t = {
     crNumber: 'رقم السجل التجاري', crPlaceholder: 'مثال: ١٢٣٤٥٦٧',
     authorizedRep: 'المفوّض بالتوقيع', authorizedRepPlaceholder: 'الاسم الكامل للمفوّض',
     companyName: 'اسم الشركة', companyNamePlaceholder: 'شركة العامري للعقارات',
+    crDoc: 'شهادة السجل التجاري / وثيقة التسجيل', crDocHint: 'ارفع نسخة من شهادة السجل التجاري (PDF أو JPG أو PNG)',
+    crDocRequired: 'يرجى رفع وثيقة تسجيل الشركة',
   },
 }
 
@@ -94,6 +98,7 @@ export default function RegisterPage() {
   const [pilotLoading, setPilotLoading] = useState(false)
   const [role, setRole] = useState<'owner'|'tenant'|'technician'|'staff'>('owner')
   const [ownerType, setOwnerType] = useState<'individual'|'company'>('individual')
+  const [crFile, setCrFile] = useState<File|null>(null)
   const [plan, setPlan] = useState('basic')
   const [inviteCode, setInviteCode] = useState('')
   const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
@@ -185,6 +190,9 @@ export default function RegisterPage() {
     if (role === 'staff' && !staffInfo) {
       setError(T.staffTokenRequired); return
     }
+    if (role === 'owner' && ownerType === 'company' && !crFile) {
+      setError(T.crDocRequired); return
+    }
     setLoading(true); setError('')
 
     // For staff, use the role from the invitation token
@@ -222,6 +230,14 @@ export default function RegisterPage() {
       if (!res.ok) {
         setError(data.error || 'Registration failed. Please try again.')
         return
+      }
+
+      // Upload CR document for company owners
+      if (role === 'owner' && ownerType === 'company' && crFile && data.userId) {
+        const fd = new FormData()
+        fd.append('userId', data.userId)
+        fd.append('file', crFile)
+        fetch('/api/org/upload-cr-doc', { method: 'POST', body: fd }).catch(() => {})
       }
 
       // Notify super admin of new owner registration
@@ -527,14 +543,31 @@ export default function RegisterPage() {
                         <input value={form.org} onChange={e=>set('org',e.target.value)} required className="input" placeholder={T.companyNamePlaceholder}/>
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                          {T.crNumber} <span className="text-slate-400 font-normal">({lang==='ar'?'اختياري':'optional'})</span>
-                        </label>
-                        <input value={form.crNumber} onChange={e=>set('crNumber',e.target.value)} className="input" placeholder={T.crPlaceholder}/>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.crNumber}</label>
+                        <input value={form.crNumber} onChange={e=>set('crNumber',e.target.value)} required className="input" placeholder={T.crPlaceholder}/>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.authorizedRep}</label>
                         <input value={form.authorizedRep} onChange={e=>set('authorizedRep',e.target.value)} required className="input" placeholder={T.authorizedRepPlaceholder}/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.crDoc}</label>
+                        <label className={`flex items-center gap-3 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${crFile ? 'border-green-400 bg-green-50' : 'border-slate-300 hover:border-navy-400 bg-slate-50'}`}>
+                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                            onChange={e => setCrFile(e.target.files?.[0] ?? null)} />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${crFile ? 'bg-green-100' : 'bg-slate-200'}`}>
+                            {crFile
+                              ? <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                              : <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            {crFile
+                              ? <div className="text-sm font-medium text-green-700 truncate">{crFile.name}</div>
+                              : <div className="text-sm text-slate-500">{T.crDocHint}</div>
+                            }
+                          </div>
+                        </label>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.name} ({lang==='ar'?'للتواصل':'for contact'})</label>
