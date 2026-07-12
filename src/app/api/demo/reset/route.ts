@@ -11,17 +11,26 @@ import { createAdminClient } from '@/lib/supabase/server'
 async function runReset() {
   const admin = createAdminClient()
   const demoEmail = process.env.DEMO_EMAIL!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-  // ── Find demo user ─────────────────────────────────────────────────────────
-  const { data: userResult } = await admin.auth.admin.getUserByEmail(demoEmail)
-  if (!userResult?.user) {
+  // ── Find demo user via REST (SDK has no getUserByEmail) ───────────────────
+  const authRes = await fetch(
+    `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(demoEmail)}`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+  )
+  const authJson = await authRes.json()
+  const authUsers = authJson.users ?? (Array.isArray(authJson) ? authJson : [])
+  const demoUser = authUsers.find((u: { email: string }) => u.email === demoEmail)
+
+  if (!demoUser) {
     return { error: 'Demo user not found — run /api/demo/setup first' }
   }
 
   const { data: profile } = await admin
     .from('profiles')
     .select('organization_id')
-    .eq('id', userResult.user.id)
+    .eq('id', demoUser.id)
     .single()
 
   const orgId = profile?.organization_id

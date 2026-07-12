@@ -41,14 +41,25 @@ async function _handleSetup(request: NextRequest) {
   const admin = createAdminClient()
   const demoEmail = process.env.DEMO_EMAIL!
   const demoPassword = process.env.DEMO_PASSWORD!
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  // Helper: find user by email via Supabase REST API (SDK has no getUserByEmail)
+  async function findUserByEmail(email: string): Promise<string | null> {
+    const res = await fetch(
+      `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    )
+    if (!res.ok) return null
+    const json = await res.json()
+    const users = json.users ?? (Array.isArray(json) ? json : [])
+    return users.find((u: { email: string }) => u.email === email)?.id ?? null
+  }
 
   // ── 1. Create demo auth user if not exists ────────────────────────────────
-  let demoUserId: string | null = null
+  let demoUserId: string | null = await findUserByEmail(demoEmail)
 
-  const { data: existingUser } = await admin.auth.admin.getUserByEmail(demoEmail)
-  if (existingUser?.user) {
-    demoUserId = existingUser.user.id
-  } else {
+  if (!demoUserId) {
     const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
       email: demoEmail,
       password: demoPassword,
@@ -57,23 +68,21 @@ async function _handleSetup(request: NextRequest) {
         full_name: 'GetSuitel Demo',
         role: 'owner',
         owner_type: 'individual',
-        org_name: 'GetSuitel Demo',   // ← required: tells trigger to create the org
+        org_name: 'GetSuitel Demo',   // ← tells trigger to create the org
         plan: 'pro',
         lang_pref: 'en',
       },
     })
 
     if (createErr) {
-      // GoTrue sometimes returns {} when a trigger errors but the user IS created.
-      // Re-check by email before giving up.
-      const { data: recheckUser } = await admin.auth.admin.getUserByEmail(demoEmail)
-      if (!recheckUser?.user) {
+      // GoTrue returns {} when a trigger errors but the user may still have been created.
+      demoUserId = await findUserByEmail(demoEmail)
+      if (!demoUserId) {
         return NextResponse.json(
           { error: `Failed to create demo user: ${createErr.message}` },
           { status: 500 }
         )
       }
-      demoUserId = recheckUser.user.id
     } else {
       demoUserId = newUser.user.id
     }
