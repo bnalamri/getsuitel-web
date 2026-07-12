@@ -95,9 +95,7 @@ export default async function SubscriptionPage() {
               {current && <div className="text-xs font-bold text-navy-700 mb-2 uppercase tracking-wide">Current Plan</div>}
               <div className="text-lg font-bold text-slate-900">{p.name}</div>
               <div className="text-xs text-slate-400 mb-2">{p.desc}</div>
-              <div className="text-3xl font-black text-navy-700 my-2">
-                {p.price}<span className="text-sm font-normal text-slate-400">/mo</span>
-              </div>
+
               <ul className="space-y-1.5 mt-3 flex-1">
                 {/* Limit features — show actual values for current plan */}
                 <li className="flex items-center gap-2 text-sm text-slate-600">
