@@ -14,10 +14,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
+  try {
+    return await _handleSetup(request)
+  } catch (err) {
+    const detail = err instanceof Error ? `${err.message}\n${err.stack}` : String(err)
+    console.error('[demo/setup] Uncaught:', detail)
+    return NextResponse.json({ error: 'Uncaught exception', detail }, { status: 500 })
+  }
+}
+
+async function _handleSetup(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get('secret')
   if (!secret || secret !== process.env.DEMO_RESET_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Quick env check — values hidden, just presence
+  const envCheck = {
+    DEMO_EMAIL: !!process.env.DEMO_EMAIL,
+    DEMO_PASSWORD: !!process.env.DEMO_PASSWORD,
+    SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    SERVICE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  }
+  console.log('[demo/setup] env:', JSON.stringify(envCheck))
 
   const admin = createAdminClient()
   const demoEmail = process.env.DEMO_EMAIL!
