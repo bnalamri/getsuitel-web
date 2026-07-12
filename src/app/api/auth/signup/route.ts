@@ -50,6 +50,7 @@ export async function POST(req: Request) {
   })
 
   if (createError) {
+    console.error('[signup] createUser failed:', JSON.stringify({ message: createError.message, status: createError.status, name: createError.name }))
     const msg = createError.message ?? ''
     if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('registered')) {
       return NextResponse.json(
@@ -57,7 +58,8 @@ export async function POST(req: Request) {
         { status: 409 }
       )
     }
-    return NextResponse.json({ error: msg || 'Registration failed. Please try again.' }, { status: 500 })
+    const display = msg || `Auth error (status ${createError.status})` || 'Registration failed. Please try again.'
+    return NextResponse.json({ error: display }, { status: 500 })
   }
 
   const userId = userData.user.id
