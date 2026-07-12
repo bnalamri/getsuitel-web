@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
     { en:'System', ar:'النظام', items:[
+      { href:'/dashboard/admin/demo-audio', icon:Volume2, en:'Demo Audio', ar:'صوت الجولة' },
       { href:'/dashboard/admin/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
     ]},
   ],

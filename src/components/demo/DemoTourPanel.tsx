@@ -5,6 +5,18 @@ import { X, Volume2, VolumeX, ChevronRight } from 'lucide-react'
 import { TOUR_STEPS, getDemoState, setDemoState, clearDemoState } from '@/lib/demo/config'
 import { createClient } from '@/lib/supabase/client'
 
+type AudioMap = Record<number, { en?: string; ar?: string }>
+
+/** Play a pre-recorded file. Returns true if played, false if URL missing. */
+function playAudioFile(url: string | undefined, muted: boolean, audioRef: React.MutableRefObject<HTMLAudioElement | null>): boolean {
+  if (!url || muted || typeof window === 'undefined') return false
+  if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+  const a = new Audio(url)
+  audioRef.current = a
+  a.play().catch(() => {})
+  return true
+}
+
 function speakText(text: string, muted: boolean, lang: 'en' | 'ar') {
   if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) return
   window.speechSynthesis.cancel()
@@ -48,23 +60,54 @@ export default function DemoTourPanel() {
     if (typeof window === 'undefined') return 'en'
     try { return localStorage.getItem('gs_demo_lang') === 'ar' ? 'ar' : 'en' } catch { return 'en' }
   })
+  const [audioMap, setAudioMap] = useState<AudioMap>({})
   const router = useRouter()
   const mutedRef = useRef(false)
   const langRef = useRef<'en' | 'ar'>(lang)
+  const audioMapRef = useRef<AudioMap>({})
+  const fileAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { langRef.current = lang }, [lang])
+  useEffect(() => { audioMapRef.current = audioMap }, [audioMap])
 
-  // Init: load step + speak welcome audio
+  function playStep(stepIdx: number) {
+    const urls = audioMapRef.current[stepIdx]
+    // Priority: uploaded lang-specific file → uploaded English file → speech synthesis (English)
+    const url = (langRef.current === 'ar' ? urls?.ar : urls?.en) ?? urls?.en
+    const played = playAudioFile(url, mutedRef.current, fileAudioRef)
+    if (!played) {
+      const s = TOUR_STEPS[stepIdx]
+      speakText(s?.audio ?? '', mutedRef.current, 'en')
+    }
+  }
+
+  // Init: load step + fetch uploaded audio URLs
   useEffect(() => {
     const initStep = getDemoState().step ?? 0
     setStep(initStep)
-    setTimeout(() => {
-      const step0 = TOUR_STEPS[initStep]
-      const text = langRef.current === 'ar' ? step0?.audioAr : step0?.audio
-      speakText(text ?? '', mutedRef.current, langRef.current)
-    }, 900)
-  }, [])
+
+    // Fetch uploaded audio from admin
+    fetch('/api/admin/demo-audio')
+      .then(r => r.json())
+      .then((records: { step_index: number; lang: string; audio_url: string }[]) => {
+        if (!Array.isArray(records)) return
+        const map: AudioMap = {}
+        for (const r of records) {
+          if (!map[r.step_index]) map[r.step_index] = {}
+          if (r.lang === 'en') map[r.step_index].en = r.audio_url
+          if (r.lang === 'ar') map[r.step_index].ar = r.audio_url
+        }
+        setAudioMap(map)
+        audioMapRef.current = map
+        // Speak welcome after audio map is loaded
+        setTimeout(() => playStep(initStep), 900)
+      })
+      .catch(() => {
+        // No audio data — fall back to speech synthesis
+        setTimeout(() => playStep(initStep), 900)
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleNext() {
     const newStep = step + 1
@@ -72,11 +115,11 @@ export default function DemoTourPanel() {
     setDemoState({ step: newStep })
     setStep(newStep)
     router.push(TOUR_STEPS[newStep].path)
-    const text = langRef.current === 'ar' ? TOUR_STEPS[newStep].audioAr : TOUR_STEPS[newStep].audio
-    setTimeout(() => speakText(text, mutedRef.current, langRef.current), 600)
+    setTimeout(() => playStep(newStep), 600)
   }
 
   async function handleExit() {
+    if (fileAudioRef.current) { fileAudioRef.current.pause(); fileAudioRef.current = null }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel()
     }
@@ -89,8 +132,9 @@ export default function DemoTourPanel() {
   function toggleMute() {
     const next = !muted
     setMuted(next)
-    if (next && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
+    if (next) {
+      if (fileAudioRef.current) { fileAudioRef.current.pause(); fileAudioRef.current = null }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
     }
   }
 
@@ -118,7 +162,7 @@ export default function DemoTourPanel() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => speakText(currentAudio, mutedRef.current, langRef.current)}
+            onClick={() => playStep(step)}
             title="Replay audio"
             className="text-white/40 hover:text-white/80 transition-colors text-sm leading-none px-0.5"
           >↻</button>
