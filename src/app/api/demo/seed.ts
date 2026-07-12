@@ -75,7 +75,7 @@ export async function seedDemoData(orgId: string, admin: SupabaseClient) {
   }
 
   // ── 3. Tenants ────────────────────────────────────────────────────────────
-  async function upsertTenant(full_name: string, phone: string, national_id: string) {
+  async function upsertTenant(full_name: string, email: string, phone: string, national_id: string) {
     const { data: existing } = await admin
       .from('tenants')
       .select('id')
@@ -85,15 +85,15 @@ export async function seedDemoData(orgId: string, admin: SupabaseClient) {
     if (existing) return existing.id
     const { data: t, error } = await admin
       .from('tenants')
-      .insert({ full_name, organization_id: orgId, phone, national_id })
+      .insert({ full_name, email, organization_id: orgId, phone, national_id })
       .select('id')
       .single()
     if (error) throw new Error(`Tenant ${full_name} insert failed: ${error.message}`)
     return t!.id
   }
 
-  const jamesId  = await upsertTenant('James Carter',    '+96891234567', 'A12345678')
-  const sarahId  = await upsertTenant('Sarah Mitchell',  '+96892345678', 'B87654321')
+  const jamesId  = await upsertTenant('James Carter',   'james.carter@demo.getsuitel.com',   '+96891234567', 'A12345678')
+  const sarahId  = await upsertTenant('Sarah Mitchell', 'sarah.mitchell@demo.getsuitel.com', '+96892345678', 'B87654321')
 
   // ── 4. Contracts ──────────────────────────────────────────────────────────
   async function upsertContract(
