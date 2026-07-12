@@ -1,8 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Volume2, VolumeX, ChevronRight } from 'lucide-react'
-import Link from 'next/link'
 import { TOUR_STEPS, getDemoState, setDemoState, clearDemoState } from '@/lib/demo/config'
 import { createClient } from '@/lib/supabase/client'
 
@@ -16,96 +15,43 @@ function speakText(text: string, muted: boolean) {
 
   function doSpeak() {
     const voices = window.speechSynthesis.getVoices()
-    const preferred =
+    const voice =
       voices.find(v => v.name === 'Samantha') ||
       voices.find(v => v.name === 'Google US English') ||
       voices.find(v => v.lang === 'en-US' && v.localService) ||
       voices.find(v => v.lang.startsWith('en-'))
-    if (preferred) utterance.voice = preferred
+    if (voice) utterance.voice = voice
     window.speechSynthesis.speak(utterance)
   }
 
   const voices = window.speechSynthesis.getVoices()
-  if (voices.length > 0) {
-    doSpeak()
-  } else {
-    window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true })
-  }
+  if (voices.length > 0) doSpeak()
+  else window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true })
 }
 
 export default function DemoTourPanel() {
   const [step, setStep] = useState(0)
-  const [loading, setLoading] = useState(false)
   const [muted, setMuted] = useState(false)
   const router = useRouter()
-  const pathname = usePathname()
   const mutedRef = useRef(false)
 
-  // Sync muted ref so callbacks see latest value
   useEffect(() => { mutedRef.current = muted }, [muted])
 
-  // Init step from localStorage + speak welcome
+  // Init from localStorage + speak welcome
   useEffect(() => {
-    const state = getDemoState()
-    const initStep = state.step ?? 0
+    const initStep = getDemoState().step ?? 0
     setStep(initStep)
     setTimeout(() => speakText(TOUR_STEPS[initStep]?.audio ?? '', mutedRef.current), 900)
   }, [])
 
-  const advanceStep = useCallback((newStep: number, extraState?: Record<string, any>) => {
-    setDemoState({ step: newStep, ...(extraState ?? {}) })
+  function handleNext() {
+    const newStep = step + 1
+    if (newStep >= TOUR_STEPS.length) return
+    setDemoState({ step: newStep })
     setStep(newStep)
-    setLoading(false)
-
-    const nextConfig = TOUR_STEPS[newStep]
-    if (!nextConfig) return
-
-    // Build navigation URL
-    let nextPath = nextConfig.path
-    if (newStep === 2) {
-      // Navigate to units filtered by newly created property
-      const state = getDemoState()
-      const pid = extraState?.propertyId ?? state.propertyId
-      if (pid) nextPath = `/dashboard/owner/units?property=${pid}`
-    }
-
-    if (nextPath !== pathname) {
-      router.push(nextPath)
-    }
-
-    setTimeout(() => speakText(nextConfig.audio, mutedRef.current), 700)
-  }, [pathname, router])
-
-  async function handleNext() {
-    const currentConfig = TOUR_STEPS[step]
-    if (!currentConfig) return
-
-    if (!currentConfig.needsSubmit) {
-      advanceStep(step + 1)
-      return
-    }
-
-    setLoading(true)
-
-    // Listen for form completion
-    const doneHandler = (e: Event) => {
-      window.removeEventListener('demo:done', doneHandler)
-      const detail = (e as CustomEvent).detail ?? {}
-      const extra: Record<string, any> = {}
-      if (detail.propertyId) extra.propertyId = detail.propertyId
-      if (detail.unitId) extra.unitId = detail.unitId
-      advanceStep(step + 1, extra)
-    }
-    window.addEventListener('demo:done', doneHandler)
-
-    // Trigger the active form to submit
-    window.dispatchEvent(new CustomEvent('demo:next', { detail: { step } }))
-
-    // Failsafe timeout
-    setTimeout(() => {
-      window.removeEventListener('demo:done', doneHandler)
-      setLoading(false)
-    }, 15000)
+    const nextPath = TOUR_STEPS[newStep].path
+    router.push(nextPath)
+    setTimeout(() => speakText(TOUR_STEPS[newStep].audio, mutedRef.current), 600)
   }
 
   async function handleExit() {
@@ -126,15 +72,11 @@ export default function DemoTourPanel() {
     }
   }
 
-  function replayAudio() {
-    speakText(TOUR_STEPS[step]?.audio ?? '', mutedRef.current)
-  }
+  const current = TOUR_STEPS[step]
+  if (!current) return null
 
-  const currentConfig = TOUR_STEPS[step]
-  if (!currentConfig) return null
-
-  const totalSteps = TOUR_STEPS.length - 2 // exclude welcome and done
-  const displayStep = step === 0 ? 'Introduction' : step >= TOUR_STEPS.length - 1 ? 'Complete!' : `Step ${step} of ${totalSteps}`
+  const isLast = step === TOUR_STEPS.length - 1
+  const progress = Math.round((step / (TOUR_STEPS.length - 1)) * 100)
 
   return (
     <div className="fixed bottom-6 right-6 z-[100] w-[300px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -146,12 +88,10 @@ export default function DemoTourPanel() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={replayAudio}
+            onClick={() => speakText(current.audio, mutedRef.current)}
             title="Replay audio"
-            className="text-white/40 hover:text-white/80 transition-colors text-xs px-1"
-          >
-            ↻
-          </button>
+            className="text-white/40 hover:text-white/80 transition-colors text-sm leading-none px-0.5"
+          >↻</button>
           <button
             onClick={toggleMute}
             title={muted ? 'Unmute' : 'Mute'}
@@ -159,11 +99,7 @@ export default function DemoTourPanel() {
           >
             {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
           </button>
-          <button
-            onClick={handleExit}
-            title="Exit demo"
-            className="text-white/50 hover:text-white transition-colors"
-          >
+          <button onClick={handleExit} title="Exit demo" className="text-white/50 hover:text-white transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -173,69 +109,48 @@ export default function DemoTourPanel() {
       <div className="h-1 bg-slate-100">
         <div
           className="h-full bg-gold-400 transition-all duration-700 ease-out"
-          style={{ width: `${(step / (TOUR_STEPS.length - 1)) * 100}%` }}
+          style={{ width: `${progress}%` }}
         />
       </div>
 
       {/* Body */}
       <div className="p-4">
         <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mb-1">
-          {displayStep}
+          {step === 0 ? 'Introduction' : isLast ? 'Complete!' : `Step ${step} of ${TOUR_STEPS.length - 2}`}
         </p>
-        <h3 className="font-bold text-slate-900 text-sm mb-2">{currentConfig.title}</h3>
-        <p className="text-slate-500 text-sm leading-relaxed mb-4">{currentConfig.description}</p>
+        <h3 className="font-bold text-slate-900 text-sm mb-2">{current.title}</h3>
+        <p className="text-slate-500 text-sm leading-relaxed mb-4">{current.description}</p>
 
         {/* Dot progress */}
         <div className="flex items-center gap-1.5 mb-4">
           {TOUR_STEPS.map((_, i) => (
             <div
               key={i}
-              className={`rounded-full transition-all duration-400 h-1.5 ${
-                i < step
-                  ? 'bg-emerald-500 w-5'
-                  : i === step
-                  ? 'bg-navy-700 w-5'
-                  : 'bg-slate-200 w-3'
+              className={`rounded-full transition-all duration-300 h-1.5 ${
+                i < step ? 'bg-emerald-500 w-5' : i === step ? 'bg-navy-700 w-5' : 'bg-slate-200 w-3'
               }`}
             />
           ))}
         </div>
 
-        {/* Action buttons */}
-        {step >= TOUR_STEPS.length - 1 ? (
+        {/* Actions */}
+        {isLast ? (
           <div className="space-y-2">
-            <Link
-              href="/auth/register"
-              onClick={clearDemoState}
-              className="flex items-center justify-center gap-2 w-full bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold py-2.5 rounded-xl text-sm transition-colors"
-            >
-              Sign Up Free <ChevronRight size={14} />
-            </Link>
+            <p className="text-center text-xs text-slate-400 mb-1">Ready to get started?</p>
             <button
               onClick={handleExit}
-              className="w-full text-center text-slate-400 hover:text-slate-600 text-xs py-1 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
             >
-              Exit Demo
+              Back to Home <ChevronRight size={14} />
             </button>
           </div>
         ) : (
           <div className="space-y-2">
             <button
               onClick={handleNext}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
             >
-              {loading ? (
-                <>
-                  <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing…
-                </>
-              ) : (
-                <>
-                  {currentConfig.nextLabel}
-                  <ChevronRight size={14} />
-                </>
-              )}
+              {step === 0 ? "Let's Start" : 'Next'} <ChevronRight size={14} />
             </button>
             {step > 0 && (
               <button

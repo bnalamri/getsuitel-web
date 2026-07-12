@@ -1,18 +1,14 @@
 export const DEMO_STATE_KEY = 'gs_demo'
 
-export type DemoState = {
-  step: number
-  propertyId: string | null
-  unitId: string | null
-}
+export type DemoState = { step: number }
 
 export function getDemoState(): DemoState {
-  if (typeof window === 'undefined') return { step: 0, propertyId: null, unitId: null }
+  if (typeof window === 'undefined') return { step: 0 }
   try {
     const raw = localStorage.getItem(DEMO_STATE_KEY)
-    return raw ? JSON.parse(raw) : { step: 0, propertyId: null, unitId: null }
+    return raw ? JSON.parse(raw) : { step: 0 }
   } catch {
-    return { step: 0, propertyId: null, unitId: null }
+    return { step: 0 }
   }
 }
 
@@ -28,105 +24,67 @@ export function clearDemoState() {
 }
 
 export interface TourStep {
-  id: string
   path: string
   title: string
   description: string
   audio: string
-  needsSubmit: boolean
-  nextLabel: string | null
-  submitStep: number | null // which step number this form handles
 }
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    id: 'welcome',
     path: '/dashboard/owner',
     title: 'Welcome to GetSuitel!',
     description:
-      "I'll guide you through setting up a property in 3 steps. Everything is pre-filled — just click Next at each stage.",
+      'Your demo account is pre-loaded with a realistic property portfolio. Hit Next to explore each section.',
     audio:
-      "Welcome to GetSuitel! I'll guide you through setting up your first property in just 3 simple steps. All the details are filled in automatically. Click Let's Start to begin.",
-    needsSubmit: false,
-    nextLabel: "Let's Start",
-    submitStep: null,
+      'Welcome to GetSuitel — the property management platform built for Oman. Your demo account is fully set up with a real property, tenants, contracts, and invoices. Click Next to begin the tour.',
   },
   {
-    id: 'add-property',
     path: '/dashboard/owner/properties',
-    title: 'Step 1 — Add a Property',
+    title: 'Properties',
     description:
-      "We've filled in Oakwood Residences — a residential property in Muscat. Click the button to create it.",
+      'Oakwood Residences is a 4-unit residential complex in Muscat. You can manage multiple buildings, villas, or compounds from one account.',
     audio:
-      "This is the Properties page. We've filled in a sample property called Oakwood Residences in Muscat. Click Create Property to add it to your account.",
-    needsSubmit: true,
-    nextLabel: 'Create Property',
-    submitStep: 1,
+      'This is the Properties page. Oakwood Residences is a residential complex in Al Khuwair, Muscat. You can add as many buildings or villas as you manage, each with their own units.',
   },
   {
-    id: 'add-unit',
     path: '/dashboard/owner/units',
-    title: 'Step 2 — Add a Unit',
+    title: 'Units',
     description:
-      "Adding Unit 101 — a 2-bedroom flat at 350 OMR/month. Click the button to save it.",
+      'Units 101 and 102 are occupied with active leases. Units 201 and 202 are vacant and ready to rent.',
     audio:
-      "Now let's add a unit to Oakwood Residences. We've filled in Unit 101, a 2-bedroom flat on the first floor with a monthly rent of 350 Omani Rials. Click Add Unit to save it.",
-    needsSubmit: true,
-    nextLabel: 'Add Unit',
-    submitStep: 2,
+      'Here are the units inside Oakwood Residences. Units 101 and 102 are currently occupied — each linked to a tenant and an active contract. Units 201 and 202 are vacant and available to lease.',
   },
   {
-    id: 'add-contract',
-    path: '/dashboard/owner/contracts',
-    title: 'Step 3 — Create a Contract',
+    path: '/dashboard/owner/tenants',
+    title: 'Tenants & Contracts',
     description:
-      "Linking James Carter to Unit 101 for 1 year at 350 OMR/month. Click to activate the lease.",
+      'James Carter and Sarah Mitchell each have an active contract — rent amount, deposit, payment schedule, and lease dates all tracked in one place.',
     audio:
-      "Almost done! We're creating a rental contract linking James Carter to Unit 101 for one year at 350 Omani Rials per month. Click Create Contract to activate it.",
-    needsSubmit: true,
-    nextLabel: 'Create Contract',
-    submitStep: 3,
+      'The Tenants page shows your current residents. James Carter is in Unit 101 and Sarah Mitchell is in Unit 102. Each tenant has a contract with the rent amount, deposit, and lease dates clearly recorded.',
   },
   {
-    id: 'done',
+    path: '/dashboard/owner/invoices',
+    title: 'Invoices',
+    description:
+      'GetSuitel auto-generates monthly invoices from active contracts. Tenants can pay directly from their own portal — no chasing needed.',
+    audio:
+      'GetSuitel automatically creates a monthly invoice for each active contract. You can see paid invoices and the current pending ones. Tenants receive their invoice by email and can pay directly from their tenant portal.',
+  },
+  {
+    path: '/dashboard/owner/maintenance',
+    title: 'Maintenance',
+    description:
+      'Tenants submit requests from their portal. You assign a service team, track status, and record costs — all in one view.',
+    audio:
+      'The Maintenance page shows all requests submitted by your tenants. You can assign them to a service team, update the status as work progresses, and record the final cost when done.',
+  },
+  {
     path: '/dashboard/owner',
-    title: 'All Done! 🎉',
+    title: "You're all set! 🎉",
     description:
-      "Oakwood Residences is live with a unit and an active contract. Sign up to start with your own properties.",
+      'Sign up free to start managing your own properties. No credit card needed — your first 30 days are on us.',
     audio:
-      "Congratulations! Oakwood Residences is fully set up with Unit 101 and an active contract for James Carter. Sign up now to start managing your own real properties with GetSuitel.",
-    needsSubmit: false,
-    nextLabel: null,
-    submitStep: null,
+      "That's the full GetSuitel experience. Sign up free today and start managing your own properties in minutes. No credit card required — your first 30 days are completely free.",
   },
 ]
-
-export const DEMO_PROPERTY_DATA = {
-  name: 'Oakwood Residences',
-  type: 'residential',
-  address: 'Way 4521, Al Khuwair',
-  address_line2: 'Near City Centre Mall',
-  city: 'Muscat',
-  country: 'Oman',
-}
-
-export const DEMO_UNIT_DATA = {
-  unit_type: 'flat',
-  unit_number: '101',
-  floor: '1',
-  area_sqm: '95',
-  bedrooms: '2',
-  bathrooms: '1',
-  rent_amount: '350',
-  currency: 'OMR',
-  status: 'vacant',
-}
-
-export const DEMO_CONTRACT_DATA = {
-  rent_amount: '350',
-  currency: 'OMR',
-  deposit_amount: '700',
-  payment_day: '1',
-  payment_method: 'bank_transfer',
-  status: 'active',
-}

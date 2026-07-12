@@ -1,17 +1,14 @@
 /**
  * One-time demo account setup.
- * Call: GET /api/demo/setup?secret=DEMO_RESET_SECRET
+ * GET /api/demo/setup?secret=DEMO_RESET_SECRET
  *
- * Creates:
- *  - demo@getsuitel.com auth user (email pre-confirmed, no verification email)
- *  - handle_new_user trigger creates profile + org (org_name passed in metadata)
- *  - Updates the org name to "GetSuitel Demo" and sets OMR currency
- *  - Inserts James Carter as a pre-seeded tenant
- *
- * Safe to call multiple times — checks for existing records before inserting.
+ * Creates the demo auth user, profile, org, and a full pre-seeded dataset
+ * (property, 4 units, 2 tenants, 2 contracts, 7 invoices, 2 maintenance requests).
+ * Safe to call multiple times — fully idempotent.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { seedDemoData } from '../seed'
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,22 +26,13 @@ async function _handleSetup(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Quick env check — values hidden, just presence
-  const envCheck = {
-    DEMO_EMAIL: !!process.env.DEMO_EMAIL,
-    DEMO_PASSWORD: !!process.env.DEMO_PASSWORD,
-    SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-    SERVICE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  }
-  console.log('[demo/setup] env:', JSON.stringify(envCheck))
-
   const admin = createAdminClient()
-  const demoEmail = process.env.DEMO_EMAIL!
+  const demoEmail    = process.env.DEMO_EMAIL!
   const demoPassword = process.env.DEMO_PASSWORD!
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-  // Helper: find user by email via Supabase REST API (SDK has no getUserByEmail)
+  // Helper: find user by email via REST (SDK has no getUserByEmail in v2)
   async function findUserByEmail(email: string): Promise<string | null> {
     const res = await fetch(
       `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
@@ -63,19 +51,19 @@ async function _handleSetup(request: NextRequest) {
     const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
       email: demoEmail,
       password: demoPassword,
-      email_confirm: true,        // skip verification email
+      email_confirm: true,
       user_metadata: {
         full_name: 'GetSuitel Demo',
         role: 'owner',
         owner_type: 'individual',
-        org_name: 'GetSuitel Demo',   // ← tells trigger to create the org
+        org_name: 'GetSuitel Demo',  // triggers org creation in handle_new_user
         plan: 'pro',
         lang_pref: 'en',
       },
     })
 
     if (createErr) {
-      // GoTrue returns {} when a trigger errors but the user may still have been created.
+      // GoTrue returns {} when trigger errors but the user may still be created
       demoUserId = await findUserByEmail(demoEmail)
       if (!demoUserId) {
         return NextResponse.json(
@@ -91,11 +79,7 @@ async function _handleSetup(request: NextRequest) {
     await new Promise(r => setTimeout(r, 3000))
   }
 
-  if (!demoUserId) {
-    return NextResponse.json({ error: 'Could not determine demo user ID' }, { status: 500 })
-  }
-
-  // ── 2. Get org_id (from profile, or fallback to organizations table) ───────
+  // ── 2. Resolve org_id ─────────────────────────────────────────────────────
   let orgId: string | null = null
 
   const { data: demoProfile } = await admin
@@ -103,20 +87,16 @@ async function _handleSetup(request: NextRequest) {
     .select('organization_id')
     .eq('id', demoUserId)
     .single()
-
   orgId = demoProfile?.organization_id ?? null
 
-  // Fallback: look up org directly by owner_id (in case profile link wasn't set yet)
   if (!orgId) {
     const { data: orgByOwner } = await admin
       .from('organizations')
       .select('id')
       .eq('owner_id', demoUserId)
       .maybeSingle()
-
     if (orgByOwner?.id) {
       orgId = orgByOwner.id
-      // Backfill the profile link
       await admin.from('profiles').update({ organization_id: orgId }).eq('id', demoUserId)
     }
   }
@@ -134,22 +114,8 @@ async function _handleSetup(request: NextRequest) {
     .update({ name: 'GetSuitel Demo', default_currency: 'OMR' })
     .eq('id', orgId)
 
-  // ── 4. Seed James Carter tenant (idempotent) ──────────────────────────────
-  const { data: existingTenant } = await admin
-    .from('tenants')
-    .select('id')
-    .eq('organization_id', orgId)
-    .eq('full_name', 'James Carter')
-    .maybeSingle()
+  // ── 4. Seed full demo dataset ─────────────────────────────────────────────
+  const seeded = await seedDemoData(orgId, admin)
 
-  if (!existingTenant) {
-    await admin.from('tenants').insert({
-      full_name: 'James Carter',
-      organization_id: orgId,
-      phone: '+96891234567',
-      national_id: 'A12345678',
-    })
-  }
-
-  return NextResponse.json({ ok: true, orgId, userId: demoUserId })
+  return NextResponse.json({ ok: true, orgId, userId: demoUserId, seeded })
 }

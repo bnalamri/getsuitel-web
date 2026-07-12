@@ -275,17 +275,10 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <div className="flex flex-col sm:flex-row gap-3 mt-8">
-                    <a href="/api/demo/start"
-                      onClick={() => { if (typeof window !== 'undefined') { try { localStorage.setItem('gs_demo', JSON.stringify({ step: 0, propertyId: null, unitId: null })) } catch {} } }}
-                      className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-navy-900 text-sm font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-gold-500/25">
-                      {lang === 'ar' ? 'جرّب الآن مجاناً' : 'Try Demo'} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
-                    </a>
-                    <Link href="/auth/register"
-                      className="inline-flex items-center gap-2 bg-navy-700 hover:bg-navy-800 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors">
-                      {C.nav.trial} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
-                    </Link>
-                  </div>
+                  <a href="/api/demo/start"
+                    className="inline-flex items-center gap-2 mt-8 bg-gold-500 hover:bg-gold-400 text-navy-900 text-sm font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-gold-500/25">
+                    {lang === 'ar' ? 'جرّب الآن مجاناً' : 'Try Demo — No Sign Up'} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
+                  </a>
                 </div>
 
                 {/* Right — mockup */}

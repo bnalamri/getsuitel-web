@@ -1,8 +1,7 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
-import { getDemoState, DEMO_PROPERTY_DATA } from '@/lib/demo/config'
 
 export default function AddPropertyForm({ orgId, inline }: { orgId: string; inline?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -11,26 +10,6 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
   const router = useRouter()
   const initialForm = { name: '', type: 'residential', address: '', address_line2: '', city: '', country: 'Oman' }
   const [form, setForm] = useState(initialForm)
-  const submitBtnRef = useRef<HTMLButtonElement>(null)
-
-  // Demo mode: auto-open and auto-fill when step === 1
-  useEffect(() => {
-    const state = getDemoState()
-    if (state.step !== 1) return
-    setOpen(true)
-    setForm({ ...initialForm, ...DEMO_PROPERTY_DATA })
-  }, [])
-
-  // Demo mode: listen for submit trigger from tour panel
-  useEffect(() => {
-    function handler(e: Event) {
-      const detail = (e as CustomEvent).detail
-      if (detail?.step !== 1) return
-      submitBtnRef.current?.click()
-    }
-    window.addEventListener('demo:next', handler)
-    return () => window.removeEventListener('demo:next', handler)
-  }, [])
 
   function closeAndReset() { setForm(initialForm); setError(''); setOpen(false) }
 
@@ -48,11 +27,6 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
     closeAndReset()
     router.refresh()
     setLoading(false)
-    // Demo: signal tour panel with new propertyId
-    const demoState = getDemoState()
-    if (demoState.step === 1 && json.id) {
-      window.dispatchEvent(new CustomEvent('demo:done', { detail: { propertyId: json.id } }))
-    }
   }
 
   if (!open) {
@@ -104,7 +78,7 @@ export default function AddPropertyForm({ orgId, inline }: { orgId: string; inli
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
-            <button ref={submitBtnRef} type="submit" disabled={loading} className="btn-primary flex-1">
+            <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Add Property'}
             </button>
           </div>
