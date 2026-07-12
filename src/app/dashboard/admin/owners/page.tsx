@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { Shield, Building2, Users, Home } from 'lucide-react'
+import { Shield, Building2, Users, Home, FileText, User, Landmark } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
 import { unstable_noStore as noStore } from 'next/cache'
 
@@ -67,9 +67,40 @@ export default async function OwnersPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-slate-900">{org.name}</h3>
                       {org.name_ar && <span className="text-slate-400 text-sm" dir="rtl">{org.name_ar}</span>}
+                      {org.owner_type === 'company'
+                        ? <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full"><Landmark size={10}/> Company</span>
+                        : <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full"><User size={10}/> Individual</span>
+                      }
                     </div>
                     <div className="text-sm text-slate-500 mt-1">{owner?.full_name} · {owner?.email}</div>
                     {owner?.phone && <div className="text-xs text-slate-400">{owner.phone}</div>}
+
+                    {/* Company-specific details */}
+                    {org.owner_type === 'company' && (
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        {org.cr_number && (
+                          <div className="text-xs text-slate-600">
+                            <span className="text-slate-400">CR No.</span> <span className="font-medium">{org.cr_number}</span>
+                          </div>
+                        )}
+                        {org.authorized_rep && (
+                          <div className="text-xs text-slate-600">
+                            <span className="text-slate-400">Authorized Rep.</span> <span className="font-medium">{org.authorized_rep}</span>
+                          </div>
+                        )}
+                        {org.cr_document_url ? (
+                          <a href={org.cr_document_url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 bg-navy-50 hover:bg-navy-100 border border-navy-200 px-2.5 py-1 rounded-lg transition-colors">
+                            <FileText size={11}/> View CR Document
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                            ⚠ No document uploaded
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {isActive && expiresAt ? (
                       <div className="text-xs text-green-700 mt-1">
                         Active until {new Date(expiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
