@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home, FileText, User, Landmark } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
+import EditLimitsForm from './EditLimitsForm'
 import { unstable_noStore as noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
@@ -72,10 +73,9 @@ export default async function OwnersPage() {
                         : <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full"><User size={10}/> Individual</span>
                       }
                     </div>
-                    <div className="text-sm text-slate-500 mt-1">{owner?.full_name} · {owner?.email}</div>
+                    <div className="text-sm text-slate-500 mt-1">{owner?.full_name} &middot; {owner?.email}</div>
                     {owner?.phone && <div className="text-xs text-slate-400">{owner.phone}</div>}
 
-                    {/* Company-specific details */}
                     {org.owner_type === 'company' && (
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         {org.cr_number && (
@@ -95,7 +95,7 @@ export default async function OwnersPage() {
                           </a>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-                            ⚠ No document uploaded
+                            No document uploaded
                           </span>
                         )}
                       </div>
@@ -109,6 +109,7 @@ export default async function OwnersPage() {
                       <div className="text-xs text-yellow-700 mt-1">Trial ends in {trialDays} days</div>
                     ) : null}
                   </div>
+
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`badge capitalize ${planColor[org.subscription_plan] ?? 'bg-slate-100 text-slate-600'}`}>
                       {org.subscription_plan}
@@ -121,21 +122,30 @@ export default async function OwnersPage() {
                       currentPlan={org.subscription_plan}
                       currentStatus={org.subscription_status}
                     />
+                    <EditLimitsForm
+                      orgId={org.id}
+                      orgName={org.name}
+                      currentMaxProperties={org.max_properties ?? 2}
+                      currentMaxUnits={org.max_units ?? 10}
+                      currentMaxTenants={org.max_tenants ?? 15}
+                      usedProperties={propCount(org.id)}
+                      usedUnits={unitCount(org.id)}
+                      usedTenants={tenantCount(org.id)}
+                    />
                   </div>
                 </div>
 
-                {/* Stats row */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
                   {[
-                    { icon: Building2, label: 'Properties', value: propCount(org.id), max: null },
-                    { icon: Home, label: 'Units', value: unitCount(org.id), max: org.max_units },
-                    { icon: Users, label: 'Tenants', value: tenantCount(org.id), max: org.max_tenants },
+                    { icon: Building2, label: 'Properties', value: propCount(org.id), max: org.max_properties ?? null },
+                    { icon: Home,      label: 'Units',      value: unitCount(org.id),   max: org.max_units ?? null },
+                    { icon: Users,     label: 'Tenants',    value: tenantCount(org.id), max: org.max_tenants ?? null },
                   ].map(s => (
                     <div key={s.label} className="flex items-center gap-2 text-sm">
                       <s.icon size={14} className="text-slate-400 flex-shrink-0" />
                       <span className="font-semibold text-slate-900">{s.value}</span>
                       <span className="text-slate-400">{s.label}</span>
-                      {s.max && <span className="text-slate-300 text-xs">/ {s.max}</span>}
+                      {s.max != null && <span className="text-slate-300 text-xs">/ {s.max}</span>}
                     </div>
                   ))}
                 </div>

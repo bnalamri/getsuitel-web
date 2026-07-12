@@ -1,6 +1,7 @@
 -- GetSuitel: handle_new_user trigger — FINAL WORKING VERSION
 -- Root cause fix: user_role enum was dropped (role col is now text), removed ::user_role cast.
 -- lang_pref and subscription_plan enums still exist, kept as ::public.lang_pref / ::public.subscription_plan
+-- 2026-07-12: Added max_properties to org insert (was missing, defaulting to 2 for all plans)
 -- Run in: Supabase Dashboard → SQL Editor
 
 create or replace function public.handle_new_user()
@@ -38,7 +39,7 @@ begin
   if v_role = 'owner' and v_org_name is not null then
     insert into public.organizations (
       name, owner_id, subscription_plan, subscription_status, trial_ends_at,
-      max_units, max_tenants, owner_type, cr_number, authorized_rep
+      max_properties, max_units, max_tenants, owner_type, cr_number, authorized_rep
     )
     values (
       v_org_name,
@@ -46,6 +47,7 @@ begin
       v_plan::public.subscription_plan,
       'trialing',
       now() + interval '30 days',
+      case v_plan when 'basic' then 2 when 'pro' then 10 else 20 end,
       case v_plan when 'basic' then 10 when 'pro' then 50 else 9999 end,
       case v_plan when 'basic' then 15 when 'pro' then 100 else 9999 end,
       v_owner_type,
@@ -58,13 +60,4 @@ begin
   end if;
 
   if v_role in ('tenant', 'technician') and v_org_id is not null then
-    update public.profiles set organization_id = v_org_id where id = new.id;
-  end if;
-
-  return new;
-
-exception when others then
-  raise exception 'handle_new_user error: % (sqlstate: %)', sqlerrm, sqlstate
-    using errcode = 'P0001';
-end;
-$func$;
+    update public.profiles set organization_id = v_org_id where id = 
