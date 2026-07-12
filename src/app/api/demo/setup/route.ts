@@ -4,7 +4,8 @@
  *
  * Creates:
  *  - demo@getsuitel.com auth user (email pre-confirmed, no verification email)
- *  - Updates the org name to "GetSuitel Demo"
+ *  - handle_new_user trigger creates profile + org (org_name passed in metadata)
+ *  - Updates the org name to "GetSuitel Demo" and sets OMR currency
  *  - Inserts James Carter as a pre-seeded tenant
  *
  * Safe to call multiple times — checks for existing records before inserting.
@@ -32,40 +33,78 @@ export async function GET(request: NextRequest) {
     const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
       email: demoEmail,
       password: demoPassword,
-      email_confirm: true,       // skip verification email
+      email_confirm: true,        // skip verification email
       user_metadata: {
         full_name: 'GetSuitel Demo',
         role: 'owner',
         owner_type: 'individual',
+        org_name: 'GetSuitel Demo',   // ← required: tells trigger to create the org
+        plan: 'pro',
+        lang_pref: 'en',
       },
     })
-    if (createErr) {
-      return NextResponse.json({ error: `Failed to create demo user: ${createErr.message}` }, { status: 500 })
-    }
-    demoUserId = newUser.user.id
 
-    // Brief pause so the handle_new_user trigger can run and create the profile + org
-    await new Promise(r => setTimeout(r, 2000))
+    if (createErr) {
+      // GoTrue sometimes returns {} when a trigger errors but the user IS created.
+      // Re-check by email before giving up.
+      const { data: recheckUser } = await admin.auth.admin.getUserByEmail(demoEmail)
+      if (!recheckUser?.user) {
+        return NextResponse.json(
+          { error: `Failed to create demo user: ${createErr.message}` },
+          { status: 500 }
+        )
+      }
+      demoUserId = recheckUser.user.id
+    } else {
+      demoUserId = newUser.user.id
+    }
+
+    // Wait for handle_new_user trigger to create profile + org
+    await new Promise(r => setTimeout(r, 3000))
   }
 
   if (!demoUserId) {
     return NextResponse.json({ error: 'Could not determine demo user ID' }, { status: 500 })
   }
 
-  // ── 2. Get org_id from demo user profile ──────────────────────────────────
+  // ── 2. Get org_id (from profile, or fallback to organizations table) ───────
+  let orgId: string | null = null
+
   const { data: demoProfile } = await admin
     .from('profiles')
     .select('organization_id')
     .eq('id', demoUserId)
     .single()
 
-  const orgId = demoProfile?.organization_id
+  orgId = demoProfile?.organization_id ?? null
+
+  // Fallback: look up org directly by owner_id (in case profile link wasn't set yet)
   if (!orgId) {
-    return NextResponse.json({ error: 'Demo profile/org not found — trigger may not have run yet. Try again in a few seconds.' }, { status: 500 })
+    const { data: orgByOwner } = await admin
+      .from('organizations')
+      .select('id')
+      .eq('owner_id', demoUserId)
+      .maybeSingle()
+
+    if (orgByOwner?.id) {
+      orgId = orgByOwner.id
+      // Backfill the profile link
+      await admin.from('profiles').update({ organization_id: orgId }).eq('id', demoUserId)
+    }
   }
 
-  // ── 3. Update org name ────────────────────────────────────────────────────
-  await admin.from('organizations').update({ name: 'GetSuitel Demo', default_currency: 'OMR' }).eq('id', orgId)
+  if (!orgId) {
+    return NextResponse.json(
+      { error: 'Demo org not found — trigger may not have run. Try again in 5 seconds.' },
+      { status: 500 }
+    )
+  }
+
+  // ── 3. Update org name + currency ─────────────────────────────────────────
+  await admin
+    .from('organizations')
+    .update({ name: 'GetSuitel Demo', default_currency: 'OMR' })
+    .eq('id', orgId)
 
   // ── 4. Seed James Carter tenant (idempotent) ──────────────────────────────
   const { data: existingTenant } = await admin
