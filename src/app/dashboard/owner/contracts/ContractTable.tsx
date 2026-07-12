@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, FileText } from 'lucide-react'
 import EditContractForm from './EditContractForm'
 import DeleteContractButton from './DeleteContractButton'
 import ActivateContractButton from './ActivateContractButton'
@@ -18,6 +18,7 @@ interface Contract {
   id: string; tenant_id: string; unit_id: string; start_date: string; end_date: string
   rent_amount: number; currency: string; deposit_amount: number; payment_day: number
   payment_method: string; status: string
+  municipality_agreement_url?: string | null
   tenants?: { full_name: string } | null
   units?: { unit_number: string; properties?: { name: string } | null } | null
 }
@@ -81,6 +82,7 @@ export default function ContractTable({
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Period</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Rent</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Municipality</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -110,6 +112,20 @@ export default function ContractTable({
                       </div>
                     </td>
                     <td className="px-4 py-3">
+                      {c.municipality_agreement_url ? (
+                        <a
+                          href={c.municipality_agreement_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 bg-navy-50 hover:bg-navy-100 border border-navy-200 px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          <FileText size={11} /> View Doc
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       {canManage && (
                         <div className="flex items-center gap-2">
                           <EditContractForm
@@ -120,6 +136,7 @@ export default function ContractTable({
                               deposit_amount: Number(c.deposit_amount ?? 0),
                               payment_day: Number(c.payment_day ?? 1),
                               payment_method: c.payment_method ?? 'cash', status: c.status,
+                              municipality_agreement_url: c.municipality_agreement_url,
                             }}
                             tenants={tenants}
                             units={allUnits as never}

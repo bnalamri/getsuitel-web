@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, X, Loader2 } from 'lucide-react'
+import { Pencil, X, Loader2, Paperclip, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 
 type Tenant = { id: string; full_name: string }
@@ -19,6 +19,7 @@ type Contract = {
   payment_day: number
   payment_method: string
   status: string
+  municipality_agreement_url?: string | null
 }
 
 export default function EditContractForm({
@@ -28,11 +29,14 @@ export default function EditContractForm({
 }: {
   contract: Contract
   tenants: Tenant[]
-  units: Unit[]   // all units (occupied + vacant), so the current unit always appears
+  units: Unit[]
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [agreementFile, setAgreementFile] = useState<File | null>(null)
+  const [replacingDoc, setReplacingDoc] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -48,10 +52,19 @@ export default function EditContractForm({
     status:         contract.status,
   })
 
+  function handleClose() {
+    setOpen(false)
+    setError('')
+    setAgreementFile(null)
+    setReplacingDoc(false)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Step 1: Update contract fields
     const res = await fetch(`/api/contracts/${contract.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -72,7 +85,23 @@ export default function EditContractForm({
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to update contract'); setLoading(false); return }
-    setOpen(false)
+
+    // Step 2: Upload new municipality agreement if provided
+    if (agreementFile) {
+      const fd = new FormData()
+      fd.append('contractId', contract.id)
+      fd.append('file', agreementFile)
+      const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
+      if (!upRes.ok) {
+        const upJson = await upRes.json()
+        setError(`Contract updated, but document upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setLoading(false)
+        router.refresh()
+        return
+      }
+    }
+
+    handleClose()
     router.refresh()
     setLoading(false)
   }
@@ -86,12 +115,14 @@ export default function EditContractForm({
     </button>
   )
 
+  const hasExistingDoc = !!contract.municipality_agreement_url
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Edit Contract</h2>
-          <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
@@ -118,7 +149,8 @@ export default function EditContractForm({
             <div>
               <label className="label">Currency</label>
               <select className="input" value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
-                <option>OMR</option><option>USD</option><option>AED</option><option>SAR</option>
+                <option>OMR</option><option>SAR</option><option>AED</option><option>KWD</option>
+                <option>QAR</option><option>BHD</option><option>USD</option><option>GBP</option><option>EUR</option>
               </select>
             </div>
           </div>
@@ -146,9 +178,58 @@ export default function EditContractForm({
               </select>
             </div>
           </div>
+
+          {/* Municipality Agreement */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="label">Municipality Agreement</label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={e => { setAgreementFile(e.target.files?.[0] ?? null); setReplacingDoc(true) }}
+            />
+            {hasExistingDoc && !replacingDoc ? (
+              <div className="flex items-center gap-2">
+                <a
+                  href={contract.municipality_agreement_url!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 bg-navy-50 hover:bg-navy-100 border border-navy-200 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <ExternalLink size={12} /> View Agreement
+                </a>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <RefreshCw size={12} /> Replace
+                </button>
+              </div>
+            ) : agreementFile ? (
+              <div className="flex items-center gap-2 text-sm bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                <span className="text-green-800 truncate flex-1">{agreementFile.name}</span>
+                <button type="button" onClick={() => { setAgreementFile(null); setReplacingDoc(false); if (fileRef.current) fileRef.current.value = '' }}
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
+              >
+                <Paperclip size={14} /> Attach Municipality Agreement
+              </button>
+            )}
+          </div>
+
           {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={handleClose} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Save Changes'}
             </button>

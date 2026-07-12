@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2 } from 'lucide-react'
+import { Plus, X, Loader2, Paperclip, CheckCircle } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
@@ -11,6 +11,8 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [agreementFile, setAgreementFile] = useState<File | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const today = new Date().toISOString().split('T')[0]
   const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
@@ -30,13 +32,15 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
     }
   }
 
-  function handleOpen() { setForm(freshForm()); setError(''); setOpen(true) }
-  function closeAndReset() { setError(''); setOpen(false) }
+  function handleOpen() { setForm(freshForm()); setError(''); setAgreementFile(null); setOpen(true) }
+  function closeAndReset() { setError(''); setAgreementFile(null); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Step 1: Create the contract
     const res = await fetch('/api/contracts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,6 +59,23 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
     })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed to create contract'); setLoading(false); return }
+
+    // Step 2: Upload municipality agreement if provided
+    if (agreementFile && json.id) {
+      const fd = new FormData()
+      fd.append('contractId', json.id)
+      fd.append('file', agreementFile)
+      const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
+      if (!upRes.ok) {
+        const upJson = await upRes.json()
+        // Contract was created — warn but don't block
+        setError(`Contract created, but document upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setLoading(false)
+        router.refresh()
+        return
+      }
+    }
+
     closeAndReset()
     router.refresh()
     setLoading(false)
@@ -127,7 +148,39 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
               </select>
             </div>
           </div>
-          {error && <div className="text-red-600 text-sm">{error}</div>}
+
+          {/* Municipality Agreement */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="label">Municipality Agreement <span className="text-slate-400 font-normal">(optional)</span></label>
+            <p className="text-xs text-slate-400 mb-2">Upload a copy of the agreement registered with the Municipality (PDF, JPG, or PNG).</p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={e => setAgreementFile(e.target.files?.[0] ?? null)}
+            />
+            {agreementFile ? (
+              <div className="flex items-center gap-2 text-sm bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                <span className="text-green-800 truncate flex-1">{agreementFile.name}</span>
+                <button type="button" onClick={() => { setAgreementFile(null); if (fileRef.current) fileRef.current.value = '' }}
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
+              >
+                <Paperclip size={14} /> Attach Municipality Agreement
+              </button>
+            )}
+          </div>
+
+          {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading || units.length === 0 || tenants.length === 0} className="btn-primary flex-1">
