@@ -35,7 +35,6 @@ export async function seedDemoData(orgId: string, admin: SupabaseClient) {
         name: 'Oakwood Residences',
         type: 'residential',
         address: 'Way 4521, Al Khuwair',
-        address_line2: 'Near City Centre Mall',
         city: 'Muscat',
         country: 'Oman',
       })
