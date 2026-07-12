@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardShell from '@/components/layout/DashboardShell'
+import DemoTourPanel from '@/components/demo/DemoTourPanel'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/auth/login')
+
+  const isDemo = user.email === process.env.DEMO_EMAIL
 
   // Fetch profile and organization separately to avoid RLS join issues
   const { data: profile } = await supabase
@@ -31,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <DashboardShell profile={{ ...profile, organizations: organization }}>
       {children}
+      {isDemo && <DemoTourPanel />}
     </DashboardShell>
   )
 }

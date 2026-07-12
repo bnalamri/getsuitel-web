@@ -17,6 +17,7 @@ export default async function OwnerDashboard() {
   const isOwner = role === 'owner'
   const isPropertyManager = role === 'property_manager'
   const isFinancialManager = role === 'financial_manager'
+  const isDemo = user.email === process.env.DEMO_EMAIL
 
   // Use admin client for org lookup so staff (property_manager / financial_manager) bypass RLS
   const admin = createAdminClient()
@@ -113,13 +114,13 @@ export default async function OwnerDashboard() {
         )}
       </div>
 
-      {/* Onboarding — owner only */}
-      {isOwner && <OnboardingChecklist steps={onboardingSteps} orgId={orgId} />}
-      {isOwner && <WelcomeModal userId={user.id} />}
+      {/* Onboarding — owner only, skip in demo mode */}
+      {isOwner && !isDemo && <OnboardingChecklist steps={onboardingSteps} orgId={orgId} />}
+      {isOwner && !isDemo && <WelcomeModal userId={user.id} />}
 
-      {/* Welcome modal — staff roles */}
-      {isPropertyManager && <StaffWelcomeModal userId={user.id} role="property_manager" />}
-      {isFinancialManager && <StaffWelcomeModal userId={user.id} role="financial_manager" />}
+      {/* Welcome modal — staff roles, skip in demo mode */}
+      {isPropertyManager && !isDemo && <StaffWelcomeModal userId={user.id} role="property_manager" />}
+      {isFinancialManager && !isDemo && <StaffWelcomeModal userId={user.id} role="financial_manager" />}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">

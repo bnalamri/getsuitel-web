@@ -1,8 +1,9 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2, Paperclip, CheckCircle } from 'lucide-react'
 import DateInput from '@/components/DateInput'
+import { getDemoState, DEMO_CONTRACT_DATA } from '@/lib/demo/config'
 
 type Unit = { id: string; unit_number: string; properties: { name: string } | null }
 type Tenant = { id: string; full_name: string }
@@ -13,6 +14,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
   const [error, setError] = useState('')
   const [agreementFile, setAgreementFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const submitBtnRef = useRef<HTMLButtonElement>(null)
   const router = useRouter()
   const today = new Date().toISOString().split('T')[0]
   const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
@@ -34,6 +36,32 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
 
   function handleOpen() { setForm(freshForm()); setError(''); setAgreementFile(null); setOpen(true) }
   function closeAndReset() { setError(''); setAgreementFile(null); setOpen(false) }
+
+  // Demo mode: auto-open and auto-fill when step === 3
+  useEffect(() => {
+    const state = getDemoState()
+    if (state.step !== 3) return
+    const base = freshForm()
+    setForm({
+      ...base,
+      unit_id: units[0]?.id ?? '',
+      tenant_id: tenants[0]?.id ?? '',
+      ...DEMO_CONTRACT_DATA,
+    })
+    setAgreementFile(null)
+    setOpen(true)
+  }, [units, tenants])
+
+  // Demo mode: listen for submit trigger
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.step !== 3) return
+      submitBtnRef.current?.click()
+    }
+    window.addEventListener('demo:next', handler)
+    return () => window.removeEventListener('demo:next', handler)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -79,6 +107,11 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
     closeAndReset()
     router.refresh()
     setLoading(false)
+    // Demo: signal tour panel
+    const demoState = getDemoState()
+    if (demoState.step === 3) {
+      window.dispatchEvent(new CustomEvent('demo:done', { detail: {} }))
+    }
   }
 
   if (!open) return (
@@ -183,7 +216,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
           {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={loading || units.length === 0 || tenants.length === 0} className="btn-primary flex-1">
+            <button ref={submitBtnRef} type="submit" disabled={loading || units.length === 0 || tenants.length === 0} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Create Contract'}
             </button>
           </div>

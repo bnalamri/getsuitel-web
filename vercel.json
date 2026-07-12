@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/subscriptions",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/demo/reset",
+      "schedule": "0 20 * * *"
     }
   ],
   "headers": [

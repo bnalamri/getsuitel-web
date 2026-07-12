@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2 } from 'lucide-react'
+import { getDemoState, DEMO_UNIT_DATA } from '@/lib/demo/config'
 
 const CURRENCIES = [
   { value: 'OMR', label: 'OMR — Omani Rial' },
@@ -31,6 +32,30 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId, defa
     rent_amount: '', currency: defaultCurrency, status: 'vacant',
   }
   const [form, setForm] = useState(initialForm)
+  const submitBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Demo mode: auto-open and auto-fill when step === 2
+  useEffect(() => {
+    const state = getDemoState()
+    if (state.step !== 2) return
+    setOpen(true)
+    setForm(f => ({
+      ...f,
+      property_id: defaultPropertyId ?? properties[0]?.id ?? '',
+      ...DEMO_UNIT_DATA,
+    }))
+  }, [defaultPropertyId, properties])
+
+  // Demo mode: listen for submit trigger
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.step !== 2) return
+      submitBtnRef.current?.click()
+    }
+    window.addEventListener('demo:next', handler)
+    return () => window.removeEventListener('demo:next', handler)
+  }, [])
 
   function closeAndReset() { setForm(initialForm); setError(''); setOpen(false) }
 
@@ -59,6 +84,11 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId, defa
     closeAndReset()
     router.refresh()
     setLoading(false)
+    // Demo: signal tour panel
+    const demoState = getDemoState()
+    if (demoState.step === 2 && json.id) {
+      window.dispatchEvent(new CustomEvent('demo:done', { detail: { unitId: json.id } }))
+    }
   }
 
   if (!open) return (
@@ -150,7 +180,7 @@ export default function AddUnitForm({ orgId, properties, defaultPropertyId, defa
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={loading} className="btn-primary flex-1">
+            <button ref={submitBtnRef} type="submit" disabled={loading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Add Unit'}
             </button>
           </div>
