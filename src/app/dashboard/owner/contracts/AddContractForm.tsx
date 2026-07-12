@@ -157,7 +157,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
               ref={fileRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
+              className="sr-only"
               onChange={e => setAgreementFile(e.target.files?.[0] ?? null)}
             />
             {agreementFile ? (

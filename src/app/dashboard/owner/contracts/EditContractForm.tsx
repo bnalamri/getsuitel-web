@@ -186,7 +186,7 @@ export default function EditContractForm({
               ref={fileRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
+              className="sr-only"
               onChange={e => { setAgreementFile(e.target.files?.[0] ?? null); setReplacingDoc(true) }}
             />
             {hasExistingDoc && !replacingDoc ? (
