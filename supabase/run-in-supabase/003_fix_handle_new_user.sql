@@ -1,5 +1,7 @@
--- GetSuitel: handle_new_user trigger
--- Run in: Supabase Dashboard -> SQL Editor
+-- GetSuitel: handle_new_user trigger — FINAL WORKING VERSION
+-- Root cause fix: user_role enum was dropped (role col is now text), removed ::user_role cast.
+-- lang_pref and subscription_plan enums still exist, kept as ::public.lang_pref / ::public.subscription_plan
+-- Run in: Supabase Dashboard → SQL Editor
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $func$
@@ -29,7 +31,7 @@ begin
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     v_role,
     new.raw_user_meta_data->>'phone',
-    coalesce(new.raw_user_meta_data->>'lang_pref', 'en'),
+    coalesce(new.raw_user_meta_data->>'lang_pref', 'en')::public.lang_pref,
     case when v_role = 'owner' and v_owner_type = 'individual' then v_national_id else null end
   );
 
@@ -41,7 +43,7 @@ begin
     values (
       v_org_name,
       new.id,
-      v_plan,
+      v_plan::public.subscription_plan,
       'trialing',
       now() + interval '30 days',
       case v_plan when 'basic' then 10 when 'pro' then 50 else 9999 end,
@@ -52,4 +54,17 @@ begin
     )
     returning id into v_org_id;
 
-    update public.profiles set organization_id = v_org_id where id = new.
+    update public.profiles set organization_id = v_org_id where id = new.id;
+  end if;
+
+  if v_role in ('tenant', 'technician') and v_org_id is not null then
+    update public.profiles set organization_id = v_org_id where id = new.id;
+  end if;
+
+  return new;
+
+exception when others then
+  raise exception 'handle_new_user error: % (sqlstate: %)', sqlerrm, sqlstate
+    using errcode = 'P0001';
+end;
+$func$;
