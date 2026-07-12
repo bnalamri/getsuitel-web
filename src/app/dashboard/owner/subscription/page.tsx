@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, CheckCircle, Mail, Upload, AlertTriangle, Calendar } from 'lucide-react'
+import { CreditCard, CheckCircle, Mail, Upload, AlertTriangle, Calendar, Building2, Home, Users } from 'lucide-react'
 import ProofUploadButton from './ProofUploadButton'
 
 export const metadata = { title: 'Subscription' }
@@ -18,19 +18,22 @@ export default async function SubscriptionPage() {
       name: 'Basic',
       price: '$29',
       desc: 'Perfect for individual landlords',
-      features: ['Up to 2 properties', 'Up to 10 units', 'Up to 15 tenants', 'Invoicing & contracts', 'Maintenance requests', 'Email notices', 'Standard support'],
+      limits: { properties: 2, units: 10, tenants: 15 },
+      extras: ['Invoicing & contracts', 'Maintenance requests', 'Email notices', 'Standard support'],
     },
     {
       name: 'Pro',
       price: '$79',
       desc: 'For growing property portfolios',
-      features: ['Up to 10 properties', 'Up to 50 units', 'Up to 75 tenants', 'Everything in Basic', 'Advanced reports', 'Team management', 'File attachments', 'Priority support'],
+      limits: { properties: 10, units: 50, tenants: 75 },
+      extras: ['Everything in Basic', 'Advanced reports', 'Team management', 'File attachments', 'Priority support'],
     },
     {
       name: 'Enterprise',
       price: '$199',
       desc: 'For large real estate companies',
-      features: ['Up to 20 properties', 'Unlimited units', 'Unlimited tenants', 'Everything in Pro', 'Custom branding', 'Dedicated account manager', 'API access', 'SLA guarantee'],
+      limits: { properties: 20, units: null, tenants: null },
+      extras: ['Everything in Pro', 'Custom branding', 'Dedicated account manager', 'API access', 'SLA guarantee'],
     },
   ]
 
@@ -40,6 +43,7 @@ export default async function SubscriptionPage() {
   const daysLeft   = expiresAt
     ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
     : null
+  const orgData = org as { subscription_plan?: string; subscription_status?: string; max_properties?: number; max_units?: number; max_tenants?: number; id?: string } | null
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -47,9 +51,9 @@ export default async function SubscriptionPage() {
         <h2 className="text-2xl font-bold text-slate-900">Subscription</h2>
         {org && (
           <p className="text-slate-500 text-sm mt-0.5">
-            Current plan: <strong className="capitalize">{(org as { subscription_plan?: string }).subscription_plan}</strong>
+            Current plan: <strong className="capitalize">{orgData?.subscription_plan}</strong>
             {' · '}
-            <span className="capitalize">{(org as { subscription_status?: string }).subscription_status}</span>
+            <span className="capitalize">{orgData?.subscription_status}</span>
             {expiresAt && daysLeft !== null && daysLeft > 0 && (
               <span className="ml-2 inline-flex items-center gap-1">
                 <Calendar size={12} className="inline"/>
@@ -74,12 +78,17 @@ export default async function SubscriptionPage() {
 
       <div className="grid md:grid-cols-3 gap-4">
         {plans.map(p => {
-          const current = (org as { subscription_plan?: string } | null)?.subscription_plan === p.name.toLowerCase()
+          const current = orgData?.subscription_plan === p.name.toLowerCase()
           const subject = encodeURIComponent(`Upgrade Request — ${p.name} Plan`)
           const body = encodeURIComponent(
             `Hello GetSuitel Support,\n\nI would like to upgrade my subscription to the ${p.name} plan ($${p.price}/mo).\n\nAccount details:\nName: ${ownerName}\nOrganization: ${orgName}\nEmail: ${user.email}\n\nPlease process this upgrade at your earliest convenience.\n\nThank you.`
           )
           const mailtoHref = `mailto:billing@getsuitel.com?subject=${subject}&body=${body}`
+
+          // For the current plan, show actual DB limits; for others show plan defaults
+          const maxProps    = current && orgData?.max_properties != null ? orgData.max_properties : p.limits.properties
+          const maxUnits    = current && orgData?.max_units    != null ? orgData.max_units    : p.limits.units
+          const maxTenants  = current && orgData?.max_tenants  != null ? orgData.max_tenants  : p.limits.tenants
 
           return (
             <div key={p.name} className={`card p-5 flex flex-col ${current ? 'ring-2 ring-navy-700' : ''}`}>
@@ -90,7 +99,30 @@ export default async function SubscriptionPage() {
                 {p.price}<span className="text-sm font-normal text-slate-400">/mo</span>
               </div>
               <ul className="space-y-1.5 mt-3 flex-1">
-                {p.features.map(f => (
+                {/* Limit features — show actual values for current plan */}
+                <li className="flex items-center gap-2 text-sm text-slate-600">
+                  <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+                  {maxProps != null ? `Up to ${maxProps} properties` : 'Unlimited properties'}
+                  {current && orgData?.max_properties != null && orgData.max_properties !== p.limits.properties && (
+                    <span className="text-xs text-navy-600 bg-navy-50 border border-navy-200 px-1.5 py-0.5 rounded-full ml-auto">custom</span>
+                  )}
+                </li>
+                <li className="flex items-center gap-2 text-sm text-slate-600">
+                  <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+                  {maxUnits != null ? `Up to ${maxUnits} units` : 'Unlimited units'}
+                  {current && orgData?.max_units != null && orgData.max_units !== p.limits.units && (
+                    <span className="text-xs text-navy-600 bg-navy-50 border border-navy-200 px-1.5 py-0.5 rounded-full ml-auto">custom</span>
+                  )}
+                </li>
+                <li className="flex items-center gap-2 text-sm text-slate-600">
+                  <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+                  {maxTenants != null ? `Up to ${maxTenants} tenants` : 'Unlimited tenants'}
+                  {current && orgData?.max_tenants != null && orgData.max_tenants !== p.limits.tenants && (
+                    <span className="text-xs text-navy-600 bg-navy-50 border border-navy-200 px-1.5 py-0.5 rounded-full ml-auto">custom</span>
+                  )}
+                </li>
+                {/* Non-limit features */}
+                {p.extras.map(f => (
                   <li key={f} className="flex items-center gap-2 text-sm text-slate-600">
                     <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />{f}
                   </li>
@@ -98,7 +130,7 @@ export default async function SubscriptionPage() {
               </ul>
               {!current && (
                 <a href={mailtoHref} className="btn-secondary w-full mt-4 text-sm text-center block">
-                  Upgrade to {p.name}
+                  Upgrade Request
                 </a>
               )}
             </div>
@@ -109,9 +141,9 @@ export default async function SubscriptionPage() {
       <div className="card p-4 flex items-center gap-3 text-sm text-slate-600">
         <Mail size={18} className="text-slate-400 flex-shrink-0" />
         <span>
-          To upgrade, click the button above — it opens a pre-filled email to{' '}
+          To upgrade, click the &ldquo;Upgrade Request&rdquo; button — it opens a pre-filled email to{' '}
           <a href="mailto:billing@getsuitel.com" className="text-navy-700 font-medium hover:underline">billing@getsuitel.com</a>.
-          {' '}Your plan will be updated within 24 hours.
+          {' '}GetSuitel team will contact you within 24 hours.
         </span>
       </div>
 
@@ -124,10 +156,10 @@ export default async function SubscriptionPage() {
           Already made a bank or mobile transfer for your subscription? Upload your transaction slip here and our billing team will confirm within 24 hours.
         </p>
         <ProofUploadButton
-          orgId={(org as { id?: string } | null)?.id ?? ''}
+          orgId={orgData?.id ?? ''}
           ownerEmail={user.email ?? ''}
           ownerName={ownerName}
-          plan={(org as { subscription_plan?: string } | null)?.subscription_plan ?? ''}
+          plan={orgData?.subscription_plan ?? ''}
         />
       </div>
     </div>
