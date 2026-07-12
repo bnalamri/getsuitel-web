@@ -76,12 +76,21 @@ export async function POST(req: Request) {
   const auth = await requireSuperadmin()
   if (!auth.ok) return auth.response
 
-  const { orgId, plan, status, maxUnits, maxTenants, maxProperties } = await req.json()
+  const {
+    orgId, plan, status,
+    // New: activation period
+    durationMonths, exactExpiryDate,
+    // New: trial extension
+    trialExtendDays,
+    // Legacy fields (kept for backward compat)
+    maxUnits, maxTenants, maxProperties,
+  } = await req.json()
+
   if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })
 
   const admin = createAdminClient()
 
-  // Fetch current org + owner for email
+  // Fetch current org + owner for email / calculations
   const { data: org } = await admin
     .from('organizations')
     .select('*, profiles!organizations_owner_id_fkey(full_name, email)')
@@ -92,14 +101,14 @@ export async function POST(req: Request) {
   const PLAN_LIMITS: Record<string, { maxProperties: number; maxUnits: number; maxTenants: number }> = {
     basic:      { maxProperties: 2,    maxUnits: 10,   maxTenants: 15 },
     pro:        { maxProperties: 10,   maxUnits: 50,   maxTenants: 75 },
-    enterprise: { maxProperties: 20, maxUnits: 9999, maxTenants: 9999 },
+    enterprise: { maxProperties: 20,   maxUnits: 9999, maxTenants: 9999 },
   }
 
-  // Downgrade check — only when changing to a more restrictive plan
+  // Downgrade check
   if (plan && org?.subscription_plan && plan !== org.subscription_plan) {
-    const targetLimits = PLAN_LIMITS[plan]
+    const targetLimits  = PLAN_LIMITS[plan]
     const currentLimits = PLAN_LIMITS[org.subscription_plan]
-    const isDowngrade = targetLimits && currentLimits &&
+    const isDowngrade   = targetLimits && currentLimits &&
       (targetLimits.maxProperties < currentLimits.maxProperties ||
        targetLimits.maxUnits < currentLimits.maxUnits ||
        targetLimits.maxTenants < currentLimits.maxTenants)
@@ -110,7 +119,6 @@ export async function POST(req: Request) {
         admin.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
         admin.from('tenants').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
       ])
-
       const violations: string[] = []
       if ((propCount ?? 0) > targetLimits.maxProperties)
         violations.push(`${propCount} properties (${plan} limit: ${targetLimits.maxProperties})`)
@@ -118,34 +126,62 @@ export async function POST(req: Request) {
         violations.push(`${unitCount} units (${plan} limit: ${targetLimits.maxUnits})`)
       if ((tenantCount ?? 0) > targetLimits.maxTenants)
         violations.push(`${tenantCount} tenants (${plan} limit: ${targetLimits.maxTenants})`)
-
       if (violations.length > 0) {
         return NextResponse.json({
-          error: `Cannot downgrade to ${plan}. Current usage exceeds the plan limits: ${violations.join(', ')}. Please reduce usage before downgrading.`,
+          error: `Cannot downgrade to ${plan}. Current usage exceeds limits: ${violations.join(', ')}. Reduce usage first.`,
         }, { status: 400 })
       }
     }
   }
 
   const updates: Record<string, unknown> = {
-    subscription_plan: plan,
+    subscription_plan:   plan,
     subscription_status: status,
   }
-  if (maxUnits) updates.max_units = Number(maxUnits)
-  if (maxTenants) updates.max_tenants = Number(maxTenants)
-  if (maxProperties) updates.max_properties = Number(maxProperties)
-  // Auto-set limits from plan if not manually overridden
-  if (plan && PLAN_LIMITS[plan] && !maxUnits) updates.max_units = PLAN_LIMITS[plan].maxUnits
-  if (plan && PLAN_LIMITS[plan] && !maxTenants) updates.max_tenants = PLAN_LIMITS[plan].maxTenants
-  if (plan && PLAN_LIMITS[plan] && !maxProperties) updates.max_properties = PLAN_LIMITS[plan].maxProperties
-  if (status === 'active') updates.subscription_ends_at = new Date(Date.now() + 365 * 86400000).toISOString()
 
-  // Set canceled_at when newly canceled
+  // ── Activation period ──
+  if (status === 'active') {
+    if (exactExpiryDate) {
+      // Exact date chosen by admin
+      updates.subscription_expires_at = new Date(exactExpiryDate).toISOString()
+    } else {
+      // Duration: extend from current expiry if still in future, else from now
+      const months = Number(durationMonths) || 12
+      const base = org?.subscription_expires_at && new Date(org.subscription_expires_at) > new Date()
+        ? new Date(org.subscription_expires_at)
+        : new Date()
+      base.setMonth(base.getMonth() + months)
+      updates.subscription_expires_at = base.toISOString()
+    }
+    updates.subscription_reminder_sent_at = null
+  }
+
+  // ── Trial extension ──
+  if (status === 'trialing' && trialExtendDays) {
+    const days = Number(trialExtendDays)
+    const base = org?.trial_ends_at && new Date(org.trial_ends_at) > new Date()
+      ? new Date(org.trial_ends_at)
+      : new Date()
+    base.setDate(base.getDate() + days)
+    updates.trial_ends_at = base.toISOString()
+  }
+
+  // ── Plan limits (auto or manual override) ──
+  if (maxUnits)      updates.max_units      = Number(maxUnits)
+  if (maxTenants)    updates.max_tenants    = Number(maxTenants)
+  if (maxProperties) updates.max_properties = Number(maxProperties)
+  // Auto-reset limits from new plan (only if not manually overriding)
+  if (plan && PLAN_LIMITS[plan]) {
+    if (!maxUnits)      updates.max_units      = PLAN_LIMITS[plan].maxUnits
+    if (!maxTenants)    updates.max_tenants    = PLAN_LIMITS[plan].maxTenants
+    if (!maxProperties) updates.max_properties = PLAN_LIMITS[plan].maxProperties
+  }
+
+  // ── Cancellation tracking ──
   const wasNotCanceled = org?.subscription_status !== 'canceled'
   if (status === 'canceled' && wasNotCanceled) {
     updates.canceled_at = new Date().toISOString()
   }
-  // Clear canceled_at if reactivating
   if (status !== 'canceled') {
     updates.canceled_at = null
   }
@@ -153,9 +189,9 @@ export async function POST(req: Request) {
   const { error } = await admin.from('organizations').update(updates).eq('id', orgId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Send emails when newly canceled
+  // ── Send cancellation emails ──
   if (status === 'canceled' && wasNotCanceled && org) {
-    const owner = org.profiles as { full_name: string; email: string } | null
+    const owner    = org.profiles as { full_name: string; email: string } | null
     const purgeDate = new Date(Date.now() + 90 * 86400000)
     try {
       await Promise.all([

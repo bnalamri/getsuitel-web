@@ -175,3 +175,75 @@ export async function GET(req: Request) {
 
   return NextResponse.json({ ok: true, warnings, purged })
 }
+
+// POST /api/admin/purge — manual force-purge a single org by superadmin
+export async function POST(req: Request) {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
+  const { orgId } = await req.json()
+  if (!orgId) return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const now   = new Date()
+
+  const { data: org } = await admin
+    .from('organizations')
+    .select('*, profiles!organizations_owner_id_fkey(full_name, email)')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+
+  const owner = org.profiles as { full_name: string; email: string } | null
+
+  const [{ count: unitsCount }, { count: tenantsCount }] = await Promise.all([
+    admin.from('units').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+    admin.from('tenants').select('*', { count: 'exact', head: true }).eq('organization_id', orgId),
+  ])
+
+  // Save audit record
+  await admin.from('deleted_accounts').insert({
+    org_id:        org.id,
+    org_name:      org.name,
+    org_name_ar:   org.name_ar,
+    owner_name:    owner?.full_name,
+    owner_email:   owner?.email,
+    plan:          org.subscription_plan,
+    units_count:   unitsCount ?? 0,
+    tenants_count: tenantsCount ?? 0,
+    joined_at:     org.created_at,
+    canceled_at:   org.canceled_at,
+    purged_at:     now.toISOString(),
+    purged_by:     'admin_manual',
+    reason:        'manual_purge_by_admin',
+  })
+
+  await purgeOrganization(admin, orgId)
+
+  // Notify super admin
+  try {
+    const body = `
+      <div style="font-size:15px;color:#334155;line-height:1.8">
+        The following organization has been <strong>manually purged</strong> by an admin.
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:16px">
+        <tr><td style="padding:8px 0;color:#64748b;width:140px">Organization</td><td style="font-weight:600;color:#0f172a">${org.name}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b">Owner</td><td style="font-weight:600;color:#0f172a">${owner?.full_name || 'Unknown'}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b">Email</td><td style="font-weight:600;color:#0f172a">${owner?.email || 'Unknown'}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b">Purged on</td><td style="font-weight:600;color:#dc2626">${formatDate(now)}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b">Units deleted</td><td style="font-weight:600;color:#0f172a">${unitsCount ?? 0}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b">Tenants deleted</td><td style="font-weight:600;color:#0f172a">${tenantsCount ?? 0}</td></tr>
+      </table>`
+    await resend.emails.send({
+      from: 'GetSuitel <noreply@getsuitel.com>',
+      to: [SUPER_ADMIN_EMAIL],
+      subject: `[Admin] ${org.name} — manually purged`,
+      html: emailWrapper('#dc2626', 'Admin — Manual Purge', body),
+    })
+  } catch (e) {
+    console.error('Purge notification email failed:', e)
+  }
+
+  return NextResponse.json({ ok: true })
+}

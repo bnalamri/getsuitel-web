@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home, FileText, User, Landmark } from 'lucide-react'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
 import EditLimitsForm from './EditLimitsForm'
+import EditOrgForm from './EditOrgForm'
+import ForcePurgeButton from './ForcePurgeButton'
 import { unstable_noStore as noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
@@ -121,6 +123,8 @@ export default async function OwnersPage() {
                       orgId={org.id}
                       currentPlan={org.subscription_plan}
                       currentStatus={org.subscription_status}
+                      currentExpiresAt={org.subscription_expires_at}
+                      currentTrialEndsAt={org.trial_ends_at}
                     />
                     <EditLimitsForm
                       orgId={org.id}
@@ -132,6 +136,14 @@ export default async function OwnersPage() {
                       usedUnits={unitCount(org.id)}
                       usedTenants={tenantCount(org.id)}
                     />
+                    <EditOrgForm
+                      orgId={org.id}
+                      currentName={org.name}
+                      currentNameAr={org.name_ar}
+                    />
+                    {org.subscription_status === 'canceled' && (
+                      <ForcePurgeButton orgId={org.id} orgName={org.name} />
+                    )}
                   </div>
                 </div>
 

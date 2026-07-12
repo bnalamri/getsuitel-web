@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -29,6 +29,10 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/subscriptions', icon:CreditCard, en:'Subscriptions', ar:'الاشتراكات' },
       { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
       { href:'/dashboard/admin/financial-report', icon:TrendingUp, en:'Financial', ar:'المالية' },
+    ]},
+    { en:'Accounts', ar:'الحسابات', items:[
+      { href:'/dashboard/admin/users', icon:Users, en:'Users', ar:'المستخدمون' },
+      { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
     { en:'System', ar:'النظام', items:[
       { href:'/dashboard/admin/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -253,6 +257,8 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     contract:     {en:'My Contract',ar:'عقدي'},
     cheques:      {en:'Cheque Tracker',ar:'سجل الشيكات'},
     staff:        {en:'Staff Management',ar:'إدارة الموظفين'},
+    users:        {en:'Users',ar:'المستخدمون'},
+    invitations:  {en:'Invitations',ar:'الدعوات'},
   }
   const title = labels[segment]?.[lang] ?? segment
 
