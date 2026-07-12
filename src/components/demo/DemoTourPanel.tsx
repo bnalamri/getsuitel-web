@@ -5,21 +5,30 @@ import { X, Volume2, VolumeX, ChevronRight } from 'lucide-react'
 import { TOUR_STEPS, getDemoState, setDemoState, clearDemoState } from '@/lib/demo/config'
 import { createClient } from '@/lib/supabase/client'
 
-function speakText(text: string, muted: boolean) {
+function speakText(text: string, muted: boolean, lang: 'en' | 'ar') {
   if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) return
   window.speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = 0.88
+  utterance.rate = lang === 'ar' ? 0.85 : 0.88
   utterance.pitch = 1.0
-  utterance.lang = 'en-US'
 
   function doSpeak() {
     const voices = window.speechSynthesis.getVoices()
-    const voice =
-      voices.find(v => v.name === 'Samantha') ||
-      voices.find(v => v.name === 'Google US English') ||
-      voices.find(v => v.lang === 'en-US' && v.localService) ||
-      voices.find(v => v.lang.startsWith('en-'))
+    let voice = undefined
+    if (lang === 'ar') {
+      voice =
+        voices.find(v => v.lang === 'ar-SA') ||
+        voices.find(v => v.lang === 'ar-EG') ||
+        voices.find(v => v.lang.startsWith('ar'))
+      utterance.lang = voice?.lang ?? 'ar-SA'
+    } else {
+      voice =
+        voices.find(v => v.name === 'Samantha') ||
+        voices.find(v => v.name === 'Google US English') ||
+        voices.find(v => v.lang === 'en-US' && v.localService) ||
+        voices.find(v => v.lang.startsWith('en-'))
+      utterance.lang = 'en-US'
+    }
     if (voice) utterance.voice = voice
     window.speechSynthesis.speak(utterance)
   }
@@ -32,16 +41,34 @@ function speakText(text: string, muted: boolean) {
 export default function DemoTourPanel() {
   const [step, setStep] = useState(0)
   const [muted, setMuted] = useState(false)
+  const [lang, setLang] = useState<'en' | 'ar'>('en')
   const router = useRouter()
   const mutedRef = useRef(false)
+  const langRef = useRef<'en' | 'ar'>('en')
 
   useEffect(() => { mutedRef.current = muted }, [muted])
+  useEffect(() => { langRef.current = lang }, [lang])
 
-  // Init from localStorage + speak welcome
+  // Init: load step + language (from localStorage set at demo entry, or profile fallback)
   useEffect(() => {
     const initStep = getDemoState().step ?? 0
     setStep(initStep)
-    setTimeout(() => speakText(TOUR_STEPS[initStep]?.audio ?? '', mutedRef.current), 900)
+
+    // Read language stored when user clicked "Try Demo" on landing page
+    let storedLang: 'en' | 'ar' = 'en'
+    try {
+      const v = localStorage.getItem('gs_demo_lang')
+      if (v === 'ar') storedLang = 'ar'
+    } catch {}
+
+    setLang(storedLang)
+    langRef.current = storedLang
+
+    setTimeout(() => {
+      const step0 = TOUR_STEPS[initStep]
+      const text = storedLang === 'ar' ? step0?.audioAr : step0?.audio
+      speakText(text ?? '', mutedRef.current, storedLang)
+    }, 900)
   }, [])
 
   function handleNext() {
@@ -49,9 +76,9 @@ export default function DemoTourPanel() {
     if (newStep >= TOUR_STEPS.length) return
     setDemoState({ step: newStep })
     setStep(newStep)
-    const nextPath = TOUR_STEPS[newStep].path
-    router.push(nextPath)
-    setTimeout(() => speakText(TOUR_STEPS[newStep].audio, mutedRef.current), 600)
+    router.push(TOUR_STEPS[newStep].path)
+    const text = langRef.current === 'ar' ? TOUR_STEPS[newStep].audioAr : TOUR_STEPS[newStep].audio
+    setTimeout(() => speakText(text, mutedRef.current, langRef.current), 600)
   }
 
   async function handleExit() {
@@ -77,9 +104,17 @@ export default function DemoTourPanel() {
 
   const isLast = step === TOUR_STEPS.length - 1
   const progress = Math.round((step / (TOUR_STEPS.length - 1)) * 100)
+  const isAr = lang === 'ar'
+
+  const title = isAr ? current.titleAr : current.title
+  const description = isAr ? current.descriptionAr : current.description
+  const currentAudio = isAr ? current.audioAr : current.audio
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] w-[300px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div
+      className={`fixed bottom-6 ${isAr ? 'left-6' : 'right-6'} z-[100] w-[300px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden`}
+      dir={isAr ? 'rtl' : 'ltr'}
+    >
       {/* Header */}
       <div className="bg-navy-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -88,7 +123,7 @@ export default function DemoTourPanel() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => speakText(current.audio, mutedRef.current)}
+            onClick={() => speakText(currentAudio, mutedRef.current, langRef.current)}
             title="Replay audio"
             className="text-white/40 hover:text-white/80 transition-colors text-sm leading-none px-0.5"
           >↻</button>
@@ -116,10 +151,16 @@ export default function DemoTourPanel() {
       {/* Body */}
       <div className="p-4">
         <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide mb-1">
-          {step === 0 ? 'Introduction' : isLast ? 'Complete!' : `Step ${step} of ${TOUR_STEPS.length - 2}`}
+          {step === 0
+            ? (isAr ? 'مقدمة' : 'Introduction')
+            : isLast
+            ? (isAr ? 'اكتمل!' : 'Complete!')
+            : isAr
+            ? `خطوة ${step} من ${TOUR_STEPS.length - 2}`
+            : `Step ${step} of ${TOUR_STEPS.length - 2}`}
         </p>
-        <h3 className="font-bold text-slate-900 text-sm mb-2">{current.title}</h3>
-        <p className="text-slate-500 text-sm leading-relaxed mb-4">{current.description}</p>
+        <h3 className="font-bold text-slate-900 text-sm mb-2">{title}</h3>
+        <p className="text-slate-500 text-sm leading-relaxed mb-4">{description}</p>
 
         {/* Dot progress */}
         <div className="flex items-center gap-1.5 mb-4">
@@ -136,12 +177,15 @@ export default function DemoTourPanel() {
         {/* Actions */}
         {isLast ? (
           <div className="space-y-2">
-            <p className="text-center text-xs text-slate-400 mb-1">Ready to get started?</p>
+            <p className="text-center text-xs text-slate-400 mb-1">
+              {isAr ? 'هل أنت مستعد للبدء؟' : 'Ready to get started?'}
+            </p>
             <button
               onClick={handleExit}
               className="w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
             >
-              Back to Home <ChevronRight size={14} />
+              {isAr ? 'العودة للرئيسية' : 'Back to Home'}
+              <ChevronRight size={14} className={isAr ? 'rotate-180' : ''} />
             </button>
           </div>
         ) : (
@@ -150,14 +194,15 @@ export default function DemoTourPanel() {
               onClick={handleNext}
               className="w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
             >
-              {step === 0 ? "Let's Start" : 'Next'} <ChevronRight size={14} />
+              {step === 0 ? (isAr ? 'لنبدأ' : "Let's Start") : (isAr ? 'التالي' : 'Next')}
+              <ChevronRight size={14} className={isAr ? 'rotate-180' : ''} />
             </button>
             {step > 0 && (
               <button
                 onClick={handleExit}
                 className="w-full text-center text-slate-400 hover:text-slate-600 text-xs py-1 transition-colors"
               >
-                Exit Demo
+                {isAr ? 'خروج من الجولة' : 'Exit Demo'}
               </button>
             )}
           </div>
