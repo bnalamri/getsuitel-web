@@ -9,27 +9,29 @@ function speakText(text: string, muted: boolean, lang: 'en' | 'ar') {
   if (muted || typeof window === 'undefined' || !('speechSynthesis' in window)) return
   window.speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = lang === 'ar' ? 0.85 : 0.88
+  utterance.rate = lang === 'ar' ? 0.82 : 0.88
   utterance.pitch = 1.0
+  // Set lang before voice selection so the browser can pick the right engine
+  utterance.lang = lang === 'ar' ? 'ar-SA' : 'en-US'
 
   function doSpeak() {
     const voices = window.speechSynthesis.getVoices()
-    let voice = undefined
     if (lang === 'ar') {
-      voice =
+      const arVoice =
         voices.find(v => v.lang === 'ar-SA') ||
         voices.find(v => v.lang === 'ar-EG') ||
         voices.find(v => v.lang.startsWith('ar'))
-      utterance.lang = voice?.lang ?? 'ar-SA'
+      if (arVoice) utterance.voice = arVoice
+      // If no Arabic voice found, utterance.lang = 'ar-SA' already set above
+      // — browser will still attempt Arabic TTS
     } else {
-      voice =
+      const enVoice =
         voices.find(v => v.name === 'Samantha') ||
         voices.find(v => v.name === 'Google US English') ||
         voices.find(v => v.lang === 'en-US' && v.localService) ||
         voices.find(v => v.lang.startsWith('en-'))
-      utterance.lang = 'en-US'
+      if (enVoice) utterance.voice = enVoice
     }
-    if (voice) utterance.voice = voice
     window.speechSynthesis.speak(utterance)
   }
 
@@ -41,33 +43,26 @@ function speakText(text: string, muted: boolean, lang: 'en' | 'ar') {
 export default function DemoTourPanel() {
   const [step, setStep] = useState(0)
   const [muted, setMuted] = useState(false)
-  const [lang, setLang] = useState<'en' | 'ar'>('en')
+  // Read language synchronously so first render already has correct lang (no flash)
+  const [lang, setLang] = useState<'en' | 'ar'>(() => {
+    if (typeof window === 'undefined') return 'en'
+    try { return localStorage.getItem('gs_demo_lang') === 'ar' ? 'ar' : 'en' } catch { return 'en' }
+  })
   const router = useRouter()
   const mutedRef = useRef(false)
-  const langRef = useRef<'en' | 'ar'>('en')
+  const langRef = useRef<'en' | 'ar'>(lang)
 
   useEffect(() => { mutedRef.current = muted }, [muted])
   useEffect(() => { langRef.current = lang }, [lang])
 
-  // Init: load step + language (from localStorage set at demo entry, or profile fallback)
+  // Init: load step + speak welcome audio
   useEffect(() => {
     const initStep = getDemoState().step ?? 0
     setStep(initStep)
-
-    // Read language stored when user clicked "Try Demo" on landing page
-    let storedLang: 'en' | 'ar' = 'en'
-    try {
-      const v = localStorage.getItem('gs_demo_lang')
-      if (v === 'ar') storedLang = 'ar'
-    } catch {}
-
-    setLang(storedLang)
-    langRef.current = storedLang
-
     setTimeout(() => {
       const step0 = TOUR_STEPS[initStep]
-      const text = storedLang === 'ar' ? step0?.audioAr : step0?.audio
-      speakText(text ?? '', mutedRef.current, storedLang)
+      const text = langRef.current === 'ar' ? step0?.audioAr : step0?.audio
+      speakText(text ?? '', mutedRef.current, langRef.current)
     }, 900)
   }, [])
 
