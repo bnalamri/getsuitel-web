@@ -25,16 +25,20 @@ function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-type Status = 'paid' | 'overdue' | 'pending' | 'no_invoice' | 'cheque'
+type Status = 'paid' | 'overdue' | 'pending' | 'no_invoice' | 'cheque' | 'cleared'
 
 function StatusBadge({ status }: { status: Status | string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    paid:       { label: 'Paid',              cls: 'bg-emerald-100 text-emerald-700' },
-    overdue:    { label: 'Overdue',           cls: 'bg-red-100 text-red-700' },
-    sent:       { label: 'Pending',           cls: 'bg-amber-100 text-amber-700' },
-    pending:    { label: 'Pending',           cls: 'bg-amber-100 text-amber-700' },
-    no_invoice: { label: 'No invoice yet',    cls: 'bg-slate-100 text-slate-500' },
-    cheque:     { label: 'Cheque — see tracker', cls: 'bg-blue-50 text-blue-600' },
+    paid:        { label: 'Paid',                 cls: 'bg-emerald-100 text-emerald-700' },
+    cleared:     { label: 'Paid (Cheque)',         cls: 'bg-emerald-100 text-emerald-700' },
+    deposited:   { label: 'Deposited',             cls: 'bg-teal-100 text-teal-700' },
+    overdue:     { label: 'Overdue',               cls: 'bg-red-100 text-red-700' },
+    bounced:     { label: 'Bounced',               cls: 'bg-red-100 text-red-700' },
+    sent:        { label: 'Pending',               cls: 'bg-amber-100 text-amber-700' },
+    pending:     { label: 'Pending',               cls: 'bg-amber-100 text-amber-700' },
+    registered:  { label: 'Cheque Registered',     cls: 'bg-blue-50 text-blue-600' },
+    no_invoice:  { label: 'No invoice yet',        cls: 'bg-slate-100 text-slate-500' },
+    cheque:      { label: 'Cheque — see tracker',  cls: 'bg-blue-50 text-blue-600' },
   }
   const s = map[status] ?? { label: status, cls: 'bg-slate-100 text-slate-500' }
   return (
@@ -199,20 +203,30 @@ export default async function MonthlyStatementPage({
     }
   })
 
-  // Sort: overdue first, then pending, then paid, then no_invoice
-  const order: Record<string, number> = { overdue: 0, sent: 1, pending: 1, paid: 2, no_invoice: 3, cheque: 4 }
+  // Sort: overdue/bounced first, then pending variants, then paid/cleared, then no_invoice/cheque
+  const order: Record<string, number> = {
+    overdue: 0, bounced: 0,
+    sent: 1, pending: 1, registered: 1, deposited: 1,
+    paid: 2, cleared: 2,
+    no_invoice: 3, cheque: 3,
+  }
   rows.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
 
   // ── Summary counts ─────────────────────────────────────────────────────────
+  const isPaidStatus   = (s: string) => s === 'paid' || s === 'cleared'
+  const isOverdueStatus = (s: string) => s === 'overdue' || s === 'bounced'
+  const isPendingStatus = (s: string) => ['sent', 'pending', 'registered', 'deposited'].includes(s)
+
   const counts = {
-    paid:       rows.filter(r => r.status === 'paid').length,
-    overdue:    rows.filter(r => r.status === 'overdue').length,
-    pending:    rows.filter(r => ['sent', 'pending'].includes(r.status)).length,
-    no_invoice: rows.filter(r => r.status === 'no_invoice').length,
-    cheque:     rows.filter(r => r.status === 'cheque' || (r.paymentMethod === 'Cheque' && r.status !== 'cleared' && r.status !== 'bounced')).length,
+    paid:       rows.filter(r => isPaidStatus(r.status)).length,
+    overdue:    rows.filter(r => isOverdueStatus(r.status)).length,
+    pending:    rows.filter(r => isPendingStatus(r.status)).length,
+    no_invoice: rows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
   }
-  const totalCollected   = rows.filter(r => r.status === 'paid').reduce((s, r) => s + r.rentAmount, 0)
-  const totalOutstanding = rows.filter(r => ['overdue', 'sent', 'pending'].includes(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalCollected   = rows.filter(r => isPaidStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const overdueTotal     = rows.filter(r => isOverdueStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const pendingTotal     = rows.filter(r => isPendingStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalOutstanding = overdueTotal + pendingTotal
 
   const methodLabel: Record<string, string> = {
     cash: 'Cash', bank_transfer: 'Bank Transfer', mobile_wallet: 'Mobile Wallet',
@@ -240,17 +254,24 @@ export default async function MonthlyStatementPage({
         </div>
         <div className="flex items-center gap-3">
           <MonthPicker month={`${year}-${monthStr}`} />
-          <PrintButton label="Print Statement" />
+          <PrintButton />
         </div>
       </div>
 
       {/* ── Print header (hidden on screen) ──────────────────────────────── */}
-      <div className="hidden print:block mb-2">
-        <div className="text-lg font-bold text-slate-900">GetSuitel — Monthly Rent Statement</div>
-        <div className="text-sm text-slate-600 mt-1">{orgName}  ·  {monthLabel}</div>
-        <div className="text-xs text-slate-400 mt-0.5">Generated: {printDate}  ·  {profile?.full_name ?? ''}</div>
-        <div className="mt-3 border border-slate-300 rounded px-3 py-2 bg-slate-50 text-xs text-slate-600 text-center">
-          CONFIDENTIAL — Internal use only
+      <div className="hidden print:block mb-4">
+        <h2 className="text-xl font-bold text-slate-900">GetSuitel — Monthly Rent Statement</h2>
+        <p className="text-sm text-slate-600 mt-0.5">{orgName} &nbsp;·&nbsp; {monthLabel}</p>
+        <p className="text-xs text-slate-400 mt-0.5">Generated: {printDate} &nbsp;·&nbsp; Printed by: <strong>{profile?.full_name ?? ''}</strong></p>
+        <div className="mt-3 border border-red-500 rounded-md px-4 py-2 bg-red-50 text-center">
+          <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</p>
+          <p className="text-xs text-red-800 mt-1 leading-relaxed">
+            This document is intended solely for authorised internal use within the organisation.
+            Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
+          </p>
+          <p className="text-xs text-red-800 mt-1 leading-relaxed">
+            هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
+          </p>
         </div>
       </div>
 
@@ -278,6 +299,9 @@ export default async function MonthlyStatementPage({
           <div>
             <div className="text-2xl font-bold text-red-600">{counts.overdue}</div>
             <div className="text-xs text-slate-500 mt-0.5">Overdue</div>
+            {overdueTotal > 0 && (
+              <div className="text-xs text-red-600 font-medium mt-1">{fmtAmt(overdueTotal, orgCurrency)}</div>
+            )}
           </div>
         </div>
         <div className="card p-4 flex items-start gap-3">
@@ -287,8 +311,8 @@ export default async function MonthlyStatementPage({
           <div>
             <div className="text-2xl font-bold text-amber-600">{counts.pending}</div>
             <div className="text-xs text-slate-500 mt-0.5">Pending</div>
-            {totalOutstanding > 0 && (
-              <div className="text-xs text-amber-600 font-medium mt-1">{fmtAmt(totalOutstanding, orgCurrency)}</div>
+            {pendingTotal > 0 && (
+              <div className="text-xs text-amber-600 font-medium mt-1">{fmtAmt(pendingTotal, orgCurrency)}</div>
             )}
           </div>
         </div>
@@ -381,37 +405,4 @@ export default async function MonthlyStatementPage({
                       Totals — {rows.length} contracts
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-slate-900 tabular-nums text-sm">
-                      {fmtAmt(rows.reduce((s, r) => s + r.rentAmount, 0), orgCurrency)}
-                    </td>
-                    <td colSpan={4} className="px-4 py-3 text-xs text-slate-500">
-                      {fmtAmt(totalCollected, orgCurrency)} collected &nbsp;·&nbsp;
-                      <span className={totalOutstanding > 0 ? 'text-orange-600' : 'text-slate-400'}>
-                        {fmtAmt(totalOutstanding, orgCurrency)} outstanding
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* ── Cheque note ────────────────────────────────────────────────────── */}
-      {rows.some(r => r.paymentMethod === 'Cheque') && (
-        <p className="text-xs text-slate-400 no-print">
-          Cheque payment details and status tracking are available in{' '}
-          <Link href="/dashboard/owner/payments/cheques" className="text-navy-700 hover:underline font-medium">
-            Payments → Cheque Tracker
-          </Link>
-          .
-        </p>
-      )}
-
-      {/* ── Print footer ───────────────────────────────────────────────────── */}
-      <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">
-        GetSuitel Property Management  ·  Monthly Rent Statement  ·  Confidential  ·  {printDate}
-      </div>
-    </div>
-  )
-}
+                      {fmtAmt(rows.reduce((s,
