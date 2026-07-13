@@ -82,12 +82,25 @@ export default function DemoTourPanel() {
     }
   }
 
-  // Init: load step + fetch uploaded audio URLs
+  // Pre-warm the speech engine so voices are ready when we need them
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices()
+    }
+  }, [])
+
+  // Init: start speaking immediately, load audio files in background
   useEffect(() => {
     const initStep = getDemoState().step ?? 0
     setStep(initStep)
 
-    // Fetch uploaded audio from admin
+    // Start speech immediately (don't wait for the API)
+    setTimeout(() => {
+      const s = TOUR_STEPS[initStep]
+      speakText(s?.audio ?? '', mutedRef.current, langRef.current)
+    }, 150)
+
+    // Fetch uploaded audio in background
     fetch('/api/admin/demo-audio')
       .then(r => r.json())
       .then((records: { step_index: number; lang: string; audio_url: string }[]) => {
@@ -100,13 +113,15 @@ export default function DemoTourPanel() {
         }
         setAudioMap(map)
         audioMapRef.current = map
-        // Speak welcome after audio map is loaded
-        setTimeout(() => playStep(initStep), 900)
+        // If a pre-recorded file exists for the current step, switch to it
+        const urls = map[initStep]
+        const url = (langRef.current === 'ar' ? urls?.ar : urls?.en) ?? urls?.en
+        if (url) {
+          window.speechSynthesis?.cancel()
+          playAudioFile(url, mutedRef.current, fileAudioRef)
+        }
       })
-      .catch(() => {
-        // No audio data — fall back to speech synthesis
-        setTimeout(() => playStep(initStep), 900)
-      })
+      .catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleNext() {
@@ -115,7 +130,7 @@ export default function DemoTourPanel() {
     setDemoState({ step: newStep })
     setStep(newStep)
     router.push(TOUR_STEPS[newStep].path)
-    setTimeout(() => playStep(newStep), 600)
+    setTimeout(() => playStep(newStep), 150)
   }
 
   async function handleExit() {
