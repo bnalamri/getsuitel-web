@@ -52,6 +52,7 @@ export async function GET(req: Request) {
 
   let invoicesCreated = 0
   let invoicesMarkedOverdue = 0
+  let contractsExpired = 0
   let emailsSent = 0
   const errors: string[] = []
 
@@ -228,11 +229,75 @@ export async function GET(req: Request) {
     }
   }
 
+  // ── 3. Expire contracts past their end_date ───────────────────────────────
+  const { data: expiredContracts } = await admin
+    .from('contracts')
+    .select(`
+      id, organization_id, end_date,
+      tenants(full_name, email),
+      units(unit_number, properties(name)),
+      profiles:organization_id(full_name, email)
+    `)
+    .eq('status', 'active')
+    .lt('end_date', todayStr)
+
+  for (const contract of expiredContracts ?? []) {
+    try {
+      await admin.from('contracts').update({ status: 'expired' }).eq('id', contract.id)
+      contractsExpired++
+
+      const tenant = contract.tenants as { full_name: string; email: string | null } | null
+      const unit   = contract.units   as { unit_number: string; properties?: { name: string } | null } | null
+      const unitLabel = `${unit?.properties?.name ?? ''} — Unit ${unit?.unit_number ?? ''}`
+
+      // Notify owner
+      const { data: ownerProfile } = await admin
+        .from('organizations')
+        .select('profiles:owner_id(full_name, email)')
+        .eq('id', contract.organization_id)
+        .single()
+      const owner = (ownerProfile?.profiles as { full_name: string; email: string } | null)
+
+      if (owner?.email) {
+        const html = emailHtml('#7c3aed', 'Contract Expired', `
+          <div style="font-size:15px;color:#334155;line-height:1.8">
+            Dear ${owner.full_name},<br><br>
+            The rental contract for <strong>${tenant?.full_name ?? 'your tenant'}</strong>
+            in <strong>${unitLabel}</strong> has expired on
+            <strong style="color:#7c3aed">${fmtDate(contract.end_date)}</strong>.<br><br>
+            The contract has been automatically marked as <strong>Expired</strong>.
+            Please log in to renew it or mark the unit as vacant.
+          </div>
+          <div style="margin-top:24px">
+            <a href="${APP_URL}/dashboard/owner/contracts"
+               style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+              View Contracts
+            </a>
+          </div>`)
+
+        try {
+          await resend.emails.send({
+            from: 'GetSuitel <notices@getsuitel.com>',
+            to: [owner.email],
+            subject: `Contract expired — ${tenant?.full_name} · ${unit?.unit_number}`,
+            html,
+          })
+          emailsSent++
+        } catch (e) {
+          errors.push(`Expiry email to ${owner.email}: ${e}`)
+        }
+      }
+    } catch (e) {
+      errors.push(`Contract expiry ${contract.id}: ${e}`)
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     date: todayStr,
     invoicesCreated,
     invoicesMarkedOverdue,
+    contractsExpired,
     emailsSent,
     ...(errors.length > 0 && { errors }),
   })
