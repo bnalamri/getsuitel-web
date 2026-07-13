@@ -320,5 +320,28 @@ export default function DashboardShell({
         )}
 
         {/* Mobile sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-50 w-60 lg:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)
+          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)}/>
+          <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 text-white/70 hover:text-white">
+            <X size={20}/>
+          </button>
+        </div>
+
+        {/* Desktop sidebar */}
+        <div className="hidden lg:flex flex-shrink-0">
+          <Sidebar profile={profile} lang={lang} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)}/>
+        </div>
+
+        {/* Main */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </Ctx.Provider>
+    </DateFormatContext.Provider>
+  )
+}
