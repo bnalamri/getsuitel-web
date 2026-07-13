@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Receipt } from 'lucide-react'
+import { Receipt, Search } from 'lucide-react'
 import UpdateChequeButton from './UpdateChequeButton'
 import DeleteChequeButton from './DeleteChequeButton'
 
@@ -31,10 +31,12 @@ interface Unit { id: string; unit_number: string }
 
 export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; units: Unit[] }) {
   const [filterUnit, setFilterUnit] = useState('')
+  const [searchNum, setSearchNum] = useState('')
   const today = new Date().toISOString().split('T')[0]
 
   const filtered = cheques
     .filter(c => filterUnit === '' || (c.units as { unit_number: string } | null)?.unit_number === filterUnit)
+    .filter(c => searchNum === '' || c.cheque_number.toLowerCase().includes(searchNum.toLowerCase()))
     .sort((a, b) => {
       const unitA = (a.units as { unit_number: string } | null)?.unit_number ?? ''
       const unitB = (b.units as { unit_number: string } | null)?.unit_number ?? ''
@@ -45,22 +47,34 @@ export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; uni
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
           <Receipt size={16} />
           {filterUnit ? `Cheques — Unit ${filterUnit}` : `All Cheques`}
           <span className="text-slate-400 font-normal text-sm">({filtered.length})</span>
         </h3>
-        <select
-          className="input w-48 text-sm"
-          value={filterUnit}
-          onChange={e => setFilterUnit(e.target.value)}
-        >
-          <option value="">All units</option>
-          {units.map(u => (
-            <option key={u.id} value={u.unit_number}>{u.unit_number}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Cheque #"
+              value={searchNum}
+              onChange={e => setSearchNum(e.target.value)}
+              className="input pl-8 w-36 text-sm"
+            />
+          </div>
+          <select
+            className="input w-36 text-sm"
+            value={filterUnit}
+            onChange={e => setFilterUnit(e.target.value)}
+          >
+            <option value="">All units</option>
+            {units.map(u => (
+              <option key={u.id} value={u.unit_number}>{u.unit_number}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
