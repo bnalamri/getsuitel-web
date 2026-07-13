@@ -26,20 +26,33 @@ export default function InvoicesTable({
   tenants,
   units,
   canManage,
+  properties = [],
 }: {
   invoices: Invoice[]
   tenants: Tenant[]
   units: Unit[]
   canManage: boolean
+  properties?: { id: string; name: string }[]
 }) {
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterStatus,   setFilterStatus]   = useState('')
+  const [filterProperty, setFilterProperty] = useState('')
 
-  const filtered = invoices.filter(i => !filterStatus || i.status === filterStatus)
+  const filtered = invoices
+    .filter(i => !filterStatus   || i.status === filterStatus)
+    .filter(i => !filterProperty || (i.units as Invoice['units'])?.properties?.name === filterProperty)
 
   return (
     <div className="space-y-3">
       {/* Filter row */}
-      <div className="flex items-center gap-3 justify-end">
+      <div className="flex items-center gap-3 justify-end flex-wrap">
+        {properties.length > 1 && (
+          <select className="input text-sm w-44" value={filterProperty} onChange={e => setFilterProperty(e.target.value)}>
+            <option value="">All Properties</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+        )}
         <select className="input text-sm w-40" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">All Statuses</option>
           <option value="draft">Draft</option>

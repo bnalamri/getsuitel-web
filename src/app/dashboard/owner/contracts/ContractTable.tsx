@@ -26,12 +26,13 @@ interface Tenant { id: string; full_name: string }
 interface Unit   { id: string; unit_number: string; properties?: { name: string } | null }
 
 export default function ContractTable({
-  contracts, tenants, allUnits, canManage = true,
+  contracts, tenants, allUnits, canManage = true, properties = [],
 }: {
   contracts: Contract[]
   tenants: Tenant[]
   allUnits: Unit[]
   canManage?: boolean
+  properties?: { id: string; name: string }[]
 }) {
   const [filterStatus,   setFilterStatus]   = useState('')
   const [filterUnit,     setFilterUnit]     = useState('')
@@ -42,10 +43,6 @@ export default function ContractTable({
   const uniqueUnits = Array.from(
     new Map(contracts.map(c => [(c.units as Unit | null)?.unit_number ?? '', c.units])).entries()
   ).filter(([k]) => k).sort(([a], [b]) => a.localeCompare(b))
-
-  const uniqueProperties = Array.from(
-    new Set(contracts.map(c => (c.units as Unit | null)?.properties?.name ?? '').filter(Boolean))
-  ).sort()
 
   const filtered = contracts
     .filter(c => filterStatus === '' || c.status === filterStatus)
@@ -61,11 +58,11 @@ export default function ContractTable({
     <div className="space-y-3">
       {/* Filters */}
       <div className="flex items-center gap-3 justify-end flex-wrap">
-        {uniqueProperties.length > 1 && (
+        {properties.length > 1 && (
           <select className="input w-44 text-sm" value={filterProperty} onChange={e => setFilterProperty(e.target.value)}>
             <option value="">All Properties</option>
-            {uniqueProperties.map(name => (
-              <option key={name} value={name}>{name}</option>
+            {properties.map(p => (
+              <option key={p.id} value={p.name}>{p.name}</option>
             ))}
           </select>
         )}

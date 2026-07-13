@@ -23,15 +23,17 @@ export default async function InvoicesPage() {
   const { data: org } = await supabase.from('organizations').select('default_currency').eq('id', orgId).single()
   const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
 
-  const [invoicesRes, tenantsRes, unitsRes] = await Promise.all([
+  const [invoicesRes, tenantsRes, unitsRes, propertiesRes] = await Promise.all([
     supabase.from('invoices').select('*, tenants(full_name), units(unit_number, properties(name))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     admin.from('tenants').select('id, full_name, email, contracts(unit_id, status)').eq('organization_id', orgId).order('full_name'),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
+    supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const invoices = invoicesRes.data ?? []
   const tenants = tenantsRes.data ?? []
   const units = unitsRes.data ?? []
+  const properties = propertiesRes.data ?? []
 
   const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
   const totalPending = invoices.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
@@ -70,6 +72,7 @@ export default async function InvoicesPage() {
           tenants={tenants as never}
           units={units as never}
           canManage={canManage}
+          properties={properties}
         />
       )}
     </div>

@@ -22,17 +22,19 @@ export default async function ContractsPage() {
   const { data: org } = await supabase.from('organizations').select('default_currency').eq('id', orgId).single()
   const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
 
-  const [contractsRes, unitsRes, allUnitsRes, tenantsRes] = await Promise.all([
+  const [contractsRes, unitsRes, allUnitsRes, tenantsRes, propertiesRes] = await Promise.all([
     supabase.from('contracts').select('*, units(unit_number, properties(name)), tenants(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId).eq('status', 'vacant'),
     admin.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId).order('unit_number'),
     admin.from('tenants').select('id, full_name').eq('organization_id', orgId).order('full_name'),
+    supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const contracts = contractsRes.data ?? []
   const vacantUnits = unitsRes.data ?? []
   const allUnits = allUnitsRes.data ?? []
   const tenants = tenantsRes.data ?? []
+  const properties = propertiesRes.data ?? []
 
   const hasUnits = vacantUnits.length > 0
   const hasTenants = tenants.length > 0
@@ -73,7 +75,7 @@ export default async function ContractsPage() {
           <p className="text-slate-400 text-sm">Create a contract to link a tenant to a unit.</p>
         </div>
       ) : (
-        <ContractTable contracts={contracts as never} tenants={tenants} allUnits={allUnits as never} canManage={canManage} />
+        <ContractTable contracts={contracts as never} tenants={tenants} allUnits={allUnits as never} canManage={canManage} properties={properties} />
       )}
     </div>
   )
