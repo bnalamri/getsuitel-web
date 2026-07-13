@@ -129,9 +129,11 @@ export default async function ReportsPage() {
   const cheques: AnyRow[] = chequesRes.data ?? []
   const tenants: AnyRow[] = tenantsRes.data ?? []
 
-  // KPIs
-  const totalRevenue = inv.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-  const pendingRevenue = inv.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
+  // KPIs — scoped to current month for consistency
+  const curMonthPrefix = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')
+  const isThisMonth = (i: AnyRow) => typeof i.due_date === 'string' && i.due_date.startsWith(curMonthPrefix)
+  const totalRevenue = inv.filter(i => i.status === 'paid' && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
+  const pendingRevenue = inv.filter(i => ['sent', 'overdue'].includes(i.status) && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
   const occupancyRate = u.length > 0 ? Math.round((u.filter(x => x.status === 'occupied').length / u.length) * 100) : 0
   const openMaint = maint.filter(m => !['completed', 'canceled'].includes(m.status)).length
 
@@ -271,8 +273,8 @@ export default async function ReportsPage() {
       {/* 1. KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Revenue Collected', value: fmtAmt(totalRevenue, orgCurrency), color: 'text-emerald-700' },
-          { label: 'Pending / Overdue', value: fmtAmt(pendingRevenue, orgCurrency), color: 'text-orange-600' },
+          { label: 'Collected (This Month)', value: fmtAmt(totalRevenue, orgCurrency), color: 'text-emerald-700' },
+          { label: 'Pending / Overdue (This Month)', value: fmtAmt(pendingRevenue, orgCurrency), color: 'text-orange-600' },
           { label: 'Occupancy Rate', value: occupancyRate + '%', color: 'text-navy-700' },
           { label: 'Open Maintenance', value: openMaint.toString(), color: 'text-red-600' },
         ].map(s => (
