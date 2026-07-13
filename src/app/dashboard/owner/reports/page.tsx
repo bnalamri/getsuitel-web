@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { BarChart2, TrendingUp, Building2, AlertTriangle, Wrench, Users, CreditCard, FileText } from 'lucide-react'
+import { BarChart2, TrendingUp, Building2, AlertTriangle, Wrench, Users, CreditCard, FileText, CalendarCheck, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import TenantDirectoryPDF from './TenantDirectoryPDF'
 
@@ -249,6 +250,23 @@ export default async function ReportsPage() {
           </p>
         </div>
       </div>
+
+      {/* Monthly Statement shortcut */}
+      <Link
+        href="/dashboard/owner/reports/monthly"
+        className="no-print flex items-center justify-between bg-navy-50 border border-navy-200 hover:border-navy-400 hover:bg-navy-100 rounded-xl px-5 py-4 transition-colors group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="bg-navy-700 text-white rounded-lg p-2">
+            <CalendarCheck size={16} />
+          </div>
+          <div>
+            <div className="font-semibold text-navy-900 text-sm">Monthly Rent Statement</div>
+            <div className="text-xs text-navy-600 mt-0.5">See who paid, who is overdue, and who is pending this month — printable</div>
+          </div>
+        </div>
+        <ArrowRight size={16} className="text-navy-400 group-hover:text-navy-700 transition-colors flex-shrink-0" />
+      </Link>
 
       {/* 1. KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -691,28 +709,4 @@ export default async function ReportsPage() {
                 <tbody>
                   {bouncedCheques.map((c, idx) => (
                     <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
-                      <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
-                      <Td>{c.units?.unit_number ?? dash}</Td>
-                      <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
-                      <Td className="text-red-700 font-medium">{fmtAmt(Number(c.amount), orgCurrency)}</Td>
-                      <Td>{c.due_date ? fmtDate(c.due_date) : dash}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 10. Tenant Directory */}
-      <TenantDirectoryPDF tenants={tenants} printDate={printDate} printerName={printerName} />
-
-      {/* Print footer */}
-      <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">
-        <FileText size={12} className="inline mr-1" />
-        GetSuitel Property Management &nbsp; Confidential &nbsp; {printDate}
-      </div>
-    </div>
-  )
-}
+                      <Td className="font-medium">{c.tenants?.full_name ?? 

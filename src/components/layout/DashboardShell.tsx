@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -58,6 +58,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/staff', icon:UserCog, en:'Staff', ar:'الموظفون' },
@@ -102,6 +103,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -120,6 +122,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -318,28 +321,4 @@ export default function DashboardShell({
 
         {/* Mobile sidebar */}
         <div className={`fixed inset-y-0 left-0 z-50 w-60 lg:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)}/>
-          <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 text-white/70 hover:text-white">
-            <X size={20}/>
-          </button>
-        </div>
-
-        {/* Desktop sidebar */}
-        <div className="hidden lg:flex flex-shrink-0">
-          <Sidebar profile={profile} lang={lang} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)}/>
-        </div>
-
-        {/* Main */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
-              {children}
-            </div>
-          </main>
-        </div>
-      </div>
-    </Ctx.Provider>
-    </DateFormatContext.Provider>
-  )
-}
+          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)
