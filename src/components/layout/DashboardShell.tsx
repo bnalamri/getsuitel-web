@@ -320,6 +320,7 @@ export default function DashboardShell({
         )}
 
         {/* Mobile sidebar */}
+        <div className={`fixed inset-y-0 left-0 z-50 w-60 lg:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)}/>
           <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 text-white/70 hover:text-white">
             <X size={20}/>
