@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
@@ -9,14 +10,15 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const admin = createAdminClient()
 
   const { invoice_id, notes } = await req.json()
   if (!invoice_id) return NextResponse.json({ error: 'Missing invoice_id' }, { status: 400 })
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Mark invoice paid
-  const { data: invoice, error } = await supabase
+  // Mark invoice paid (use admin client to bypass RLS)
+  const { data: invoice, error } = await admin
     .from('invoices')
     .update({ status: 'paid', paid_date: today, payment_method: 'cash' })
     .eq('id', invoice_id)
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Insert receipt record for audit trail
-  await supabase.from('payment_receipts').insert({
+  await admin.from('payment_receipts').insert({
     organization_id: invoice.organization_id,
     invoice_id,
     tenant_id: invoice.tenant_id,
