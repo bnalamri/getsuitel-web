@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2, Paperclip, CheckCircle } from 'lucide-react'
 import DateInput from '@/components/DateInput'
