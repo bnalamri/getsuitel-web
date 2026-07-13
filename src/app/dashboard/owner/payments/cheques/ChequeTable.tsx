@@ -31,11 +31,13 @@ interface Unit { id: string; unit_number: string }
 
 export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; units: Unit[] }) {
   const [filterUnit, setFilterUnit] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
   const [searchNum, setSearchNum] = useState('')
   const today = new Date().toISOString().split('T')[0]
 
   const filtered = cheques
     .filter(c => filterUnit === '' || (c.units as { unit_number: string } | null)?.unit_number === filterUnit)
+    .filter(c => filterStatus === '' || c.status === filterStatus)
     .filter(c => searchNum === '' || c.cheque_number.toLowerCase().includes(searchNum.toLowerCase()))
     .sort((a, b) => {
       const unitA = (a.units as { unit_number: string } | null)?.unit_number ?? ''
@@ -61,11 +63,25 @@ export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; uni
               placeholder="Cheque #"
               value={searchNum}
               onChange={e => setSearchNum(e.target.value)}
-              className="input pl-8 w-36 text-sm"
+              className="input pl-8 w-32 text-sm"
             />
           </div>
           <select
-            className="input w-36 text-sm"
+            className="input w-32 text-sm"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="deposited">Deposited</option>
+            <option value="cleared">Cleared</option>
+            <option value="bounced">Bounced</option>
+            <option value="returned">Returned</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="replaced">Replaced</option>
+          </select>
+          <select
+            className="input w-32 text-sm"
             value={filterUnit}
             onChange={e => setFilterUnit(e.target.value)}
           >
