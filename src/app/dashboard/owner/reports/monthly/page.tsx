@@ -112,7 +112,7 @@ export default async function MonthlyRentStatement({
 
   const admin = createAdminClient()
 
-  const [contractsRes, invoicesRes, chequesRes] = await Promise.all([
+  const [contractsRes, invoicesRes, chequesRes, propsRes] = await Promise.all([
     admin.from('contracts')
       .select(`
         id, rent_amount, currency, payment_method, status,
@@ -132,11 +132,16 @@ export default async function MonthlyRentStatement({
       .eq('organization_id', orgId)
       .gte('due_date', monthStart)
       .lte('due_date', monthEnd),
+    admin.from('properties')
+      .select('id, name')
+      .eq('organization_id', orgId)
+      .order('name'),
   ])
 
-  const contracts = contractsRes.data ?? []
-  const invoices  = invoicesRes.data ?? []
-  const cheques   = chequesRes.data ?? []
+  const contracts    = contractsRes.data ?? []
+  const invoices     = invoicesRes.data ?? []
+  const cheques      = chequesRes.data ?? []
+  const allProperties = (propsRes.data ?? []).map(p => ({ id: p.id as string, name: p.name as string }))
 
   const rows: Row[] = contracts.map(c => {
     const units      = c.units as { id: string; unit_number: string; properties?: { id: string; name: string } | null } | null
@@ -222,7 +227,7 @@ export default async function MonthlyRentStatement({
 
   // Property filter
   const selectedProp    = searchParams.property ?? ''
-  const propertyList    = propGroups.map(pg => ({ id: pg.id, name: pg.name }))
+  const propertyList    = allProperties.length > 0 ? allProperties : propGroups.map(pg => ({ id: pg.id, name: pg.name }))
   const visibleGroups   = selectedProp
     ? propGroups.filter(pg => pg.id === selectedProp)
     : propGroups

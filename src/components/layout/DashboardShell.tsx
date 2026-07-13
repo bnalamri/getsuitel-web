@@ -186,7 +186,15 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
                 const roleHome = profile.role === 'superadmin' ? '/dashboard/admin'
                   : staffRoles.includes(profile.role) ? '/dashboard/owner'
                   : '/dashboard/' + profile.role
-                const active = pathname === item.href || (item.href !== roleHome && pathname.startsWith(item.href))
+                const active = pathname === item.href || (
+                  item.href !== roleHome &&
+                  pathname.startsWith(item.href) &&
+                  !group.items.some(other =>
+                    other.href !== item.href &&
+                    other.href.startsWith(item.href + '/') &&
+                    pathname.startsWith(other.href)
+                  )
+                )
                 return (
                   <Link key={item.href} href={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
