@@ -137,6 +137,22 @@ export default async function ReportsPage() {
   const occupancyRate = u.length > 0 ? Math.round((u.filter(x => x.status === 'occupied').length / u.length) * 100) : 0
   const openMaint = maint.filter(m => !['completed', 'canceled'].includes(m.status)).length
 
+  // Per-property revenue breakdown (this month)
+  const propRevMap = new Map<string, { name: string; paid: number; overdue: number; pending: number }>()
+  inv.filter(i => i.type === 'rent' && isThisMonth(i)).forEach(i => {
+    const propId   = ((i.units as AnyRow)?.properties as AnyRow)?.id ?? '__none__'
+    const propName = ((i.units as AnyRow)?.properties as AnyRow)?.name ?? '—'
+    if (!propRevMap.has(propId)) propRevMap.set(propId, { name: propName, paid: 0, overdue: 0, pending: 0 })
+    const g = propRevMap.get(propId)!
+    const amt = Number(i.amount)
+    if (i.status === 'paid') g.paid += amt
+    else if (i.status === 'overdue') g.overdue += amt
+    else if (['sent', 'pending'].includes(i.status)) g.pending += amt
+  })
+  const propRevGroups = Array.from(propRevMap.entries())
+    .map(([id, g]) => ({ id, ...g }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
   // Monthly Income Statement (last 12 months)
   const months12 = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(today.getFullYear(), today.getMonth() - (11 - i), 1)
@@ -284,6 +300,45 @@ export default async function ReportsPage() {
           </div>
         ))}
       </div>
+
+      {/* 1b. Revenue by Property (This Month) */}
+      {propRevGroups.length > 0 && (
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 size={15} className="text-slate-500" />
+            <h3 className="text-sm font-semibold text-slate-800">Revenue by Property <span className="font-normal text-slate-500">(This Month)</span></h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {propRevGroups.map(pg => (
+              <div key={pg.id} className="rounded-lg border border-slate-200 overflow-hidden">
+                <div className="bg-slate-800 px-4 py-2">
+                  <p className="text-sm font-semibold text-white truncate">{pg.name}</p>
+                </div>
+                <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white">
+                  <div className="px-3 py-2 text-center">
+                    <p className="text-xs text-slate-400 mb-0.5">Paid</p>
+                    <p className="text-sm font-semibold text-emerald-600">
+                      {pg.paid > 0 ? pg.paid.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                    </p>
+                  </div>
+                  <div className="px-3 py-2 text-center">
+                    <p className="text-xs text-slate-400 mb-0.5">Overdue</p>
+                    <p className="text-sm font-semibold text-red-600">
+                      {pg.overdue > 0 ? pg.overdue.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                    </p>
+                  </div>
+                  <div className="px-3 py-2 text-center">
+                    <p className="text-xs text-slate-400 mb-0.5">Pending</p>
+                    <p className="text-sm font-semibold text-amber-600">
+                      {pg.pending > 0 ? pg.pending.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 2. Properties List */}
       <div className="card p-5">
