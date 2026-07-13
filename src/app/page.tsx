@@ -279,7 +279,7 @@ export default function LandingPage() {
                     href="/api/demo/start"
                     onClick={() => { try { localStorage.setItem('gs_demo_lang', lang) } catch {} }}
                     className="inline-flex items-center gap-2 mt-8 bg-gold-500 hover:bg-gold-400 text-navy-900 text-sm font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-gold-500/25">
-                    {lang === 'ar' ? 'جرّب الآن مجاناً' : 'Try Demo — No Sign Up'} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
+                    {lang === 'ar' ? 'أستكشف ما تقدمه المنصة لك' : 'Try Demo — No Sign Up'} <ArrowRight size={15} className={lang === 'ar' ? 'rotate-180' : ''} />
                   </a>
                 </div>
 
