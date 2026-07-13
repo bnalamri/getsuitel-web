@@ -708,6 +708,7 @@ export default async function ReportsPage() {
                 </thead>
                 <tbody>
                   {bouncedCheques.map((c, idx) => (
+                    <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
                       <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
                       <Td>{c.units?.unit_number ?? dash}</Td>
                       <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
