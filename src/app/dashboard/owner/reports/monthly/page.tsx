@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, CheckCircle2, AlertCircle, Clock, FileQuestion } 
 import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import MonthPicker from './MonthPicker'
+import PropertyFilter from './PropertyFilter'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,7 +81,7 @@ const METHOD_LABEL: Record<string, string> = {
 export default async function MonthlyRentStatement({
   searchParams,
 }: {
-  searchParams: { month?: string }
+  searchParams: { month?: string; property?: string }
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -219,16 +220,24 @@ export default async function MonthlyRentStatement({
     .map(([id, g]) => ({ id, name: g.name, rows: g.rows }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  // Overall KPIs
-  const totalPaid     = rows.filter(r => isPaid(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const totalOverdue  = rows.filter(r => isOverdue(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const totalPending  = rows.filter(r => isPending(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const grandTotal    = rows.reduce((s, r) => s + r.rentAmount, 0)
+  // Property filter
+  const selectedProp    = searchParams.property ?? ''
+  const propertyList    = propGroups.map(pg => ({ id: pg.id, name: pg.name }))
+  const visibleGroups   = selectedProp
+    ? propGroups.filter(pg => pg.id === selectedProp)
+    : propGroups
+
+  // Overall KPIs (across visible groups only)
+  const visibleRows = visibleGroups.flatMap(pg => pg.rows)
+  const totalPaid     = visibleRows.filter(r => isPaid(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalOverdue  = visibleRows.filter(r => isOverdue(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalPending  = visibleRows.filter(r => isPending(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const grandTotal    = visibleRows.reduce((s, r) => s + r.rentAmount, 0)
   const counts = {
-    paid:      rows.filter(r => isPaid(r.status)).length,
-    overdue:   rows.filter(r => isOverdue(r.status)).length,
-    pending:   rows.filter(r => isPending(r.status)).length,
-    noInvoice: rows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
+    paid:      visibleRows.filter(r => isPaid(r.status)).length,
+    overdue:   visibleRows.filter(r => isOverdue(r.status)).length,
+    pending:   visibleRows.filter(r => isPending(r.status)).length,
+    noInvoice: visibleRows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
   }
 
   return (
@@ -248,12 +257,13 @@ export default async function MonthlyRentStatement({
           <div>
             <h2 className="text-xl font-bold text-slate-900">Monthly Rent Statement</h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              {monthLabel} &mdash; {rows.length} active contract{rows.length !== 1 ? 's' : ''} across {propGroups.length} {propGroups.length === 1 ? 'property' : 'properties'}
+              {monthLabel} &mdash; {visibleRows.length} active contract{visibleRows.length !== 1 ? 's' : ''}{selectedProp ? '' : ` across ${propGroups.length} ${propGroups.length === 1 ? 'property' : 'properties'}`}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <MonthPicker month={`${year}-${monthStr}`} />
+          <PropertyFilter properties={propertyList} selected={selectedProp} month={`${year}-${monthStr}`} />
           <PrintButton />
         </div>
       </div>
@@ -315,13 +325,13 @@ export default async function MonthlyRentStatement({
       </div>
 
       {/* Per-property sections */}
-      {propGroups.length === 0 ? (
+      {visibleGroups.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
           No active contracts found for {monthLabel}.
         </div>
       ) : (
         <div className="space-y-5">
-          {propGroups.map(pg => {
+          {visibleGroups.map(pg => {
             const pRows       = pg.rows
             const pPaid       = pRows.filter(r => isPaid(r.status))
             const pOverdue    = pRows.filter(r => isOverdue(r.status))
@@ -448,11 +458,11 @@ export default async function MonthlyRentStatement({
       )}
 
       {/* Grand total bar */}
-      {rows.length > 0 && (
+      {visibleRows.length > 0 && (
         <div className="bg-slate-800 text-white rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
           <div>
             <p className="text-sm font-medium text-slate-300">
-              Grand Total &mdash; {rows.length} contract{rows.length !== 1 ? 's' : ''} &bull; {propGroups.length} {propGroups.length === 1 ? 'property' : 'properties'}
+              Grand Total &mdash; {visibleRows.length} contract{visibleRows.length !== 1 ? 's' : ''} &bull; {visibleGroups.length} {propGroups.length === 1 ? 'property' : 'properties'}
             </p>
             <p className="text-2xl font-bold mt-0.5">{fmtAmt(grandTotal, orgCurrency)}</p>
           </div>
@@ -474,11 +484,11 @@ export default async function MonthlyRentStatement({
       )}
 
       {/* Print grand total */}
-      {rows.length > 0 && (
+      {visibleRows.length > 0 && (
         <div className="hidden print:block border-t-2 border-slate-800 pt-4 mt-6">
           <div className="flex justify-between items-center">
             <span className="font-bold text-slate-900">
-              Grand Total ({rows.length} contract{rows.length !== 1 ? 's' : ''})
+              Grand Total ({visibleRows.length} contract{visibleRows.length !== 1 ? 's' : ''})
             </span>
             <span className="font-bold text-slate-900 font-mono text-lg">{fmtAmt(grandTotal, orgCurrency)}</span>
           </div>
@@ -490,7 +500,7 @@ export default async function MonthlyRentStatement({
         </div>
       )}
 
-      {rows.some(r => r.paymentMethod === 'Cheque' || r.paymentMethod === 'cheque') && (
+      {visibleRows.some(r => r.paymentMethod === 'Cheque' || r.paymentMethod === 'cheque') && (
         <p className="text-xs text-slate-400 no-print">
           * Cheque statuses: Registered → Deposited → Cleared (Paid) / Bounced (Overdue)
         </p>
