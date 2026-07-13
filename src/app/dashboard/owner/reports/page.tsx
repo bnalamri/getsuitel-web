@@ -23,8 +23,21 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+function makeFmtDate(fmt: string) {
+  return function fmtDate(d: string) {
+    if (!d) return '—'
+    const dt   = new Date(d)
+    const dd   = String(dt.getDate()).padStart(2, '0')
+    const mm   = String(dt.getMonth() + 1).padStart(2, '0')
+    const mon  = dt.toLocaleString('en-US', { month: 'short' })
+    const yyyy = String(dt.getFullYear())
+    switch (fmt) {
+      case 'MM/DD/YYYY':  return `${mm}/${dd}/${yyyy}`
+      case 'YYYY-MM-DD':  return `${yyyy}-${mm}-${dd}`
+      case 'DD MMM YYYY': return `${dd} ${mon} ${yyyy}`
+      default:            return `${dd}/${mm}/${yyyy}`
+    }
+  }
 }
 
 function monthLabel(key: string) {
@@ -88,8 +101,10 @@ export default async function ReportsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const { data: orgData } = await supabase.from('organizations').select('default_currency').eq('id', orgId).single()
+  const { data: orgData } = await supabase.from('organizations').select('default_currency, date_format').eq('id', orgId).single()
   const orgCurrency = (orgData?.default_currency as string) ?? 'OMR'
+  const orgDateFmt  = (orgData?.date_format as string) ?? 'DD/MM/YYYY'
+  const fmtDate     = makeFmtDate(orgDateFmt)
 
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
