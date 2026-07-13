@@ -18,7 +18,7 @@ const Ctx = createContext<ShellCtx>({ lang:'en', setLang:()=>{}, profile: {} as 
 export const useShell = () => useContext(Ctx)
 
 // ─── Nav definitions ─────────────────────────────────────────────────────────
-type NavItem = { href: string; icon: React.ElementType; en: string; ar: string }
+type NavItem = { href: string; icon: React.ElementType; en: string; ar: string; newTab?: boolean }
 type NavGroup = { en: string; ar: string; items: NavItem[] }
 
 const NAV: Record<string, NavGroup[]> = {
@@ -58,7 +58,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/staff', icon:UserCog, en:'Staff', ar:'الموظفون' },
@@ -103,7 +103,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -122,7 +122,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -197,6 +197,7 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
                 )
                 return (
                   <Link key={item.href} href={item.href}
+                    {...(item.newTab ? { target:'_blank', rel:'noopener noreferrer' } : {})}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                       ${active ? 'bg-white/15 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}
                     title={collapsed ? (lang==='ar'?item.ar:item.en) : undefined}>
