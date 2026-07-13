@@ -1,5 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { ArrowLeft, Building2, CheckCircle2, AlertCircle, Clock, FileQuestion } from 'lucide-react'
+import { ArrowLeft, Building2, CheckCircle2, AlertCircle, Clock, FileQuestion, ArrowDownToLine } from 'lucide-react'
 import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import MonthPicker from './MonthPicker'
@@ -124,7 +124,7 @@ export default async function MonthlyRentStatement({
   const monthStart = `${year}-${monthStr}-01`
   const monthEnd   = new Date(year, month, 0).toISOString().slice(0, 10)
   const monthLabel = new Date(year, month - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const printDate  = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+  const printDate  = applyDateFmt(now.toISOString().slice(0, 10), orgDateFmt)
 
   const admin = createAdminClient()
 
@@ -250,15 +250,17 @@ export default async function MonthlyRentStatement({
 
   // Overall KPIs (across visible groups only)
   const visibleRows = visibleGroups.flatMap(pg => pg.rows)
-  const totalPaid     = visibleRows.filter(r => isPaid(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const totalOverdue  = visibleRows.filter(r => isOverdue(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const totalPending  = visibleRows.filter(r => isPending(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const grandTotal    = visibleRows.reduce((s, r) => s + r.rentAmount, 0)
+  const totalPaid        = visibleRows.filter(r => isPaid(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalOverdue     = visibleRows.filter(r => isOverdue(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalDeposited   = visibleRows.filter(r => r.status === 'deposited' || r.status === 'registered').reduce((s, r) => s + r.rentAmount, 0)
+  const totalPendingInv  = visibleRows.filter(r => r.status === 'sent' || r.status === 'pending').reduce((s, r) => s + r.rentAmount, 0)
+  const grandTotal       = visibleRows.reduce((s, r) => s + r.rentAmount, 0)
   const counts = {
-    paid:      visibleRows.filter(r => isPaid(r.status)).length,
-    overdue:   visibleRows.filter(r => isOverdue(r.status)).length,
-    pending:   visibleRows.filter(r => isPending(r.status)).length,
-    noInvoice: visibleRows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
+    paid:        visibleRows.filter(r => isPaid(r.status)).length,
+    overdue:     visibleRows.filter(r => isOverdue(r.status)).length,
+    deposited:   visibleRows.filter(r => r.status === 'deposited' || r.status === 'registered').length,
+    pendingInv:  visibleRows.filter(r => r.status === 'sent' || r.status === 'pending').length,
+    noInvoice:   visibleRows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
   }
 
   return (
@@ -311,7 +313,7 @@ export default async function MonthlyRentStatement({
       </div>
 
       {/* Overall KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 no-print">
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 mb-3">
             <CheckCircle2 size={18} />
@@ -329,12 +331,20 @@ export default async function MonthlyRentStatement({
           {totalOverdue > 0 && <p className="text-xs text-red-600 mt-0.5">{fmtAmt(totalOverdue, orgCurrency)}</p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-600 mb-3">
+            <ArrowDownToLine size={18} />
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{counts.deposited}</p>
+          <p className="text-sm font-medium text-slate-700">Deposited</p>
+          {totalDeposited > 0 && <p className="text-xs text-teal-600 mt-0.5">{fmtAmt(totalDeposited, orgCurrency)}</p>}
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-600 mb-3">
             <Clock size={18} />
           </div>
-          <p className="text-2xl font-bold text-slate-900">{counts.pending}</p>
+          <p className="text-2xl font-bold text-slate-900">{counts.pendingInv}</p>
           <p className="text-sm font-medium text-slate-700">Pending</p>
-          {totalPending > 0 && <p className="text-xs text-amber-600 mt-0.5">{fmtAmt(totalPending, orgCurrency)}</p>}
+          {totalPendingInv > 0 && <p className="text-xs text-amber-600 mt-0.5">{fmtAmt(totalPendingInv, orgCurrency)}</p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 mb-3">
@@ -356,10 +366,13 @@ export default async function MonthlyRentStatement({
             const pRows       = pg.rows
             const pPaid       = pRows.filter(r => isPaid(r.status))
             const pOverdue    = pRows.filter(r => isOverdue(r.status))
-            const pPending    = pRows.filter(r => isPending(r.status))
+            const pDeposited  = pRows.filter(r => r.status === 'deposited' || r.status === 'registered')
+            const pPendingInv = pRows.filter(r => r.status === 'sent' || r.status === 'pending')
+            const pNoInvoice  = pRows.filter(r => r.status === 'no_invoice' || r.status === 'cheque')
             const pPaidAmt    = pPaid.reduce((s, r) => s + r.rentAmount, 0)
             const pOverdueAmt = pOverdue.reduce((s, r) => s + r.rentAmount, 0)
-            const pPendingAmt = pPending.reduce((s, r) => s + r.rentAmount, 0)
+            const pDepositedAmt  = pDeposited.reduce((s, r) => s + r.rentAmount, 0)
+            const pPendingInvAmt = pPendingInv.reduce((s, r) => s + r.rentAmount, 0)
             const pTotal      = pRows.reduce((s, r) => s + r.rentAmount, 0)
 
             return (
@@ -380,20 +393,33 @@ export default async function MonthlyRentStatement({
                         <span className="text-emerald-300 hidden sm:inline">· {fmtAmt(pPaidAmt, orgCurrency)}</span>
                       )}
                     </span>
-                    <span className="flex items-center gap-1.5 text-red-400">
-                      <AlertCircle size={13} />
-                      <span className="font-semibold">{pOverdue.length}</span>
-                      {pOverdue.length > 0 && (
+                    {pOverdue.length > 0 && (
+                      <span className="flex items-center gap-1.5 text-red-400">
+                        <AlertCircle size={13} />
+                        <span className="font-semibold">{pOverdue.length}</span>
                         <span className="text-red-300 hidden sm:inline">· {fmtAmt(pOverdueAmt, orgCurrency)}</span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-amber-400">
-                      <Clock size={13} />
-                      <span className="font-semibold">{pPending.length}</span>
-                      {pPending.length > 0 && (
-                        <span className="text-amber-300 hidden sm:inline">· {fmtAmt(pPendingAmt, orgCurrency)}</span>
-                      )}
-                    </span>
+                      </span>
+                    )}
+                    {pDeposited.length > 0 && (
+                      <span className="flex items-center gap-1.5 text-teal-300">
+                        <ArrowDownToLine size={13} />
+                        <span className="font-semibold">{pDeposited.length}</span>
+                        <span className="hidden sm:inline">· {fmtAmt(pDepositedAmt, orgCurrency)}</span>
+                      </span>
+                    )}
+                    {pPendingInv.length > 0 && (
+                      <span className="flex items-center gap-1.5 text-amber-400">
+                        <Clock size={13} />
+                        <span className="font-semibold">{pPendingInv.length}</span>
+                        <span className="text-amber-300 hidden sm:inline">· {fmtAmt(pPendingInvAmt, orgCurrency)}</span>
+                      </span>
+                    )}
+                    {pNoInvoice.length > 0 && (
+                      <span className="flex items-center gap-1.5 text-slate-400">
+                        <FileQuestion size={13} />
+                        <span className="font-semibold">{pNoInvoice.length}</span>
+                      </span>
+                    )}
                     <span className="font-bold text-white border-l border-slate-600 pl-4">
                       {fmtAmt(pTotal, orgCurrency)}
                     </span>
@@ -462,8 +488,14 @@ export default async function MonthlyRentStatement({
                           {pOverdue.length > 0 && (
                             <span className="text-red-600 mr-3">{pOverdue.length} overdue</span>
                           )}
-                          {pPending.length > 0 && (
-                            <span className="text-amber-600">{pPending.length} pending</span>
+                          {pDeposited.length > 0 && (
+                            <span className="text-teal-600 mr-3">{pDeposited.length} deposited</span>
+                          )}
+                          {pPendingInv.length > 0 && (
+                            <span className="text-amber-600 mr-3">{pPendingInv.length} pending</span>
+                          )}
+                          {pNoInvoice.length > 0 && (
+                            <span className="text-slate-400">{pNoInvoice.length} no invoice</span>
                           )}
                         </td>
                       </tr>
@@ -477,7 +509,6 @@ export default async function MonthlyRentStatement({
       )}
 
       {/* Grand total bar */}
-      {visibleRows.length > 0 && (
         <div className="bg-slate-800 text-white rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
           <div>
             <p className="text-sm font-medium text-slate-300">
@@ -494,10 +525,18 @@ export default async function MonthlyRentStatement({
               <p className="text-slate-400 text-xs">Overdue</p>
               <p className="font-semibold text-red-400">{fmtAmt(totalOverdue, orgCurrency)}</p>
             </div>
-            <div>
-              <p className="text-slate-400 text-xs">Pending</p>
-              <p className="font-semibold text-amber-400">{fmtAmt(totalPending, orgCurrency)}</p>
-            </div>
+            {totalDeposited > 0 && (
+              <div>
+                <p className="text-slate-400 text-xs">Deposited</p>
+                <p className="font-semibold text-teal-400">{fmtAmt(totalDeposited, orgCurrency)}</p>
+              </div>
+            )}
+            {totalPendingInv > 0 && (
+              <div>
+                <p className="text-slate-400 text-xs">Pending</p>
+                <p className="font-semibold text-amber-400">{fmtAmt(totalPendingInv, orgCurrency)}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -514,7 +553,8 @@ export default async function MonthlyRentStatement({
           <div className="flex gap-6 text-sm text-slate-600 mt-2">
             <span className="text-emerald-700">Collected: {fmtAmt(totalPaid, orgCurrency)}</span>
             <span className="text-red-700">Overdue: {fmtAmt(totalOverdue, orgCurrency)}</span>
-            <span className="text-amber-700">Pending: {fmtAmt(totalPending, orgCurrency)}</span>
+            {totalDeposited > 0 && <span className="text-teal-700">Deposited: {fmtAmt(totalDeposited, orgCurrency)}</span>}
+            {totalPendingInv > 0 && <span className="text-amber-700">Pending: {fmtAmt(totalPendingInv, orgCurrency)}</span>}
           </div>
         </div>
       )}

@@ -4,8 +4,18 @@ import { Users, Download } from 'lucide-react'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRow = Record<string, any>
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+function fmtDate(d: string, fmt = 'DD/MM/YYYY') {
+  const dt   = new Date(d)
+  const dd   = String(dt.getDate()).padStart(2, '0')
+  const mm   = String(dt.getMonth() + 1).padStart(2, '0')
+  const mon  = dt.toLocaleString('en-US', { month: 'short' })
+  const yyyy = String(dt.getFullYear())
+  switch (fmt) {
+    case 'MM/DD/YYYY':  return `${mm}/${dd}/${yyyy}`
+    case 'YYYY-MM-DD':  return `${yyyy}-${mm}-${dd}`
+    case 'DD MMM YYYY': return `${dd} ${mon} ${yyyy}`
+    default:            return `${dd}/${mm}/${yyyy}`
+  }
 }
 function fmtAmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' OMR'
@@ -21,10 +31,12 @@ export default function TenantDirectoryPDF({
   tenants,
   printDate,
   printerName = 'Unknown',
+  dateFormat = 'DD/MM/YYYY',
 }: {
   tenants: AnyRow[]
   printDate: string
   printerName?: string
+  dateFormat?: string
 }) {
   const dash = '—'
 
@@ -38,8 +50,8 @@ export default function TenantDirectoryPDF({
       const property = activeContract?.units?.properties?.name ?? dash
       const unit = activeContract?.units?.unit_number ?? dash
       const contractStatus = activeContract?.status ?? dash
-      const startDate = activeContract?.start_date ? fmtDate(activeContract.start_date) : dash
-      const endDate = activeContract?.end_date ? fmtDate(activeContract.end_date) : dash
+      const startDate = activeContract?.start_date ? fmtDate(activeContract.start_date, dateFormat) : dash
+      const endDate = activeContract?.end_date ? fmtDate(activeContract.end_date, dateFormat) : dash
       const rent = activeContract?.rent_amount ? fmtAmt(Number(activeContract.rent_amount)) : dash
       const statusStyle = activeContract?.status ? (STATUS_COLORS[activeContract.status] ?? '') : ''
 
@@ -204,8 +216,8 @@ export default function TenantDirectoryPDF({
               const property = activeContract?.units?.properties?.name ?? dash
               const unit = activeContract?.units?.unit_number ?? dash
               const contractStatus = activeContract?.status
-              const startDate = activeContract?.start_date ? fmtDate(activeContract.start_date) : dash
-              const endDate = activeContract?.end_date ? fmtDate(activeContract.end_date) : dash
+              const startDate = activeContract?.start_date ? fmtDate(activeContract.start_date, dateFormat) : dash
+              const endDate = activeContract?.end_date ? fmtDate(activeContract.end_date, dateFormat) : dash
               const rent = activeContract?.rent_amount ? fmtAmt(Number(activeContract.rent_amount)) : dash
 
               const statusColors: Record<string, string> = {

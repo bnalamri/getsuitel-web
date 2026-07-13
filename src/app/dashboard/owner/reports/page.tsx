@@ -253,7 +253,7 @@ export default async function ReportsPage() {
     bounced: cheques.filter(c => c.status === 'bounced').length,
   }
 
-  const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+  const printDate = fmtDate(todayStr)
   const printerName = (profile?.full_name as string) || user.email || 'Unknown'
   const dash = '—'
 
@@ -287,6 +287,8 @@ export default async function ReportsPage() {
       {/* Monthly Statement shortcut */}
       <Link
         href="/dashboard/owner/reports/monthly"
+        target="_blank"
+        rel="noopener noreferrer"
         className="no-print flex items-center justify-between bg-navy-50 border border-navy-200 hover:border-navy-400 hover:bg-navy-100 rounded-xl px-5 py-4 transition-colors group"
       >
         <div className="flex items-center gap-3">
@@ -796,7 +798,7 @@ export default async function ReportsPage() {
       </div>
 
       {/* 10. Tenant Directory */}
-      <TenantDirectoryPDF tenants={tenants} printDate={printDate} printerName={printerName} />
+      <TenantDirectoryPDF tenants={tenants} printDate={printDate} printerName={printerName} dateFormat={orgDateFmt} />
 
       {/* Print footer */}
       <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">
