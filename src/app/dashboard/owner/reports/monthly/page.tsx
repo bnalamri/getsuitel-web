@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { ArrowLeft, CheckCircle2, AlertTriangle, Clock, FileQuestion, Printer } from 'lucide-react'
 import Link from 'next/link'
 import MonthPicker from './MonthPicker'
+import PropertyFilter from './PropertyFilter'
 import PrintButton from '@/components/PrintButton'
 
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,7 @@ function StatusBadge({ status }: { status: Status | string }) {
 export default async function MonthlyStatementPage({
   searchParams,
 }: {
-  searchParams: { month?: string }
+  searchParams: { month?: string; property?: string }
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -134,6 +135,7 @@ export default async function MonthlyStatementPage({
     dueDate?: string
     daysOverdue?: number
     chequeNumber?: string
+    propertyId?: string
   }
 
   const today = now.toISOString().split('T')[0]
@@ -195,6 +197,7 @@ export default async function MonthlyStatementPage({
       paidDate: invoice.paid_date as string | undefined,
       dueDate: invoice.due_date as string | undefined,
       daysOverdue,
+      propertyId: (c.units as { properties?: { id: string } | null } | null)?.properties?.id as string | undefined,
     }
   })
 
@@ -211,14 +214,14 @@ export default async function MonthlyStatementPage({
   const isPendingStatus = (s: string) => ['sent', 'pending', 'registered', 'deposited'].includes(s)
 
   const counts = {
-    paid:       rows.filter(r => isPaidStatus(r.status)).length,
-    overdue:    rows.filter(r => isOverdueStatus(r.status)).length,
-    pending:    rows.filter(r => isPendingStatus(r.status)).length,
-    no_invoice: rows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
+    paid:       filteredRows.filter(r => isPaidStatus(r.status)).length,
+    overdue:    filteredRows.filter(r => isOverdueStatus(r.status)).length,
+    pending:    filteredRows.filter(r => isPendingStatus(r.status)).length,
+    no_invoice: filteredRows.filter(r => r.status === 'no_invoice' || r.status === 'cheque').length,
   }
-  const totalCollected   = rows.filter(r => isPaidStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const overdueTotal     = rows.filter(r => isOverdueStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
-  const pendingTotal     = rows.filter(r => isPendingStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const totalCollected   = filteredRows.filter(r => isPaidStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const overdueTotal     = filteredRows.filter(r => isOverdueStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
+  const pendingTotal     = filteredRows.filter(r => isPendingStatus(r.status)).reduce((s, r) => s + r.rentAmount, 0)
   const totalOutstanding = overdueTotal + pendingTotal
 
   const methodLabel: Record<string, string> = {
@@ -237,11 +240,12 @@ export default async function MonthlyStatementPage({
           </Link>
           <div>
             <h2 className="text-xl font-bold text-slate-900">Monthly Rent Statement</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Rent collection status per tenant</p>
+            <p className="text-sm text-slate-500 mt-0.5">Rent collection status per tenant{selectedProp ? ' — ' + (propertyList.find(p => p.id === selectedProp)?.name ?? '') : ''}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <MonthPicker month={`${year}-${monthStr}`} />
+          <PropertyFilter properties={propertyList} selected={selectedProp} month={`${year}-${monthStr}`} />
           <PrintButton />
         </div>
       </div>
@@ -316,11 +320,11 @@ export default async function MonthlyStatementPage({
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-slate-900">Rent Status &mdash; {monthLabel}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{rows.length} active contract{rows.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{filteredRows.length} active contract{filteredRows.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
-          {rows.length === 0 ? (
+          {filteredRows.length === 0 ? (
             <div className="text-center py-16 text-slate-400 text-sm">No active contracts found.</div>
           ) : (
             <table className="w-full text-sm border-collapse">
@@ -337,7 +341,7 @@ export default async function MonthlyStatementPage({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, idx) => {
+                {filteredRows.map((row, idx) => {
                   const isOverdue = isOverdueStatus(row.status)
                   const isPaid    = isPaidStatus(row.status)
                   const rowBg = isOverdue
@@ -378,14 +382,14 @@ export default async function MonthlyStatementPage({
                   )
                 })}
               </tbody>
-              {rows.length > 0 && (
+              {filteredRows.length > 0 && (
                 <tfoot>
                   <tr className="bg-slate-100">
                     <td colSpan={3} className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Totals &mdash; {rows.length} contracts
+                      Totals &mdash; {filteredRows.length} contracts
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-slate-900 tabular-nums text-sm">
-                      {fmtAmt(rows.reduce((s, r) => s + r.rentAmount, 0), orgCurrency)}
+                      {fmtAmt(filteredRows.reduce((s, r) => s + r.rentAmount, 0), orgCurrency)}
                     </td>
                     <td colSpan={4} className="px-4 py-3 text-xs text-slate-500">
                       {fmtAmt(totalCollected, orgCurrency)} collected &nbsp;&middot;&nbsp;
@@ -401,7 +405,7 @@ export default async function MonthlyStatementPage({
         </div>
       </div>
 
-      {rows.some(r => r.paymentMethod === 'Cheque') && (
+      {filteredRows.some(r => r.paymentMethod === 'Cheque') && (
         <p className="text-xs text-slate-400 no-print">
           Cheque payment details and status tracking are available in{' '}
           <Link href="/dashboard/owner/payments/cheques" className="text-navy-700 hover:underline font-medium">
