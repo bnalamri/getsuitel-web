@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { Shield, Building2, Users, Home, FileText, User, Landmark } from 'lucide-react'
+import { Shield, Building2, Users, Home, FileText, User, Landmark, RotateCcw } from 'lucide-react'
+import Link from 'next/link'
 import ChangeSubscriptionForm from './ChangeSubscriptionForm'
 import EditLimitsForm from './EditLimitsForm'
 import EditOrgForm from './EditOrgForm'
@@ -149,6 +150,12 @@ export default async function OwnersPage() {
                     {org.subscription_status === 'canceled' && (
                       <ForcePurgeButton orgId={org.id} orgName={org.name} />
                     )}
+                    <Link
+                      href={`/dashboard/admin/restore/${org.id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition-colors"
+                    >
+                      <RotateCcw size={11} /> Restore
+                    </Link>
                   </div>
                 </div>
 
