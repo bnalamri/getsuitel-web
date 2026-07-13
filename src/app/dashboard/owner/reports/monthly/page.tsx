@@ -118,7 +118,7 @@ export default async function MonthlyRentStatement({
         units:unit_id ( id, unit_number, properties:property_id ( id, name ) ),
         tenants:tenant_id ( id, full_name )
       `)
-      .eq('org_id', orgId)
+      .eq('organization_id', orgId)
       .eq('status', 'active'),
     admin.from('invoices')
       .select('id, amount, status, due_date, paid_date, unit_id, type')
