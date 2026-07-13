@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -39,7 +40,6 @@ export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
   if (!isCron) {
-    const { requireSuperadmin } = await import('@/lib/api-auth')
     const auth = await requireSuperadmin()
     if (!auth.ok) return auth.response
   }
