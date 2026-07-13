@@ -33,8 +33,9 @@ export default function ContractTable({
   allUnits: Unit[]
   canManage?: boolean
 }) {
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterUnit,   setFilterUnit]   = useState('')
+  const [filterStatus,   setFilterStatus]   = useState('')
+  const [filterUnit,     setFilterUnit]     = useState('')
+  const [filterProperty, setFilterProperty] = useState('')
 
   const daysLeft = (endDate: string) => Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000)
 
@@ -42,9 +43,14 @@ export default function ContractTable({
     new Map(contracts.map(c => [(c.units as Unit | null)?.unit_number ?? '', c.units])).entries()
   ).filter(([k]) => k).sort(([a], [b]) => a.localeCompare(b))
 
+  const uniqueProperties = Array.from(
+    new Set(contracts.map(c => (c.units as Unit | null)?.properties?.name ?? '').filter(Boolean))
+  ).sort()
+
   const filtered = contracts
     .filter(c => filterStatus === '' || c.status === filterStatus)
-    .filter(c => filterUnit   === '' || (c.units as Unit | null)?.unit_number === filterUnit)
+    .filter(c => filterUnit     === '' || (c.units as Unit | null)?.unit_number === filterUnit)
+    .filter(c => filterProperty === '' || (c.units as Unit | null)?.properties?.name === filterProperty)
     .sort((a, b) => {
       const statusCmp = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)
       if (statusCmp !== 0) return statusCmp
@@ -54,7 +60,15 @@ export default function ContractTable({
   return (
     <div className="space-y-3">
       {/* Filters */}
-      <div className="flex items-center gap-3 justify-end">
+      <div className="flex items-center gap-3 justify-end flex-wrap">
+        {uniqueProperties.length > 1 && (
+          <select className="input w-44 text-sm" value={filterProperty} onChange={e => setFilterProperty(e.target.value)}>
+            <option value="">All Properties</option>
+            {uniqueProperties.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        )}
         <select className="input w-36 text-sm" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
           <option value="">All statuses</option>
           <option value="active">Active</option>

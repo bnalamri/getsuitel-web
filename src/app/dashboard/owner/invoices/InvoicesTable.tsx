@@ -1,0 +1,107 @@
+'use client'
+import { useState } from 'react'
+import EditInvoiceForm from './EditInvoiceForm'
+import MarkPaidButton from './MarkPaidButton'
+
+type Invoice = {
+  id: string; tenant_id: string; unit_id: string
+  type: string; amount: number | string; currency: string
+  due_date: string; status: string; notes?: string | null
+  tenants?: { full_name: string } | null
+  units?: { unit_number: string; properties?: { name: string } | null } | null
+}
+type Tenant = { id: string; full_name: string; email: string; contracts: { unit_id: string; status: string }[] }
+type Unit = { id: string; unit_number: string; properties?: { name: string } | null }
+
+const statusColor: Record<string, string> = {
+  draft:    'bg-slate-100 text-slate-600',
+  sent:     'bg-blue-100 text-blue-700',
+  paid:     'bg-green-100 text-green-700',
+  overdue:  'bg-red-100 text-red-700',
+  canceled: 'bg-slate-100 text-slate-400',
+}
+
+export default function InvoicesTable({
+  invoices,
+  tenants,
+  units,
+  canManage,
+}: {
+  invoices: Invoice[]
+  tenants: Tenant[]
+  units: Unit[]
+  canManage: boolean
+}) {
+  const [filterStatus, setFilterStatus] = useState('')
+
+  const filtered = invoices.filter(i => !filterStatus || i.status === filterStatus)
+
+  return (
+    <div className="space-y-3">
+      {/* Filter row */}
+      <div className="flex items-center gap-3 justify-end">
+        <select className="input text-sm w-40" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="sent">Sent</option>
+          <option value="paid">Paid</option>
+          <option value="overdue">Overdue</option>
+          <option value="canceled">Canceled</option>
+        </select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="card p-12 text-center text-slate-400 text-sm">No invoices match the selected filter.</div>
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Tenant</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Type</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Amount</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Due Date</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map(inv => {
+                const tenant = inv.tenants
+                const unit = inv.units
+                return (
+                  <tr key={inv.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-900">{tenant?.full_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">
+                      <div>{unit?.properties?.name}</div>
+                      <div className="text-slate-400">Unit {unit?.unit_number}</div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 capitalize">{inv.type}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
+                    <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
+                    <td className="px-4 py-3"><span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span></td>
+                    <td className="px-4 py-3">
+                      {canManage && (
+                        <div className="flex items-center gap-1">
+                          <EditInvoiceForm
+                            invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, status: inv.status, notes: inv.notes }}
+                            tenants={tenants}
+                            units={units as never}
+                          />
+                          {['sent', 'overdue', 'draft'].includes(inv.status) && (
+                            <MarkPaidButton invoiceId={inv.id} />
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

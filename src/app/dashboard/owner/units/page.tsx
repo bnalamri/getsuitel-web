@@ -4,6 +4,7 @@ import AddUnitForm from './AddUnitForm'
 import EditUnitForm from './EditUnitForm'
 import DeleteUnitButton from './DeleteUnitButton'
 import Link from 'next/link'
+import PropertyFilterSelect from './PropertyFilterSelect'
 
 export const metadata = { title: 'Units' }
 
@@ -61,24 +62,16 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Units {selectedProperty ? `— ${selectedProperty.name}` : ''}</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Units</h2>
           <p className="text-slate-500 text-sm mt-0.5">{units?.length ?? 0} units</p>
         </div>
         {canEdit && <AddUnitForm orgId={orgId} properties={properties ?? []} defaultPropertyId={searchParams.property} defaultCurrency={defaultCurrency} />}
       </div>
 
       {/* Filter by property */}
-      {(properties?.length ?? 0) > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          <a href="/dashboard/owner/units" className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${!searchParams.property ? 'bg-navy-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>All</a>
-          {properties?.map(p => (
-            <a key={p.id} href={`/dashboard/owner/units?property=${p.id}`}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${searchParams.property === p.id ? 'bg-navy-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-              {p.name}
-            </a>
-          ))}
-        </div>
-      )}
+      <div className="flex justify-end">
+        <PropertyFilterSelect properties={properties ?? []} selected={searchParams.property} />
+      </div>
 
       {units?.length === 0 ? (
         <div className="card p-16 text-center">

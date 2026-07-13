@@ -3,17 +3,10 @@ import { Receipt } from 'lucide-react'
 import AddInvoiceForm from './AddInvoiceForm'
 import EditInvoiceForm from './EditInvoiceForm'
 import MarkPaidButton from './MarkPaidButton'
+import InvoicesTable from './InvoicesTable'
 
 export const metadata = { title: 'Invoices' }
 export const dynamic = 'force-dynamic'
-
-const statusColor: Record<string, string> = {
-  draft: 'bg-slate-100 text-slate-600',
-  sent: 'bg-blue-100 text-blue-700',
-  paid: 'bg-green-100 text-green-700',
-  overdue: 'bg-red-100 text-red-700',
-  canceled: 'bg-slate-100 text-slate-400',
-}
 
 export default async function InvoicesPage() {
   const supabase = await createClient()
@@ -72,54 +65,12 @@ export default async function InvoicesPage() {
           <p className="text-slate-400 text-sm">Create invoices to track rent and other payments.</p>
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Tenant</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Unit</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Type</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Amount</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Due Date</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {invoices.map(inv => {
-                const tenant = inv.tenants as { full_name: string } | null
-                const unit = inv.units as { unit_number: string; properties: { name: string } | null } | null
-                return (
-                  <tr key={inv.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{tenant?.full_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">
-                      <div>{unit?.properties?.name}</div>
-                      <div className="text-slate-400">Unit {unit?.unit_number}</div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 capitalize">{inv.type}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
-                    <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
-                    <td className="px-4 py-3"><span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span></td>
-                    <td className="px-4 py-3">
-                      {canManage && (
-                        <div className="flex items-center gap-1">
-                          <EditInvoiceForm
-                            invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, status: inv.status, notes: inv.notes }}
-                            tenants={tenants}
-                            units={units as never}
-                          />
-                          {['sent', 'overdue', 'draft'].includes(inv.status) && (
-                            <MarkPaidButton invoiceId={inv.id} />
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <InvoicesTable
+          invoices={invoices as never}
+          tenants={tenants as never}
+          units={units as never}
+          canManage={canManage}
+        />
       )}
     </div>
   )
