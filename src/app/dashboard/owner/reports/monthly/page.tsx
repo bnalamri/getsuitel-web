@@ -23,6 +23,21 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
+function applyDateFmt(dateStr: string | undefined, fmt: string): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  const dd  = String(d.getDate()).padStart(2, '0')
+  const mm  = String(d.getMonth() + 1).padStart(2, '0')
+  const mon = d.toLocaleString('en-US', { month: 'short' })
+  const yyyy = String(d.getFullYear())
+  switch (fmt) {
+    case 'MM/DD/YYYY':   return `${mm}/${dd}/${yyyy}`
+    case 'YYYY-MM-DD':   return `${yyyy}-${mm}-${dd}`
+    case 'DD MMM YYYY':  return `${dd} ${mon} ${yyyy}`
+    default:             return `${dd}/${mm}/${yyyy}`   // DD/MM/YYYY
+  }
+}
+
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   paid:       { label: 'Paid',               cls: 'bg-emerald-100 text-emerald-700' },
   cleared:    { label: 'Paid (Cheque)',       cls: 'bg-emerald-100 text-emerald-700' },
@@ -95,9 +110,10 @@ export default async function MonthlyRentStatement({
   )
 
   const { data: orgData } = await supabase
-    .from('organizations').select('name, default_currency').eq('id', orgId).single()
-  const orgCurrency = (orgData?.default_currency as string) ?? 'OMR'
-  const orgName     = (orgData?.name as string) ?? ''
+    .from('organizations').select('name, default_currency, date_format').eq('id', orgId).single()
+  const orgCurrency  = (orgData?.default_currency as string) ?? 'OMR'
+  const orgName      = (orgData?.name as string) ?? ''
+  const orgDateFmt   = (orgData?.date_format as string) ?? 'DD/MM/YYYY'
 
   const now      = new Date()
   const rawMonth = searchParams.month ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -410,9 +426,7 @@ export default async function MonthlyRentStatement({
                             {fmtAmt(row.rentAmount, row.currency)}
                           </td>
                           <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
-                            {row.dueDate
-                              ? new Date(row.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                              : '—'}
+                            {applyDateFmt(row.dueDate, orgDateFmt)}
                           </td>
                           <td className="px-5 py-3 whitespace-nowrap">
                             <StatusBadge status={row.status} />
@@ -420,7 +434,7 @@ export default async function MonthlyRentStatement({
                           <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
                             {isPaid(row.status) && row.paidDate && (
                               <span className="text-emerald-600">
-                                Paid {new Date(row.paidDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                Paid {applyDateFmt(row.paidDate, orgDateFmt)}
                               </span>
                             )}
                             {isOverdue(row.status) && (row.daysOverdue ?? 0) > 0 && (
