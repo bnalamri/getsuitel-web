@@ -5,21 +5,29 @@ import { Loader2, ChevronDown } from 'lucide-react'
 
 const transitions: Record<string, string[]> = {
   pending:   ['deposited', 'returned', 'cancelled'],
-  deposited: ['cleared', 'bounced', 'returned', 'cancelled'],
-  bounced:   ['replaced', 'cancelled'],
-  returned:  ['replaced', 'cancelled'],
-  cleared:   [],
-  cancelled: [],
+  deposited: ['cleared', 'bounced', 'returned', 'cancelled', 'revert:pending'],
+  bounced:   ['replaced', 'cancelled', 'revert:pending'],
+  returned:  ['replaced', 'cancelled', 'revert:pending'],
+  cleared:   ['revert:deposited'],
+  cancelled: ['revert:pending'],
   replaced:  [],
 }
 
+// Map revert actions to the actual status they set
+const revertTarget: Record<string, string> = {
+  'revert:pending':   'pending',
+  'revert:deposited': 'deposited',
+}
+
 const labels: Record<string, string> = {
-  deposited: 'Mark Deposited',
-  cleared:   'Mark Cleared',
-  bounced:   'Mark Bounced (NSF)',
-  returned:  'Mark Returned (Technical)',
-  cancelled: 'Cancel',
-  replaced:  'Mark Replaced',
+  deposited:          'Mark Deposited',
+  cleared:            'Mark Cleared',
+  bounced:            'Mark Bounced (NSF)',
+  returned:           'Mark Returned (Technical)',
+  cancelled:          'Cancel',
+  replaced:           'Mark Replaced',
+  'revert:pending':   '↩ Revert to Pending',
+  'revert:deposited': '↩ Revert to Deposited',
 }
 
 export default function UpdateChequeButton({
@@ -58,13 +66,15 @@ export default function UpdateChequeButton({
     setOpen(o => !o)
   }
 
-  async function apply(status: string) {
+  async function apply(action: string) {
+    // Resolve revert actions to their target status
+    const status = revertTarget[action] ?? action
     setLoading(true)
     setOpen(false)
     setPending(null)
     const today = new Date().toISOString().split('T')[0]
     const body: Record<string, string> = { status }
-    if (status === 'deposited') body.deposited_date = today
+    if (status === 'deposited' && !action.startsWith('revert')) body.deposited_date = today
     if (status === 'cleared')   body.cleared_date   = today
     if (status === 'bounced'   && bounceReason) body.bounce_reason  = bounceReason
     if (status === 'returned'  && returnReason) body.return_reason  = returnReason
@@ -96,8 +106,11 @@ export default function UpdateChequeButton({
               style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
               className="bg-white shadow-xl border border-slate-200 rounded-xl overflow-hidden w-44"
             >
-              {next.map(s => (
+              {next.map((s, i) => (
                 <div key={s}>
+                  {s.startsWith('revert:') && i > 0 && (
+                    <div className="border-t border-slate-100 my-1" />
+                  )}
                   {s === 'bounced' && pendingStatus === 'bounced' ? (
                     <div className="p-2">
                       <input
@@ -126,7 +139,11 @@ export default function UpdateChequeButton({
                     </div>
                   ) : (
                     <button
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 ${
+                        s.startsWith('revert:')
+                          ? 'text-slate-400 hover:text-slate-600'
+                          : 'text-slate-700'
+                      }`}
                       onClick={() => {
                         if (s === 'bounced')  { setPending('bounced');  return }
                         if (s === 'returned') { setPending('returned'); return }
