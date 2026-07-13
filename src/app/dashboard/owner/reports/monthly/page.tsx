@@ -73,12 +73,11 @@ export default async function MonthlyStatementPage({
   const orgCurrency = (orgData?.default_currency as string) ?? 'OMR'
   const orgName     = (orgData?.name as string) ?? ''
 
-  // ── Resolve month ──────────────────────────────────────────────────────────
+  // -- Resolve month
   const now = new Date()
   const rawMonth = searchParams.month ?? (
     now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
   )
-  // Validate format
   const monthMatch = rawMonth.match(/^(\d{4})-(\d{2})$/)
   const year  = monthMatch ? Number(monthMatch[1]) : now.getFullYear()
   const month = monthMatch ? Number(monthMatch[2]) : now.getMonth() + 1
@@ -90,7 +89,6 @@ export default async function MonthlyStatementPage({
 
   const admin = createAdminClient()
 
-  // ── Fetch data ─────────────────────────────────────────────────────────────
   const [contractsRes, invoicesRes, chequesRes] = await Promise.all([
     admin
       .from('contracts')
@@ -122,7 +120,6 @@ export default async function MonthlyStatementPage({
   const invoices  = invoicesRes.data ?? []
   const cheques   = chequesRes.data ?? []
 
-  // ── Build per-contract rows ────────────────────────────────────────────────
   type Row = {
     contractId: string
     tenant: string
@@ -148,7 +145,6 @@ export default async function MonthlyStatementPage({
     const unitId   = (c.units as { id: string } | null)?.id
 
     if (c.payment_method === 'cheque') {
-      // Look up cheque for this unit in the selected month
       const cheque = cheques.find(ch => ch.unit_id === unitId)
       if (cheque) {
         return {
@@ -172,7 +168,6 @@ export default async function MonthlyStatementPage({
       }
     }
 
-    // Non-cheque: look for invoice
     const invoice = invoices.find(inv => inv.unit_id === unitId)
     if (!invoice) {
       return {
@@ -203,7 +198,6 @@ export default async function MonthlyStatementPage({
     }
   })
 
-  // Sort: overdue/bounced first, then pending variants, then paid/cleared, then no_invoice/cheque
   const order: Record<string, number> = {
     overdue: 0, bounced: 0,
     sent: 1, pending: 1, registered: 1, deposited: 1,
@@ -212,8 +206,7 @@ export default async function MonthlyStatementPage({
   }
   rows.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
 
-  // ── Summary counts ─────────────────────────────────────────────────────────
-  const isPaidStatus   = (s: string) => s === 'paid' || s === 'cleared'
+  const isPaidStatus    = (s: string) => s === 'paid' || s === 'cleared'
   const isOverdueStatus = (s: string) => s === 'overdue' || s === 'bounced'
   const isPendingStatus = (s: string) => ['sent', 'pending', 'registered', 'deposited'].includes(s)
 
@@ -237,14 +230,9 @@ export default async function MonthlyStatementPage({
     <div className="space-y-6">
       <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 no-print">
         <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/owner/reports"
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-            aria-label="Back to Reports"
-          >
+          <Link href="/dashboard/owner/reports" className="text-slate-400 hover:text-slate-600 transition-colors" aria-label="Back to Reports">
             <ArrowLeft size={18} />
           </Link>
           <div>
@@ -258,27 +246,24 @@ export default async function MonthlyStatementPage({
         </div>
       </div>
 
-      {/* ── Print header (hidden on screen) ──────────────────────────────── */}
       <div className="hidden print:block mb-4">
-        <h2 className="text-xl font-bold text-slate-900">GetSuitel — Monthly Rent Statement</h2>
-        <p className="text-sm text-slate-600 mt-0.5">{orgName} &nbsp;·&nbsp; {monthLabel}</p>
-        <p className="text-xs text-slate-400 mt-0.5">Generated: {printDate} &nbsp;·&nbsp; Printed by: <strong>{profile?.full_name ?? ''}</strong></p>
+        <h2 className="text-xl font-bold text-slate-900">GetSuitel &mdash; Monthly Rent Statement</h2>
+        <p className="text-sm text-slate-600 mt-0.5">{orgName} &nbsp;&middot;&nbsp; {monthLabel}</p>
+        <p className="text-xs text-slate-400 mt-0.5">Generated: {printDate} &nbsp;&middot;&nbsp; Printed by: <strong>{profile?.full_name ?? ''}</strong></p>
         <div className="mt-3 border border-red-500 rounded-md px-4 py-2 bg-red-50 text-center">
-          <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</p>
+          <p className="text-sm font-bold text-red-600 tracking-wide">STRICTLY CONFIDENTIAL &nbsp;&middot;&nbsp; &#x633;&#x631;&#x64A; &#x644;&#x644;&#x63A;&#x627;&#x64A;&#x629;</p>
           <p className="text-xs text-red-800 mt-1 leading-relaxed">
             This document is intended solely for authorised internal use within the organisation.
             Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
           </p>
           <p className="text-xs text-red-800 mt-1 leading-relaxed">
-            هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
+            &#x647;&#x630;&#x647; &#x627;&#x644;&#x648;&#x62B;&#x64A;&#x642;&#x629; &#x645;&#x62E;&#x635;&#x635;&#x629; &#x644;&#x644;&#x627;&#x633;&#x62A;&#x639;&#x645;&#x627;&#x644; &#x627;&#x644;&#x62F;&#x627;&#x62E;&#x644;&#x64A; &#x627;&#x644;&#x645;&#x635;&#x631;&#x62D; &#x628;&#x647; &#x62F;&#x627;&#x62E;&#x644; &#x627;&#x644;&#x645;&#x624;&#x633;&#x633;&#x629; &#x641;&#x642;&#x637;.
           </p>
         </div>
       </div>
 
-      {/* ── Month label for print ─────────────────────────────────────────── */}
       <div className="print:block hidden text-base font-semibold text-slate-700 mt-4">{monthLabel}</div>
 
-      {/* ── Summary cards ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="card p-4 flex items-start gap-3">
           <div className="rounded-full bg-emerald-100 p-2 flex-shrink-0">
@@ -327,21 +312,16 @@ export default async function MonthlyStatementPage({
         </div>
       </div>
 
-      {/* ── Statement table ─────────────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-slate-900">
-              Rent Status — {monthLabel}
-            </h3>
+            <h3 className="font-semibold text-slate-900">Rent Status &mdash; {monthLabel}</h3>
             <p className="text-xs text-slate-500 mt-0.5">{rows.length} active contract{rows.length !== 1 ? 's' : ''}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
           {rows.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 text-sm">
-              No active contracts found.
-            </div>
+            <div className="text-center py-16 text-slate-400 text-sm">No active contracts found.</div>
           ) : (
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -358,8 +338,8 @@ export default async function MonthlyStatementPage({
               </thead>
               <tbody>
                 {rows.map((row, idx) => {
-                  const isOverdue = row.status === 'overdue'
-                  const isPaid    = row.status === 'paid'
+                  const isOverdue = isOverdueStatus(row.status)
+                  const isPaid    = isPaidStatus(row.status)
                   const rowBg = isOverdue
                     ? (idx % 2 === 0 ? 'bg-white' : 'bg-red-50/20')
                     : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40')
@@ -402,7 +382,38 @@ export default async function MonthlyStatementPage({
                 <tfoot>
                   <tr className="bg-slate-100">
                     <td colSpan={3} className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      Totals — {rows.length} contracts
+                      Totals &mdash; {rows.length} contracts
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-slate-900 tabular-nums text-sm">
-                      {fmtAmt(rows.reduce((s,
+                      {fmtAmt(rows.reduce((s, r) => s + r.rentAmount, 0), orgCurrency)}
+                    </td>
+                    <td colSpan={4} className="px-4 py-3 text-xs text-slate-500">
+                      {fmtAmt(totalCollected, orgCurrency)} collected &nbsp;&middot;&nbsp;
+                      <span className={totalOutstanding > 0 ? 'text-orange-600' : 'text-slate-400'}>
+                        {fmtAmt(totalOutstanding, orgCurrency)} outstanding
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          )}
+        </div>
+      </div>
+
+      {rows.some(r => r.paymentMethod === 'Cheque') && (
+        <p className="text-xs text-slate-400 no-print">
+          Cheque payment details and status tracking are available in{' '}
+          <Link href="/dashboard/owner/payments/cheques" className="text-navy-700 hover:underline font-medium">
+            Payments &rarr; Cheque Tracker
+          </Link>
+          .
+        </p>
+      )}
+
+      <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">
+        GetSuitel Property Management &nbsp;&middot;&nbsp; Monthly Rent Statement &nbsp;&middot;&nbsp; Confidential &nbsp;&middot;&nbsp; {printDate}
+      </div>
+    </div>
+  )
+}
