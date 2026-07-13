@@ -708,5 +708,28 @@ export default async function ReportsPage() {
                 </thead>
                 <tbody>
                   {bouncedCheques.map((c, idx) => (
-                    <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}>
-                      <Td className="font-medium">{c.tenants?.full_name ?? 
+                      <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
+                      <Td>{c.units?.unit_number ?? dash}</Td>
+                      <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
+                      <Td className="text-red-700 font-medium">{fmtAmt(Number(c.amount), orgCurrency)}</Td>
+                      <Td>{c.due_date ? fmtDate(c.due_date) : dash}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 10. Tenant Directory */}
+      <TenantDirectoryPDF tenants={tenants} printDate={printDate} printerName={printerName} />
+
+      {/* Print footer */}
+      <div className="hidden print:block text-xs text-slate-400 text-center mt-8 pt-4 border-t border-slate-200">
+        <FileText size={12} className="inline mr-1" />
+        GetSuitel Property Management &nbsp; Confidential &nbsp; {printDate}
+      </div>
+    </div>
+  )
+}
