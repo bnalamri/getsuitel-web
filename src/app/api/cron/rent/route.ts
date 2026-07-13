@@ -37,8 +37,11 @@ function emailHtml(headerColor: string, label: string, body: string) {
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
+  if (!isCron) {
+    const { requireSuperadmin } = await import('@/lib/api-auth')
+    const auth = await requireSuperadmin()
+    if (!auth.ok) return auth.response
   }
 
   const admin = createAdminClient()
