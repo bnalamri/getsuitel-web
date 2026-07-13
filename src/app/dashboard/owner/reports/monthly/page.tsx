@@ -8,6 +8,7 @@ import PropertyFilter from './PropertyFilter'
 export const dynamic = 'force-dynamic'
 
 const PRINT_CSS = `
+@page { margin: 1.5cm; }
 @media print {
   aside, header { display: none !important; }
   .no-print { display: none !important; }
@@ -509,6 +510,7 @@ export default async function MonthlyRentStatement({
       )}
 
       {/* Grand total bar */}
+      {visibleRows.length > 0 && (
         <div className="bg-slate-800 text-white rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 no-print">
           <div>
             <p className="text-sm font-medium text-slate-300">
@@ -561,7 +563,7 @@ export default async function MonthlyRentStatement({
 
       {visibleRows.some(r => r.paymentMethod === 'Cheque' || r.paymentMethod === 'cheque') && (
         <p className="text-xs text-slate-400 no-print">
-          * Cheque statuses: Registered → Deposited → Cleared (Paid) / Bounced (Overdue)
+          * Cheque statuses: Registered &#x2192; Deposited &#x2192; Cleared (Paid) / Bounced (Overdue)
         </p>
       )}
     </div>
