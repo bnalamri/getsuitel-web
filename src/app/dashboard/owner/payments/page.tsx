@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle, Clock, Banknote, Smartphone, Building2, Receipt } from 'lucide-react'
 import Link from 'next/link'
 import ConfirmReceiptButton from './ConfirmReceiptButton'
-import CashMarkPaidButton from './CashMarkPaidButton'
+import MarkPaidModal from '../invoices/MarkPaidModal'
 
 export const metadata = { title: 'Payments' }
 
@@ -33,7 +33,6 @@ export default async function PaymentsPage() {
       .select('*, tenants(full_name), units(unit_number, properties(name))')
       .eq('organization_id', orgId)
       .in('status', ['sent', 'overdue'])
-      .or('payment_method.eq.cash,payment_method.is.null')
       .order('due_date', { ascending: true }),
   ])
 
@@ -117,7 +116,7 @@ export default async function PaymentsPage() {
 
       <div>
         <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-          <Banknote size={16} className="text-emerald-600"/> Mark Cash Payment
+          <Banknote size={16} className="text-emerald-600"/> Mark as Paid
         </h3>
         {invoices.length === 0 ? (
           <div className="card p-8 text-center text-slate-400 text-sm">No open invoices</div>
@@ -149,7 +148,7 @@ export default async function PaymentsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <CashMarkPaidButton invoiceId={inv.id} />
+                        <MarkPaidModal invoiceId={inv.id} />
                       </td>
                     </tr>
                   )
