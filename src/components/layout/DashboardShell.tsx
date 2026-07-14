@@ -347,4 +347,13 @@ export default function DashboardShell({
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
           <main className="flex-1 overflow-y-auto">
-            <div clas
+            <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </Ctx.Provider>
+    </DateFormatContext.Provider>
+  )
+}
