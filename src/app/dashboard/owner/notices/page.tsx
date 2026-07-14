@@ -39,27 +39,21 @@ export default async function NoticesPage() {
       .order('due_date'),
     // Technicians: profiles with role='technician' in this org
     admin.from('profiles')
-      .select('id, full_name:raw_user_meta_data->full_name, organization_id')
+      .select('id, full_name, email')
       .eq('organization_id', orgId)
-      .eq('role', 'technician'),
+      .eq('role', 'technician')
+      .order('full_name'),
   ])
 
   const notices = noticesRes.data ?? []
   const tenants = tenantsRes.data ?? []
   const overdueInvoices = overdueRes.data ?? []
 
-  // Build technician list from profiles + auth users
-  const techProfiles = techniciansRes.data ?? []
-  const technicianIds = techProfiles.map(p => p.id)
-
-  const techEmails: { id: string; full_name: string; email: string }[] = []
-  await Promise.all(technicianIds.map(async (tid) => {
-    const { data: authUser } = await admin.auth.admin.getUserById(tid)
-    const email = authUser?.user?.email ?? ''
-    const name = (authUser?.user?.user_metadata?.full_name as string) ?? email
-    techEmails.push({ id: tid, full_name: name, email })
+  const techEmails = (techniciansRes.data ?? []).map(t => ({
+    id: t.id as string,
+    full_name: (t.full_name as string) ?? '',
+    email: (t.email as string) ?? '',
   }))
-  techEmails.sort((a, b) => a.full_name.localeCompare(b.full_name))
 
   return (
     <div className="space-y-6">
