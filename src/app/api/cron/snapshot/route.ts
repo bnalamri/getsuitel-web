@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { logCron } from '@/lib/cron-logger'
+import { isOrgMidnight } from '@/lib/countries'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const KEEP_DAYS = 7
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
   const demoEmail = process.env.DEMO_EMAIL
   const { data: orgs, error: orgsErr } = await admin
     .from('organizations')
-    .select('id, name')
+    .select('id, name, org_timezone')
     .not('subscription_status', 'eq', 'canceled')
 
   if (orgsErr) return NextResponse.json({ error: orgsErr.message }, { status: 500 })
@@ -67,6 +68,15 @@ export async function GET(req: Request) {
     if (demoProfile?.organization_id) {
       targetOrgs = orgs.filter(o => o.id !== demoProfile.organization_id)
     }
+  }
+
+  // Filter to orgs where it's currently midnight in their timezone
+  targetOrgs = targetOrgs.filter(o =>
+    isOrgMidnight(((o as Record<string, unknown>).org_timezone as string) ?? 'UTC')
+  )
+
+  if (targetOrgs.length === 0) {
+    return NextResponse.json({ ok: true, skipped: true, reason: 'no orgs at midnight' })
   }
 
   let snapshotted = 0

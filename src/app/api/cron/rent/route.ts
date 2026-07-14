@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
 import { logCron } from '@/lib/cron-logger'
+import { isOrgMidnight } from '@/lib/countries'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
@@ -55,6 +56,20 @@ export async function GET(req: Request) {
   const monthStart = `${year}-${monthStr}-01`
   const monthEnd   = `${year}-${monthStr}-28` // cap at 28 (UI enforces max=28)
 
+  // ── Timezone filter: only process orgs where it's currently midnight ────────
+  const { data: activeOrgs } = await admin
+    .from('organizations')
+    .select('id, org_timezone')
+    .not('subscription_status', 'eq', 'canceled')
+
+  const eligibleOrgIds = (activeOrgs ?? [])
+    .filter(o => isOrgMidnight((o.org_timezone as string) ?? 'UTC'))
+    .map(o => o.id as string)
+
+  if (eligibleOrgIds.length === 0) {
+    return NextResponse.json({ ok: true, skipped: true, reason: 'no orgs at midnight' })
+  }
+
   let invoicesCreated = 0
   let invoicesMarkedOverdue = 0
   let contractsExpired = 0
@@ -73,6 +88,7 @@ export async function GET(req: Request) {
     `)
     .eq('status', 'active')
     .neq('payment_method', 'cheque') // cheque payments tracked separately in Cheque Tracker
+    .in('organization_id', eligibleOrgIds)
 
   if (contractsErr) {
     return NextResponse.json({ error: contractsErr.message }, { status: 500 })
@@ -188,6 +204,7 @@ export async function GET(req: Request) {
     `)
     .eq('status', 'sent')
     .lt('due_date', todayStr)
+    .in('organization_id', eligibleOrgIds)
 
   for (const inv of sentPastDue ?? []) {
     try {
@@ -245,6 +262,7 @@ export async function GET(req: Request) {
     `)
     .eq('status', 'active')
     .lt('end_date', todayStr)
+    .in('organization_id', eligibleOrgIds)
 
   for (const contract of expiredContracts ?? []) {
     try {
