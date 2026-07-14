@@ -158,87 +158,21 @@ export default function FinancialReportPDF({
   })
 
 
-  // ── Excel export (SheetJS loaded from CDN) ─────────────────────────────────
+  // ── Excel export (styled xlsx via JSZip + custom XML) ─────────────────────
   async function handleExportExcel() {
-    // Dynamically load SheetJS from CDN
-    const XLSX: any = await new Promise((resolve, reject) => {
-      if ((window as any).XLSX) { resolve((window as any).XLSX); return }
-      const s = document.createElement('script')
-      s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
-      s.onload = () => resolve((window as any).XLSX)
-      s.onerror = reject
-      document.head.appendChild(s)
+    const { exportFinancialReportToExcel } = await import('./exportToExcel')
+    await exportFinancialReportToExcel({
+      printDate,
+      byCurrency,
+      byOrg,
+      byMonth,
+      planBreakdown,
+      mrr,
+      arr,
+      subRevByCurrency,
+      subPendingByCurrency,
+      orgs,
     })
-
-    const wb = XLSX.utils.book_new()
-
-    // ── Sheet 1: Summary ──────────────────────────────────────────────────────
-    const summaryData = [
-      ['GetSuitel — Financial Report', '', '', ''],
-      ['Generated', printDate, '', ''],
-      ['', '', '', ''],
-      ['RENTAL REVENUE SUMMARY', '', '', ''],
-      ['Currency', 'Invoiced', 'Collected', 'Outstanding', 'Collection Rate', 'Invoices'],
-      ...byCurrency.map(c => [c.currency, c.invoiced, c.collected, c.outstanding, `${c.rate}%`, c.count]),
-      ['', '', '', ''],
-      ['SUBSCRIPTION REVENUE SUMMARY', '', '', ''],
-      ['MRR (USD)', mrr],
-      ['ARR (USD)', arr],
-      ...Object.entries(subRevByCurrency).map(([c, v]) => [`Payments Received (${c})`, v]),
-      ...Object.entries(subPendingByCurrency).map(([c, v]) => [`Pending Payments (${c})`, v]),
-      ['', '', '', ''],
-      ['SUBSCRIPTION STATUS', '', '', ''],
-      ['Status', 'Count'],
-      ['Active',   orgs.filter(o => o.subscription_status === 'active').length],
-      ['Trialing', orgs.filter(o => o.subscription_status === 'trialing').length],
-      ['Past Due', orgs.filter(o => o.subscription_status === 'past_due').length],
-      ['Canceled', orgs.filter(o => o.subscription_status === 'canceled').length],
-    ]
-    const ws1 = XLSX.utils.aoa_to_sheet(summaryData)
-    ws1['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }]
-    XLSX.utils.book_append_sheet(wb, ws1, 'Summary')
-
-    // ── Sheet 2: By Organization ──────────────────────────────────────────────
-    const orgData = [
-      ['Organization', 'Plan', 'Status', 'Currency', 'Invoiced', 'Collected', 'Outstanding', 'Collection Rate', 'Invoices'],
-      ...byOrg.map(o => [
-        o.name,
-        o.subscription_plan,
-        o.subscription_status,
-        o.currency,
-        o.invoiced,
-        o.collected,
-        o.outstanding,
-        `${o.rate}%`,
-        o.count,
-      ]),
-    ]
-    const ws2 = XLSX.utils.aoa_to_sheet(orgData)
-    ws2['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 10 }]
-    XLSX.utils.book_append_sheet(wb, ws2, 'By Organization')
-
-    // ── Sheet 3: Monthly Trend ────────────────────────────────────────────────
-    const monthData = [
-      ['Month', 'Invoiced', 'Collected', 'Invoices'],
-      ...byMonth.map(m => [m.label, m.invoiced, m.collected, m.count]),
-    ]
-    const ws3 = XLSX.utils.aoa_to_sheet(monthData)
-    ws3['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }]
-    XLSX.utils.book_append_sheet(wb, ws3, 'Monthly Trend')
-
-    // ── Sheet 4: Subscription Plans ───────────────────────────────────────────
-    const planData = [
-      ['Plan', 'Price/mo (USD)', 'Total Orgs', 'Active Orgs', 'MRR (USD)'],
-      ...planBreakdown.map(p => [p.plan, p.price, p.total, p.active, p.mrr]),
-      ['', '', '', 'Total MRR', mrr],
-    ]
-    const ws4 = XLSX.utils.aoa_to_sheet(planData)
-    ws4['!cols'] = [{ wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 14 }]
-    XLSX.utils.book_append_sheet(wb, ws4, 'Subscription Plans')
-
-    // Download
-    const today = new Date().toISOString().split('T')[0]
-    XLSX.writeFile(wb, `GetSuitel_Financial_Report_${today}.xlsx`)
   }
 
   // ── PDF export ──────────────────────────────────────────────────────────────
