@@ -31,7 +31,7 @@ export default async function NoticesPage() {
       .select('*, tenants(full_name), technician:technician_id(full_name)')
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false }),
-    admin.from('tenants').select('id, full_name, email').eq('organization_id', orgId).order('full_name'),
+    admin.from('tenants').select('id, full_name, email, contracts!inner(status)').eq('organization_id', orgId).eq('contracts.status', 'active').order('full_name'),
     supabase.from('invoices')
       .select('id, amount, currency, due_date, tenants(id, full_name, email)')
       .eq('organization_id', orgId)
