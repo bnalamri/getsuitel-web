@@ -69,16 +69,14 @@ export async function POST(req: Request) {
   const ownerIds = (orgs ?? []).map(o => o.owner_id as string)
   console.log(`[notices] orgs found=${ownerIds.length}`)
 
-  // Get emails from profiles table (email is stored at signup via trigger)
-  let emails: string[] = []
-  if (ownerIds.length > 0) {
-    const { data: profileRows, error: profileErr } = await admin
-      .from('profiles')
-      .select('email')
-      .in('id', ownerIds)
-    if (profileErr) console.error('[notices] profiles email query error:', profileErr.message)
-    emails = (profileRows ?? []).map(p => p.email).filter(Boolean) as string[]
-  }
+  // Get current emails from auth.users — handles email changes after signup
+  const emailResults = await Promise.all(
+    ownerIds.map(async (id) => {
+      const { data } = await admin.auth.admin.getUserById(id)
+      return data?.user?.email ?? null
+    })
+  )
+  const emails = emailResults.filter(Boolean) as string[]
 
   console.log(`[notices] emails found=${emails.length}`, JSON.stringify(emails))
 
