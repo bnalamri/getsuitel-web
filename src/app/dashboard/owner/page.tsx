@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle } from 'lucide-react'
+import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle, Bell } from 'lucide-react'
 import Link from 'next/link'
 import WelcomeModal from '@/components/WelcomeModal'
 import StaffWelcomeModal from '@/components/StaffWelcomeModal'
@@ -57,6 +57,20 @@ export default async function OwnerDashboard() {
 
   const orgId = org.id as string
 
+  // Fetch unread platform notices count
+  const { data: platformNotices } = await admin
+    .from('platform_notices')
+    .select('id')
+    .or(`target_org_id.is.null,target_org_id.eq.${orgId}`)
+
+  const { data: platformReads } = await admin
+    .from('platform_notice_reads')
+    .select('notice_id')
+    .eq('user_id', user.id)
+
+  const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
+  const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
+
   const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('units').select('id, status', { count: 'exact' }).eq('organization_id', orgId),
@@ -113,6 +127,25 @@ export default async function OwnerDashboard() {
           </p>
         )}
       </div>
+
+      {/* Platform notice banner */}
+      {unreadPlatformNotices > 0 && (
+        <Link href="/dashboard/owner/platform-notices"
+          className="flex items-center gap-3 bg-navy-700 text-white rounded-xl px-5 py-3.5 hover:bg-navy-800 transition-colors">
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Bell size={16} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">
+              {unreadPlatformNotices === 1 ? '1 new notice' : `${unreadPlatformNotices} new notices`} from GetSuitel
+            </div>
+            <div className="text-xs text-white/70">Click to view platform announcements</div>
+          </div>
+          <span className="bg-white text-navy-700 text-xs font-bold px-2.5 py-1 rounded-full">
+            {unreadPlatformNotices}
+          </span>
+        </Link>
+      )}
 
       {/* Onboarding — owner only, skip in demo mode */}
       {isOwner && !isDemo && <OnboardingChecklist steps={onboardingSteps} orgId={orgId} />}

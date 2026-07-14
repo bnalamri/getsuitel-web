@@ -12,7 +12,8 @@ export async function POST(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['owner', 'manager'].includes(profile.role)) {
+  const allowedRoles = ['owner', 'manager', 'property_manager', 'financial_manager']
+  if (!profile || !allowedRoles.includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (!profile.organization_id) {
@@ -20,8 +21,17 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  // rows is an array of notice objects (one or many tenants)
-  const { rows } = body as { rows: { tenant_id: string | null; type: string; subject: string; body: string; attachment_url: string | null }[] }
+  const { rows } = body as {
+    rows: {
+      tenant_id?: string | null
+      technician_id?: string | null
+      recipient_type?: 'tenant' | 'technician'
+      type: string
+      subject: string
+      body: string
+      attachment_url: string | null
+    }[]
+  }
 
   if (!rows || rows.length === 0) {
     return NextResponse.json({ error: 'No rows provided' }, { status: 400 })
@@ -29,7 +39,16 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient()
   const { error } = await admin.from('notices').insert(
-    rows.map(r => ({ ...r, organization_id: profile.organization_id }))
+    rows.map(r => ({
+      organization_id: profile.organization_id,
+      type: r.type,
+      subject: r.subject,
+      body: r.body,
+      attachment_url: r.attachment_url ?? null,
+      recipient_type: r.recipient_type ?? 'tenant',
+      tenant_id: r.tenant_id ?? null,
+      technician_id: r.technician_id ?? null,
+    }))
   )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

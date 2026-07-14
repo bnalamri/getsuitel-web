@@ -2,20 +2,21 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, X, Loader2, AlertCircle, Bell, Paperclip, UploadCloud } from 'lucide-react'
-// Note: createClient is kept for storage uploads only; DB writes go through /api/notices
+import { Plus, X, Loader2, AlertCircle, Bell, HardHat, Paperclip, UploadCloud, Users } from 'lucide-react'
 
-type Tenant = { id: string; full_name: string; email: string }
+type Tenant     = { id: string; full_name: string; email: string }
+type Technician = { id: string; full_name: string; email: string }
 type OverdueInvoice = { id: string; amount: number; currency: string; due_date: string; tenants: { id: string; full_name: string; email: string } | null }
 
 const LATE_PAYMENT_TEMPLATE = (tenantName: string, amount: number, currency: string, dueDate: string) =>
   `Dear ${tenantName},\n\nThis is a formal notice that your rent payment of ${amount.toLocaleString()} ${currency}, which was due on ${dueDate}, has not been received.\n\nPlease arrange payment within 5 business days to avoid further action.\n\nIf you have already made the payment, please disregard this notice and contact us with the payment confirmation.\n\nThank you for your prompt attention to this matter.\n\nSincerely,\nProperty Management`
 
 export default function AddNoticeForm({
-  orgId, tenants, overdueInvoices
+  orgId, tenants, technicians, overdueInvoices,
 }: {
   orgId: string
   tenants: Tenant[]
+  technicians: Technician[]
   overdueInvoices: OverdueInvoice[]
 }) {
   const [open, setOpen] = useState(false)
@@ -27,15 +28,20 @@ export default function AddNoticeForm({
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  // Recipient group: 'tenant' | 'technician'
+  const [recipientGroup, setRecipientGroup] = useState<'tenant' | 'technician'>('tenant')
   const [type, setType] = useState<'late_payment' | 'general'>('late_payment')
   const [tenantId, setTenantId] = useState<string>(overdueInvoices[0]?.tenants?.id ?? tenants[0]?.id ?? '')
+  const [technicianId, setTechnicianId] = useState<string>(technicians[0]?.id ?? '')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [sendToAll, setSendToAll] = useState(false)
 
   function closeAndReset() {
+    setRecipientGroup('tenant')
     setType('late_payment')
     setTenantId(overdueInvoices[0]?.tenants?.id ?? tenants[0]?.id ?? '')
+    setTechnicianId(technicians[0]?.id ?? '')
     setSubject('')
     setBody('')
     setSendToAll(false)
@@ -45,10 +51,17 @@ export default function AddNoticeForm({
     setOpen(false)
   }
 
+  function handleGroupChange(g: 'tenant' | 'technician') {
+    setRecipientGroup(g)
+    setType('general')
+    setSubject('')
+    setBody('')
+    setSendToAll(false)
+  }
+
   function handleTypeChange(newType: 'late_payment' | 'general') {
     setType(newType)
     if (newType === 'late_payment') {
-      // Auto-fill from first overdue invoice
       const inv = overdueInvoices[0]
       if (inv?.tenants) {
         setTenantId(inv.tenants.id)
@@ -77,8 +90,7 @@ export default function AddNoticeForm({
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { setError('File must be under 5MB'); return }
-    setUploading(true)
-    setError('')
+    setUploading(true); setError('')
     const supabase = createClient()
     const ext = file.name.split('.').pop()
     const path = `notices/${orgId}/${Date.now()}.${ext}`
@@ -93,11 +105,30 @@ export default function AddNoticeForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!subject.trim() || !body.trim()) { setError('Subject and body are required'); return }
-    setLoading(true)
-    setError('')
-    const rows = sendToAll
-      ? tenants.map(t => ({ tenant_id: t.id, type, subject, body, attachment_url: attachmentUrl }))
-      : [{ tenant_id: tenantId || null, type, subject, body, attachment_url: attachmentUrl }]
+    setLoading(true); setError('')
+
+    let rows: object[]
+    let emailRecipients: { email: string }[]
+
+    if (recipientGroup === 'technician') {
+      if (sendToAll) {
+        rows = technicians.map(t => ({
+          technician_id: t.id, recipient_type: 'technician',
+          type: 'general', subject, body, attachment_url: attachmentUrl,
+        }))
+        emailRecipients = technicians
+      } else {
+        const tech = technicians.find(t => t.id === technicianId)
+        rows = [{ technician_id: technicianId || null, recipient_type: 'technician', type: 'general', subject, body, attachment_url: attachmentUrl }]
+        emailRecipients = tech ? [tech] : []
+      }
+    } else {
+      // tenant
+      rows = sendToAll
+        ? tenants.map(t => ({ tenant_id: t.id, recipient_type: 'tenant', type, subject, body, attachment_url: attachmentUrl }))
+        : [{ tenant_id: tenantId || null, recipient_type: 'tenant', type, subject, body, attachment_url: attachmentUrl }]
+      emailRecipients = sendToAll ? tenants : tenants.filter(t => t.id === tenantId)
+    }
 
     const res = await fetch('/api/notices', {
       method: 'POST',
@@ -108,12 +139,11 @@ export default function AddNoticeForm({
     if (!res.ok) { setError(noticeJson.error ?? 'Failed to send notice'); setLoading(false); return }
 
     // Send emails
-    const recipients = sendToAll ? tenants : tenants.filter(t => t.id === tenantId)
     await Promise.allSettled(
-      recipients.map(t => fetch('/api/email/notice', {
+      emailRecipients.map(r => fetch('/api/email/notice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: t.email, subject, body, type, attachmentUrl }),
+        body: JSON.stringify({ to: r.email, subject, body, type: recipientGroup === 'technician' ? 'general' : type, attachmentUrl }),
       }))
     )
 
@@ -124,12 +154,8 @@ export default function AddNoticeForm({
 
   function handleOpen() {
     setOpen(true)
-    // Auto-select late_payment if there are overdue invoices
-    if (overdueInvoices.length > 0) {
-      handleTypeChange('late_payment')
-    } else {
-      setType('general')
-    }
+    if (overdueInvoices.length > 0) handleTypeChange('late_payment')
+    else setType('general')
   }
 
   if (!open) return (
@@ -143,31 +169,72 @@ export default function AddNoticeForm({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white">
           <h2 className="font-bold text-slate-900">Send Notice</h2>
-          <button onClick={() => closeAndReset()} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+          <button onClick={closeAndReset} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Type selector */}
+          {/* Recipient Group */}
           <div>
-            <label className="label">Notice Type</label>
+            <label className="label">Send to</label>
             <div className="grid grid-cols-2 gap-2">
               {([
-                { value: 'late_payment', icon: AlertCircle, label: 'Late Rent Payment', color: 'border-red-300 bg-red-50 text-red-700' },
-                { value: 'general', icon: Bell, label: 'General Notice', color: 'border-blue-300 bg-blue-50 text-blue-700' },
+                { value: 'tenant', icon: Users, label: 'Tenants' },
+                { value: 'technician', icon: HardHat, label: 'Technicians' },
               ] as const).map(opt => (
                 <button key={opt.value} type="button"
-                  onClick={() => handleTypeChange(opt.value)}
+                  onClick={() => handleGroupChange(opt.value)}
                   className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all
-                    ${type === opt.value ? opt.color + ' ring-2 ring-offset-1 ring-current' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                  <opt.icon size={15} />
-                  {opt.label}
+                    ${recipientGroup === opt.value
+                      ? 'border-navy-700 bg-navy-50 text-navy-700 ring-2 ring-offset-1 ring-navy-700'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                  <opt.icon size={15} />{opt.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Tenant selector */}
-          {type === 'late_payment' ? (
+          {/* Notice Type (tenants only) */}
+          {recipientGroup === 'tenant' && (
+            <div>
+              <label className="label">Notice Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: 'late_payment', icon: AlertCircle, label: 'Late Rent Payment', color: 'border-red-300 bg-red-50 text-red-700' },
+                  { value: 'general', icon: Bell, label: 'General Notice', color: 'border-blue-300 bg-blue-50 text-blue-700' },
+                ] as const).map(opt => (
+                  <button key={opt.value} type="button"
+                    onClick={() => handleTypeChange(opt.value)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all
+                      ${type === opt.value ? opt.color + ' ring-2 ring-offset-1 ring-current' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                    <opt.icon size={15} />{opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recipient selector */}
+          {recipientGroup === 'technician' ? (
+            <div>
+              <label className="label">Technician</label>
+              {technicians.length === 0 ? (
+                <div className="text-sm text-slate-500 bg-slate-50 rounded-lg p-3">No technicians found in your team.</div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="sendAllTech" checked={sendToAll} onChange={e => setSendToAll(e.target.checked)} className="rounded" />
+                    <label htmlFor="sendAllTech" className="text-sm text-slate-700 cursor-pointer">Send to all technicians</label>
+                  </div>
+                  {!sendToAll && (
+                    <select className="input" value={technicianId} onChange={e => setTechnicianId(e.target.value)}>
+                      <option value="">— Select technician —</option>
+                      {technicians.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                    </select>
+                  )}
+                </>
+              )}
+            </div>
+          ) : type === 'late_payment' ? (
             <div>
               <label className="label">Tenant with overdue payment</label>
               {overdueInvoices.length === 0 ? (
@@ -210,7 +277,7 @@ export default function AddNoticeForm({
             <textarea className="input font-mono text-xs leading-relaxed" rows={8} required value={body} onChange={e => setBody(e.target.value)} placeholder="Write your notice here..." />
           </div>
 
-          {/* Attachment (general only) */}
+          {/* Attachment */}
           <div>
             <label className="label">Attachment <span className="text-slate-400 font-normal">(optional, max 5MB)</span></label>
             <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" className="hidden" onChange={handleFileUpload} />
@@ -218,9 +285,7 @@ export default function AddNoticeForm({
               <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
                 <Paperclip size={14} />
                 <span className="flex-1 truncate">{attachmentName}</span>
-                <button type="button" onClick={() => { setAttachmentUrl(null); setAttachmentName(null) }} className="text-green-600 hover:text-green-800">
-                  <X size={14} />
-                </button>
+                <button type="button" onClick={() => { setAttachmentUrl(null); setAttachmentName(null) }} className="text-green-600 hover:text-green-800"><X size={14} /></button>
               </div>
             ) : (
               <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
@@ -234,7 +299,7 @@ export default function AddNoticeForm({
           {error && <div className="text-red-600 text-sm">{error}</div>}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => closeAndReset()} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={closeAndReset} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={loading || uploading} className="btn-primary flex-1">
               {loading ? <Loader2 size={16} className="animate-spin" /> : 'Send Notice'}
             </button>

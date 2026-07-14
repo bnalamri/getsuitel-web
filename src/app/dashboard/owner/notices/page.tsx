@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Bell, Clock, FileText, AlertCircle } from 'lucide-react'
+import { Bell, Clock, FileText, AlertCircle, HardHat } from 'lucide-react'
 import AddNoticeForm from './AddNoticeForm'
 
 export const metadata = { title: 'Notices' }
@@ -25,20 +25,40 @@ export default async function NoticesPage() {
 
   const admin = createAdminClient()
 
-  // Fetch notices + all tenants + overdue invoices (for pre-filling late payment notice)
-  const [noticesRes, tenantsRes, overdueRes] = await Promise.all([
-    supabase.from('notices').select('*, tenants(full_name)').eq('organization_id', orgId).order('created_at', { ascending: false }),
+  const [noticesRes, tenantsRes, overdueRes, techniciansRes] = await Promise.all([
+    admin.from('notices')
+      .select('*, tenants(full_name), technician:technician_id(full_name)')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false }),
     admin.from('tenants').select('id, full_name, email').eq('organization_id', orgId).order('full_name'),
     supabase.from('invoices')
       .select('id, amount, currency, due_date, tenants(id, full_name, email)')
       .eq('organization_id', orgId)
       .eq('status', 'overdue')
       .order('due_date'),
+    // Technicians: profiles with role='technician' in this org
+    admin.from('profiles')
+      .select('id, full_name:raw_user_meta_data->full_name, organization_id')
+      .eq('organization_id', orgId)
+      .eq('role', 'technician'),
   ])
 
   const notices = noticesRes.data ?? []
   const tenants = tenantsRes.data ?? []
   const overdueInvoices = overdueRes.data ?? []
+
+  // Build technician list from profiles + auth users
+  const techProfiles = techniciansRes.data ?? []
+  const technicianIds = techProfiles.map(p => p.id)
+
+  const techEmails: { id: string; full_name: string; email: string }[] = []
+  await Promise.all(technicianIds.map(async (tid) => {
+    const { data: authUser } = await admin.auth.admin.getUserById(tid)
+    const email = authUser?.user?.email ?? ''
+    const name = (authUser?.user?.user_metadata?.full_name as string) ?? email
+    techEmails.push({ id: tid, full_name: name, email })
+  }))
+  techEmails.sort((a, b) => a.full_name.localeCompare(b.full_name))
 
   return (
     <div className="space-y-6">
@@ -47,7 +67,12 @@ export default async function NoticesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Notices</h2>
           <p className="text-slate-500 text-sm mt-0.5">{notices.length} notices sent</p>
         </div>
-        <AddNoticeForm orgId={orgId} tenants={tenants} overdueInvoices={overdueInvoices as never} />
+        <AddNoticeForm
+          orgId={orgId}
+          tenants={tenants}
+          technicians={techEmails}
+          overdueInvoices={overdueInvoices as never}
+        />
       </div>
 
       {/* Overdue alert banner */}
@@ -72,7 +97,7 @@ export default async function NoticesPage() {
         <div className="card p-16 text-center">
           <Bell size={40} className="mx-auto text-slate-300 mb-3" />
           <h3 className="font-semibold text-slate-700 mb-1">No notices yet</h3>
-          <p className="text-slate-400 text-sm">Send late payment warnings or general notices to your tenants.</p>
+          <p className="text-slate-400 text-sm">Send late payment warnings or general notices to your tenants and technicians.</p>
         </div>
       ) : (
         <div className="card overflow-x-auto">
@@ -81,7 +106,7 @@ export default async function NoticesPage() {
               <tr>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Type</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Subject</th>
-                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Tenant</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Recipient</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Attachment</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Sent</th>
               </tr>
@@ -89,6 +114,8 @@ export default async function NoticesPage() {
             <tbody className="divide-y divide-slate-100">
               {notices.map(n => {
                 const tenant = n.tenants as { full_name: string } | null
+                const technician = (n as Record<string, unknown>).technician as { full_name: string } | null
+                const isTech = n.recipient_type === 'technician'
                 const Icon = typeIcon[n.type] ?? Bell
                 return (
                   <tr key={n.id} className="hover:bg-slate-50">
@@ -103,7 +130,14 @@ export default async function NoticesPage() {
                       <div className="text-xs text-slate-400 truncate max-w-[220px]">{n.body}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {tenant?.full_name ?? <span className="text-slate-400 italic text-xs">All tenants</span>}
+                      {isTech ? (
+                        <span className="flex items-center gap-1.5">
+                          <HardHat size={13} className="text-slate-400" />
+                          {technician?.full_name ?? <span className="text-slate-400 italic text-xs">All technicians</span>}
+                        </span>
+                      ) : (
+                        tenant?.full_name ?? <span className="text-slate-400 italic text-xs">All tenants</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {n.attachment_url ? (
