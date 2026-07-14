@@ -81,6 +81,7 @@ type Row = {
   rentAmount:    number
   currency:      string
   paymentMethod: string
+  paidVia?:      string   // actual method used to pay (may differ from contract method)
   status:        string
   invoiceId?:    string
   paidDate?:     string
@@ -139,7 +140,7 @@ export default async function MonthlyRentStatement({
       .eq('organization_id', orgId)
       .eq('status', 'active'),
     admin.from('invoices')
-      .select('id, amount, status, due_date, paid_date, unit_id, type')
+      .select('id, amount, status, due_date, paid_date, paid_via, unit_id, type')
       .eq('organization_id', orgId)
       .eq('type', 'rent')
       .gte('due_date', monthStart)
@@ -170,7 +171,25 @@ export default async function MonthlyRentStatement({
     const tenantObj  = c.tenants as { full_name?: string } | null
     const tenant     = (tenantObj?.full_name as string) ?? '—'
 
+    const invoice = invoices.find(inv => inv.unit_id === unitId)
+
     if (c.payment_method === 'cheque' || c.payment_method === 'Cheque') {
+      // If the invoice exists and is paid (tenant paid via a different method this month), show invoice status
+      if (invoice && invoice.status === 'paid') {
+        return {
+          contractId:    c.id as string,
+          tenant, unit, property, propertyId,
+          rentAmount:    Number(c.rent_amount),
+          currency:      (c.currency as string) ?? orgCurrency,
+          paymentMethod: 'Cheque',
+          paidVia:       (invoice.paid_via as string | undefined) ?? undefined,
+          status:        'paid',
+          invoiceId:     invoice.id as string,
+          paidDate:      invoice.paid_date as string | undefined,
+          dueDate:       invoice.due_date as string | undefined,
+        }
+      }
+      // Otherwise check cheque tracker
       const cheque = cheques.find(ch => ch.unit_id === unitId)
       if (cheque) {
         return {
@@ -184,17 +203,19 @@ export default async function MonthlyRentStatement({
           chequeNumber:  cheque.cheque_number as string | undefined,
         }
       }
+      // No invoice paid, no cheque — pending
       return {
         contractId:    c.id as string,
         tenant, unit, property, propertyId,
         rentAmount:    Number(c.rent_amount),
         currency:      (c.currency as string) ?? orgCurrency,
         paymentMethod: 'Cheque',
-        status:        'cheque',
+        status:        invoice ? (invoice.status as string) : 'cheque',
+        invoiceId:     invoice?.id as string | undefined,
+        dueDate:       invoice?.due_date as string | undefined,
       }
     }
 
-    const invoice = invoices.find(inv => inv.unit_id === unitId)
     if (!invoice) {
       return {
         contractId:    c.id as string,
@@ -216,6 +237,7 @@ export default async function MonthlyRentStatement({
       rentAmount:    Number(c.rent_amount),
       currency:      (c.currency as string) ?? orgCurrency,
       paymentMethod: (c.payment_method as string) ?? 'cash',
+      paidVia:       (invoice.paid_via as string | undefined) ?? undefined,
       status:        invoice.status as string,
       invoiceId:     invoice.id as string,
       paidDate:      invoice.paid_date as string | undefined,
@@ -447,7 +469,10 @@ export default async function MonthlyRentStatement({
                           <td className="px-5 py-3 font-medium text-slate-900 whitespace-nowrap">{row.tenant}</td>
                           <td className="px-5 py-3 text-slate-600 whitespace-nowrap">{row.unit}</td>
                           <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
-                            {METHOD_LABEL[row.paymentMethod] ?? row.paymentMethod}
+                            {row.paidVia
+                              ? <span>{METHOD_LABEL[row.paidVia] ?? row.paidVia}<span className="text-slate-300 text-xs ml-1">(was {METHOD_LABEL[row.paymentMethod] ?? row.paymentMethod})</span></span>
+                              : METHOD_LABEL[row.paymentMethod] ?? row.paymentMethod
+                            }
                           </td>
                           <td className="px-5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
                             {fmtAmt(row.rentAmount, row.currency)}
