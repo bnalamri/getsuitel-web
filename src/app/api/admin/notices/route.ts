@@ -69,14 +69,12 @@ export async function POST(req: Request) {
   const ownerIds = (orgs ?? []).map(o => o.owner_id as string)
   console.log(`[notices] orgs found=${ownerIds.length}`)
 
-  // Get current emails from auth.users — handles email changes after signup
-  const emailResults = await Promise.all(
-    ownerIds.map(async (id) => {
-      const { data } = await admin.auth.admin.getUserById(id)
-      return data?.user?.email ?? null
-    })
-  )
-  const emails = emailResults.filter(Boolean) as string[]
+  // Get current emails via listUsers (single call, handles post-signup email changes)
+  const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const ownerIdSet = new Set(ownerIds)
+  const emails = users
+    .filter(u => ownerIdSet.has(u.id) && u.email)
+    .map(u => u.email as string)
 
   console.log(`[notices] emails found=${emails.length}`, JSON.stringify(emails))
 
