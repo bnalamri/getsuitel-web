@@ -80,33 +80,25 @@ export async function POST(req: Request) {
 
   console.log(`[notices] emails found=${emails.length}`, JSON.stringify(emails))
 
-  // 3. Send branded email to each owner
+  // 3. Send branded email to each owner via batch (single API call, avoids rate limiting)
   const emailHtml = buildNoticeEmail(title, body)
 
-  const sendResults = await Promise.allSettled(
-    emails.map(email =>
-      resend.emails.send({
-        from: 'GetSuitel <noreply@getsuitel.com>',
-        to: [email],
-        subject: `[GetSuitel] ${title}`,
-        html: emailHtml,
-      })
-    )
+  const { data: batchData, error: batchErr } = await resend.batch.send(
+    emails.map(email => ({
+      from: 'GetSuitel <noreply@getsuitel.com>',
+      to: [email],
+      subject: `[GetSuitel] ${title}`,
+      html: emailHtml,
+    }))
   )
 
-  const emailErrors = sendResults
-    .map((r, i) => {
-      if (r.status === 'rejected') return { email: emails[i], error: String(r.reason) }
-      if (r.status === 'fulfilled' && (r.value as { error?: unknown })?.error)
-        return { email: emails[i], error: JSON.stringify((r.value as { error?: unknown }).error) }
-      return null
-    })
-    .filter(Boolean)
-
-  console.log(`[notices] send results: ${sendResults.filter(r => r.status === 'fulfilled').length} ok, ${emailErrors.length} errors`)
-  if (emailErrors.length) {
-    console.error('[notices] email send errors:', JSON.stringify(emailErrors))
+  if (batchErr) {
+    console.error('[notices] batch send error:', JSON.stringify(batchErr))
+  } else {
+    console.log(`[notices] batch sent ok, ids=${batchData?.data?.length ?? 0}`)
   }
+
+  const emailErrors = batchErr ? [{ error: JSON.stringify(batchErr) }] : []
 
   return NextResponse.json({
     ok: true,
