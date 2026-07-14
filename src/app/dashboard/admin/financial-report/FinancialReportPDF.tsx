@@ -477,20 +477,22 @@ export default function FinancialReportPDF({
           <h2 className="text-2xl font-bold text-slate-900">Financial Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Aggregated revenue across all organizations · {printDate}</p>
         </div>
-        <button
-          onClick={handleSavePDF}
-          className="flex items-center gap-1.5 text-sm font-medium text-white bg-navy-700 hover:bg-navy-800 px-4 py-2 rounded-xl transition-colors"
-        >
-          <Download size={15} />
-          Save as PDF
-        </button>
-        <button
-          onClick={handleExportExcel}
-          className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl transition-colors"
-        >
-          <FileSpreadsheet size={15} />
-          Export to Excel
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSavePDF}
+            className="flex items-center gap-1.5 text-sm font-medium text-white bg-navy-700 hover:bg-navy-800 px-4 py-2 rounded-xl transition-colors"
+          >
+            <Download size={15} />
+            Save as PDF
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl transition-colors"
+          >
+            <FileSpreadsheet size={15} />
+            Export to Excel
+          </button>
+        </div>
       </div>
 
       {/* Per-currency KPI summary */}
