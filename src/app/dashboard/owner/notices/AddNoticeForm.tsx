@@ -108,7 +108,6 @@ export default function AddNoticeForm({
     setLoading(true); setError('')
 
     let rows: object[]
-    let emailRecipients: { email: string }[]
 
     if (recipientGroup === 'technician') {
       if (sendToAll) {
@@ -116,18 +115,14 @@ export default function AddNoticeForm({
           technician_id: t.id, recipient_type: 'technician',
           type: 'general', subject, body, attachment_url: attachmentUrl,
         }))
-        emailRecipients = technicians
       } else {
-        const tech = technicians.find(t => t.id === technicianId)
         rows = [{ technician_id: technicianId || null, recipient_type: 'technician', type: 'general', subject, body, attachment_url: attachmentUrl }]
-        emailRecipients = tech ? [tech] : []
       }
     } else {
       // tenant
       rows = sendToAll
         ? tenants.map(t => ({ tenant_id: t.id, recipient_type: 'tenant', type, subject, body, attachment_url: attachmentUrl }))
         : [{ tenant_id: tenantId || null, recipient_type: 'tenant', type, subject, body, attachment_url: attachmentUrl }]
-      emailRecipients = sendToAll ? tenants : tenants.filter(t => t.id === tenantId)
     }
 
     const res = await fetch('/api/notices', {
@@ -137,15 +132,6 @@ export default function AddNoticeForm({
     })
     const noticeJson = await res.json()
     if (!res.ok) { setError(noticeJson.error ?? 'Failed to send notice'); setLoading(false); return }
-
-    // Send emails
-    await Promise.allSettled(
-      emailRecipients.map(r => fetch('/api/email/notice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: r.email, subject, body, type: recipientGroup === 'technician' ? 'general' : type, attachmentUrl }),
-      }))
-    )
 
     closeAndReset()
     router.refresh()
