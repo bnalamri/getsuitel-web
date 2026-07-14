@@ -53,20 +53,21 @@ export async function POST(req: Request) {
 
   if (noticeErr) return NextResponse.json({ error: noticeErr.message }, { status: 500 })
 
-  // 2. Fetch recipient owner emails
-  let ownersQuery = admin
-    .from('profiles')
-    .select('id, organization_id, organizations(id, name)')
-    .eq('role', 'owner')
+  // 2. Fetch recipient owner IDs from organizations table
+  let orgsQuery = admin
+    .from('organizations')
+    .select('owner_id, id, name')
+    .not('owner_id', 'is', null)
 
   if (targetOrgId) {
-    ownersQuery = ownersQuery.eq('organization_id', targetOrgId)
+    orgsQuery = orgsQuery.eq('id', targetOrgId)
   }
 
-  const { data: ownerProfiles } = await ownersQuery
+  const { data: orgs, error: orgsErr } = await orgsQuery
+  if (orgsErr) console.error('[notices] orgs query error:', orgsErr.message)
 
   // Get emails from auth.users via admin
-  const ownerIds = (ownerProfiles ?? []).map(p => p.id)
+  const ownerIds = (orgs ?? []).map(o => o.owner_id as string)
   const emailPromises = ownerIds.map(async (ownerId) => {
     const { data: authUser, error: authErr } = await admin.auth.admin.getUserById(ownerId)
     if (authErr) console.error(`[notices] getUserById failed for ${ownerId}:`, authErr.message)
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
   })
   const emails = (await Promise.all(emailPromises)).filter(Boolean) as string[]
 
-  console.log(`[notices] ownerProfiles=${ownerIds.length} emails=${emails.length}`)
+  console.log(`[notices] orgs=${ownerIds.length} emails=${emails.length}`)
 
   // 3. Send branded email to each owner
   const emailHtml = buildNoticeEmail(title, body)
