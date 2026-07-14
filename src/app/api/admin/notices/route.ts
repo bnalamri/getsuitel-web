@@ -68,18 +68,21 @@ export async function POST(req: Request) {
   // Get emails from auth.users via admin
   const ownerIds = (ownerProfiles ?? []).map(p => p.id)
   const emailPromises = ownerIds.map(async (ownerId) => {
-    const { data: authUser } = await admin.auth.admin.getUserById(ownerId)
+    const { data: authUser, error: authErr } = await admin.auth.admin.getUserById(ownerId)
+    if (authErr) console.error(`[notices] getUserById failed for ${ownerId}:`, authErr.message)
     return authUser?.user?.email ?? null
   })
   const emails = (await Promise.all(emailPromises)).filter(Boolean) as string[]
 
+  console.log(`[notices] ownerProfiles=${ownerIds.length} emails=${emails.length}`)
+
   // 3. Send branded email to each owner
   const emailHtml = buildNoticeEmail(title, body)
 
-  await Promise.allSettled(
+  const sendResults = await Promise.allSettled(
     emails.map(email =>
       resend.emails.send({
-        from: 'GetSuitel <notices@getsuitel.com>',
+        from: 'GetSuitel <noreply@getsuitel.com>',
         to: [email],
         subject: `[GetSuitel] ${title}`,
         html: emailHtml,
@@ -87,7 +90,20 @@ export async function POST(req: Request) {
     )
   )
 
-  return NextResponse.json({ ok: true, noticeId: notice.id, recipientCount: emails.length })
+  const emailErrors = sendResults
+    .map((r, i) => r.status === 'rejected' ? { email: emails[i], error: String(r.reason) } : null)
+    .filter(Boolean)
+
+  if (emailErrors.length) {
+    console.error('[notices] email send errors:', JSON.stringify(emailErrors))
+  }
+
+  return NextResponse.json({
+    ok: true,
+    noticeId: notice.id,
+    recipientCount: emails.length,
+    emailErrors,
+  })
 }
 
 // ─── Branded email template ───────────────────────────────────────────────────
