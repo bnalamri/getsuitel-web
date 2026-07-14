@@ -17,8 +17,8 @@ export default function ShareNoticeButton({
       // 1. Try to share as a branded image card
       if (typeof navigator !== 'undefined' && navigator.share) {
         try {
-          const params = new URLSearchParams({ title, body })
-          const imgRes = await fetch(`/api/notice-image?${params}`)
+          const params = new URLSearchParams({ title, body, t: Date.now().toString() })
+          const imgRes = await fetch(`/api/notice-image?${params}`, { cache: 'no-store' })
           const blob = await imgRes.blob()
           const file = new File([blob], 'getsuitel-notice.png', { type: 'image/png' })
 
