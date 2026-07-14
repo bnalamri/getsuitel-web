@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Bell, AlertCircle, FileText, Clock } from 'lucide-react'
+import DeleteNoticeButton from '@/components/DeleteNoticeButton'
 
 export const metadata = { title: 'Notices' }
 
@@ -41,11 +42,14 @@ export default async function TenantNoticesPage() {
                     {isLate ? <AlertCircle size={17} /> : <Bell size={17} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900">{n.subject}</span>
-                      <span className={`badge text-xs ${isLate ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {isLate ? 'Late Payment' : 'General'}
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-slate-900">{n.subject}</span>
+                        <span className={`badge text-xs ${isLate ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {isLate ? 'Late Payment' : 'General'}
+                        </span>
+                      </div>
+                      <DeleteNoticeButton noticeId={n.id} apiPath="/api/notices" />
                     </div>
                     <div className="text-sm text-slate-600 mt-2 whitespace-pre-line leading-relaxed">{n.body}</div>
                     {n.attachment_url && (

@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Bell, Clock, FileText, AlertCircle, HardHat } from 'lucide-react'
 import AddNoticeForm from './AddNoticeForm'
 import ShareNoticeButton from '@/components/ShareNoticeButton'
+import DeleteNoticeButton from '@/components/DeleteNoticeButton'
 
 export const metadata = { title: 'Notices' }
 export const dynamic = 'force-dynamic'
@@ -148,7 +149,10 @@ export default async function NoticesPage() {
                       {new Date(n.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
                     </td>
                     <td className="px-4 py-3">
-                      <ShareNoticeButton title={n.subject} body={n.body} />
+                      <div className="flex items-center gap-2">
+                        <ShareNoticeButton title={n.subject} body={n.body} />
+                        <DeleteNoticeButton noticeId={n.id} apiPath="/api/notices" />
+                      </div>
                     </td>
                   </tr>
                 )
