@@ -70,7 +70,9 @@ export async function POST(req: Request) {
   console.log(`[notices] orgs found=${ownerIds.length}`)
 
   // Get current emails via listUsers (single call, handles post-signup email changes)
-  const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const { data: listData, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  if (listErr) console.error('[notices] listUsers error:', listErr.message)
+  const users = listData?.users ?? []
   const ownerIdSet = new Set(ownerIds)
   const emails = users
     .filter(u => ownerIdSet.has(u.id) && u.email)
@@ -93,9 +95,15 @@ export async function POST(req: Request) {
   )
 
   const emailErrors = sendResults
-    .map((r, i) => r.status === 'rejected' ? { email: emails[i], error: String(r.reason) } : null)
+    .map((r, i) => {
+      if (r.status === 'rejected') return { email: emails[i], error: String(r.reason) }
+      if (r.status === 'fulfilled' && (r.value as { error?: unknown })?.error)
+        return { email: emails[i], error: JSON.stringify((r.value as { error?: unknown }).error) }
+      return null
+    })
     .filter(Boolean)
 
+  console.log(`[notices] send results: ${sendResults.filter(r => r.status === 'fulfilled').length} ok, ${emailErrors.length} errors`)
   if (emailErrors.length) {
     console.error('[notices] email send errors:', JSON.stringify(emailErrors))
   }
