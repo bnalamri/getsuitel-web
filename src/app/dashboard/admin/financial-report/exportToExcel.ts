@@ -123,10 +123,10 @@ ${strings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
 
   const wsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<dimension ref="A1:${lastCol}${lastRow}"/>
 <sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>
 <sheetFormatPr defaultRowHeight="15"/>
 <cols>${colsXml}</cols>
-<dimension ref="A1:${lastCol}${lastRow}"/>
 <sheetData>${rowXml}</sheetData>
 </worksheet>`
 
@@ -253,10 +253,10 @@ export async function exportFinancialReportToExcel(data: {
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<dimension ref="A1:${lastCol}${lastRow}"/>
 <sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>
 <sheetFormatPr defaultRowHeight="16"/>
 <cols>${colsXml}</cols>
-<dimension ref="A1:${lastCol}${lastRow}"/>
 <sheetData>${rowXml}</sheetData>
 </worksheet>`
   })
