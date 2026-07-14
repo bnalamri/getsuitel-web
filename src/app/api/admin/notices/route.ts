@@ -66,16 +66,21 @@ export async function POST(req: Request) {
   const { data: orgs, error: orgsErr } = await orgsQuery
   if (orgsErr) console.error('[notices] orgs query error:', orgsErr.message)
 
-  // Get emails from auth.users via admin
   const ownerIds = (orgs ?? []).map(o => o.owner_id as string)
-  const emailPromises = ownerIds.map(async (ownerId) => {
-    const { data: authUser, error: authErr } = await admin.auth.admin.getUserById(ownerId)
-    if (authErr) console.error(`[notices] getUserById failed for ${ownerId}:`, authErr.message)
-    return authUser?.user?.email ?? null
-  })
-  const emails = (await Promise.all(emailPromises)).filter(Boolean) as string[]
+  console.log(`[notices] orgs found=${ownerIds.length}`)
 
-  console.log(`[notices] orgs=${ownerIds.length} emails=${emails.length}`)
+  // Get emails from profiles table (email is stored at signup via trigger)
+  let emails: string[] = []
+  if (ownerIds.length > 0) {
+    const { data: profileRows, error: profileErr } = await admin
+      .from('profiles')
+      .select('email')
+      .in('id', ownerIds)
+    if (profileErr) console.error('[notices] profiles email query error:', profileErr.message)
+    emails = (profileRows ?? []).map(p => p.email).filter(Boolean) as string[]
+  }
+
+  console.log(`[notices] emails found=${emails.length}`, JSON.stringify(emails))
 
   // 3. Send branded email to each owner
   const emailHtml = buildNoticeEmail(title, body)
