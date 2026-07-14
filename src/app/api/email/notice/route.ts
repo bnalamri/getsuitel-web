@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'GetSuitel <notices@getsuitel.com>',
+      from: 'GetSuitel <noreply@getsuitel.com>',
       to: [to],
       subject,
       html,
