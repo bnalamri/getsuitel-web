@@ -85,6 +85,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/technician', icon:LayoutDashboard, en:'Dashboard', ar:'لوحة التحكم' },
       { href:'/dashboard/technician/orders', icon:ClipboardList, en:'Work Orders', ar:'أوامر العمل' },
       { href:'/dashboard/technician/schedule', icon:Calendar, en:'Schedule', ar:'الجدول' },
+      { href:'/dashboard/technician/notices', icon:Bell, en:'Notices', ar:'الإشعارات' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/technician/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
