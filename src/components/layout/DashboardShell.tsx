@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck, Activity,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -35,6 +35,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
     { en:'System', ar:'النظام', items:[
+      { href:'/dashboard/admin/cron-monitor', icon:Activity, en:'Cron Monitor', ar:'مراقب المهام' },
       { href:'/dashboard/admin/demo-audio', icon:Volume2, en:'Demo Audio', ar:'صوت الجولة' },
       { href:'/dashboard/admin/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
     ]},
@@ -264,6 +265,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     owners:       {en:'Owners',ar:'الملاك'},
     subscriptions:     {en:'Subscriptions',ar:'الاشتراكات'},
     'financial-report':{en:'Financial Report',ar:'التقرير المالي'},
+    'cron-monitor':    {en:'Cron Monitor',ar:'مراقب المهام'},
     notices:      {en:'Notices',ar:'الإشعارات'},
     orders:       {en:'Work Orders',ar:'أوامر العمل'},
     schedule:     {en:'Schedule',ar:'الجدول'},
@@ -345,13 +347,4 @@ export default function DashboardShell({
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
-              {children}
-            </div>
-          </main>
-        </div>
-      </div>
-    </Ctx.Provider>
-    </DateFormatContext.Provider>
-  )
-}
+            <div clas

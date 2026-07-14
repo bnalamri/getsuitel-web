@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
+import { logCron } from '@/lib/cron-logger'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
     if (!auth.ok) return auth.response
   }
 
+  const _startTime = Date.now()
   const admin = createAdminClient()
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
@@ -295,6 +297,15 @@ export async function GET(req: Request) {
     }
   }
 
+  const _hasErrors = errors.length > 0
+  await logCron({
+    jobName: 'rent_invoicing',
+    status: _hasErrors ? 'partial' : 'success',
+    summary: { invoicesCreated, invoicesMarkedOverdue, contractsExpired, emailsSent, errorCount: errors.length },
+    errorMsg: _hasErrors ? errors.join(' | ') : undefined,
+    durationMs: Date.now() - _startTime,
+  })
+
   return NextResponse.json({
     ok: true,
     date: todayStr,
@@ -302,6 +313,6 @@ export async function GET(req: Request) {
     invoicesMarkedOverdue,
     contractsExpired,
     emailsSent,
-    ...(errors.length > 0 && { errors }),
+    ...(_hasErrors && { errors }),
   })
 }

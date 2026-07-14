@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
+import { logCron } from '@/lib/cron-logger'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const KEEP_DAYS = 7
@@ -37,6 +38,7 @@ export async function GET(req: Request) {
     if (!auth.ok) return auth.response
   }
 
+  const _startTime = Date.now()
   const admin = createAdminClient()
   const today = new Date().toISOString().split('T')[0]
   const cutoff = new Date(Date.now() - KEEP_DAYS * 86400000).toISOString().split('T')[0]
@@ -49,7 +51,10 @@ export async function GET(req: Request) {
     .not('subscription_status', 'eq', 'canceled')
 
   if (orgsErr) return NextResponse.json({ error: orgsErr.message }, { status: 500 })
-  if (!orgs?.length) return NextResponse.json({ ok: true, snapshotted: 0 })
+  if (!orgs?.length) {
+    await logCron({ jobName: 'org_snapshot', status: 'success', summary: { snapshotted: 0, orgsTotal: 0, errorCount: 0 }, durationMs: Date.now() - _startTime })
+    return NextResponse.json({ ok: true, snapshotted: 0 })
+  }
 
   // Filter out demo org if needed
   let targetOrgs = orgs
@@ -113,5 +118,12 @@ export async function GET(req: Request) {
     }
   }
 
+  await logCron({
+    jobName: 'org_snapshot',
+    status: errors.length > 0 ? 'partial' : 'success',
+    summary: { snapshotted, orgsTotal: targetOrgs.length, errorCount: errors.length },
+    errorMsg: errors.length > 0 ? errors.join(' | ') : undefined,
+    durationMs: Date.now() - _startTime,
+  })
   return NextResponse.json({ ok: true, snapshotted, errors, date: today })
 }

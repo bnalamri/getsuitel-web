@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
+import { logCron } from '@/lib/cron-logger'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'admin@getsuitel.com'
@@ -64,6 +65,7 @@ export async function GET(req: Request) {
     if (!auth.ok) return auth.response
   }
 
+  const _startTime = Date.now()
   const admin = createAdminClient()
   const now = new Date()
   const warningThreshold = new Date(now.getTime() - 83 * 86400000) // 83 days ago
@@ -77,6 +79,7 @@ export async function GET(req: Request) {
     .not('canceled_at', 'is', null)
 
   if (!canceledOrgs || canceledOrgs.length === 0) {
+    await logCron({ jobName: 'org_purge', status: 'success', summary: { warnings: 0, purged: 0, errorCount: 0 }, durationMs: Date.now() - _startTime })
     return NextResponse.json({ ok: true, warnings: 0, purged: 0 })
   }
 
@@ -173,6 +176,12 @@ export async function GET(req: Request) {
     }
   }
 
+  await logCron({
+    jobName: 'org_purge',
+    status: 'success',
+    summary: { warnings, purged },
+    durationMs: Date.now() - _startTime,
+  })
   return NextResponse.json({ ok: true, warnings, purged })
 }
 
