@@ -12,17 +12,25 @@ export async function POST(req: Request) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['owner', 'manager'].includes(profile.role)) {
+  if (!profile || !['owner', 'manager', 'financial_manager'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { invoiceId } = await req.json()
+  const { invoiceId, paid_via, notes, payment_slip_url } = await req.json()
   if (!invoiceId) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 })
 
   const admin = createAdminClient()
+  const update: Record<string, unknown> = {
+    status:    'paid',
+    paid_date: new Date().toISOString().split('T')[0],
+  }
+  if (paid_via)         update.paid_via         = paid_via
+  if (notes)            update.notes            = notes
+  if (payment_slip_url) update.payment_slip_url = payment_slip_url
+
   const { error } = await admin
     .from('invoices')
-    .update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] })
+    .update(update)
     .eq('id', invoiceId)
     .eq('organization_id', profile.organization_id)
 

@@ -1,12 +1,22 @@
 'use client'
 import { useState } from 'react'
+import { Paperclip } from 'lucide-react'
 import EditInvoiceForm from './EditInvoiceForm'
-import MarkPaidButton from './MarkPaidButton'
+import MarkPaidModal from './MarkPaidModal'
+
+const PAID_VIA_LABEL: Record<string, string> = {
+  cash:            'Cash',
+  cheque:          'Cheque',
+  bank_transfer:   'Bank Transfer',
+  mobile_transfer: 'Mobile Transfer',
+}
 
 type Invoice = {
   id: string; tenant_id: string; unit_id: string
   type: string; amount: number | string; currency: string
   due_date: string; status: string; notes?: string | null
+  paid_via?: string | null
+  payment_slip_url?: string | null
   tenants?: { full_name: string } | null
   units?: { unit_number: string; properties?: { name: string } | null } | null
 }
@@ -93,7 +103,21 @@ export default function InvoicesTable({
                     <td className="px-4 py-3 text-slate-600 capitalize">{inv.type}</td>
                     <td className="px-4 py-3 font-semibold text-slate-900">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
                     <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
-                    <td className="px-4 py-3"><span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span></td>
+                    <td className="px-4 py-3">
+                      <span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span>
+                      {inv.status === 'paid' && inv.paid_via && (
+                        <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                          {PAID_VIA_LABEL[inv.paid_via] ?? inv.paid_via}
+                          {inv.payment_slip_url && (
+                            <a href={inv.payment_slip_url} target="_blank" rel="noopener noreferrer"
+                              title="View payment slip"
+                              className="text-blue-500 hover:text-blue-700 ml-0.5">
+                              <Paperclip size={11} />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {canManage && (
                         <div className="flex items-center gap-1">
@@ -103,7 +127,7 @@ export default function InvoicesTable({
                             units={units as never}
                           />
                           {['sent', 'overdue', 'draft'].includes(inv.status) && (
-                            <MarkPaidButton invoiceId={inv.id} />
+                            <MarkPaidModal invoiceId={inv.id} />
                           )}
                         </div>
                       )}

@@ -2,7 +2,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Receipt } from 'lucide-react'
 import AddInvoiceForm from './AddInvoiceForm'
 import EditInvoiceForm from './EditInvoiceForm'
-import MarkPaidButton from './MarkPaidButton'
 import InvoicesTable from './InvoicesTable'
 
 export const metadata = { title: 'Invoices' }
