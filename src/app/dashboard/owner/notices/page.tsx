@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Bell, Clock, FileText, AlertCircle, HardHat } from 'lucide-react'
 import AddNoticeForm from './AddNoticeForm'
+import ShareNoticeButton from '@/components/ShareNoticeButton'
 
 export const metadata = { title: 'Notices' }
 export const dynamic = 'force-dynamic'
@@ -109,6 +110,7 @@ export default async function NoticesPage() {
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Recipient</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Attachment</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Sent</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -150,6 +152,9 @@ export default async function NoticesPage() {
                     <td className="px-4 py-3 text-slate-500 text-xs flex items-center gap-1">
                       <Clock size={11} />
                       {new Date(n.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ShareNoticeButton title={n.subject} body={n.body} />
                     </td>
                   </tr>
                 )
