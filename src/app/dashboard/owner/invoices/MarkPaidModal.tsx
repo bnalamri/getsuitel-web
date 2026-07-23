@@ -10,14 +10,33 @@ const PAYMENT_METHODS = [
   { value: 'mobile_transfer',  label: 'Mobile Transfer',  icon: Smartphone },
 ]
 
-export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
-  const [open, setOpen]         = useState(false)
-  const [method, setMethod]     = useState('')
-  const [notes, setNotes]       = useState('')
-  const [slip, setSlip]         = useState<File | null>(null)
+type Props = {
+  invoiceId: string
+  tenantEmail?: string | null
+  tenantName?: string | null
+  amount?: number
+  currency?: string
+  invoiceType?: string
+  dueDate?: string | null
+}
+
+export default function MarkPaidModal({
+  invoiceId,
+  tenantEmail,
+  tenantName,
+  amount,
+  currency = 'OMR',
+  invoiceType = 'rent',
+  dueDate,
+}: Props) {
+  const [open, setOpen]       = useState(false)
+  const [method, setMethod]   = useState('')
+  const [notes, setNotes]     = useState('')
+  const [slip, setSlip]       = useState<File | null>(null)
+  const [notify, setNotify]   = useState(!!tenantEmail)
   const [uploading, setUploading] = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const router  = useRouter()
 
@@ -31,7 +50,6 @@ export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
 
     let payment_slip_url: string | undefined
 
-    // Upload slip first if attached
     if (slip) {
       setUploading(true)
       const fd = new FormData()
@@ -44,6 +62,8 @@ export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
       payment_slip_url = json.url
     }
 
+    const paidDate = new Date().toISOString().split('T')[0]
+
     await fetch('/api/invoices/markpaid', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -54,6 +74,24 @@ export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
         payment_slip_url,
       }),
     })
+
+    if (notify && tenantEmail) {
+      await fetch('/api/email/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: tenantEmail,
+          tenantName: tenantName ?? 'Tenant',
+          amount,
+          currency,
+          dueDate,
+          paidDate,
+          type: invoiceType,
+          status: 'paid',
+          corrected: false,
+        }),
+      })
+    }
 
     handleClose()
     setLoading(false)
@@ -72,7 +110,6 @@ export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-900">Mark Invoice as Paid</h3>
               <button onClick={handleClose} className="text-slate-400 hover:text-slate-600">
@@ -150,6 +187,19 @@ export default function MarkPaidModal({ invoiceId }: { invoiceId: string }) {
                 onChange={e => setNotes(e.target.value)}
               />
             </div>
+
+            {/* Email notification checkbox */}
+            {tenantEmail && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={notify}
+                  onChange={e => setNotify(e.target.checked)}
+                  className="w-4 h-4 rounded accent-navy-700"
+                />
+                <span className="text-sm text-slate-600">Notify tenant by email with payment confirmation</span>
+              </label>
+            )}
 
             {error && <p className="text-xs text-red-500">{error}</p>}
 

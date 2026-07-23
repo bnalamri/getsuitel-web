@@ -14,7 +14,7 @@ const PAID_VIA_LABEL: Record<string, string> = {
 type Invoice = {
   id: string; tenant_id: string; unit_id: string
   type: string; amount: number | string; currency: string
-  due_date: string; status: string; notes?: string | null
+  due_date: string; paid_date?: string | null; status: string; notes?: string | null
   paid_via?: string | null
   payment_slip_url?: string | null
   tenants?: { full_name: string } | null
@@ -93,6 +93,7 @@ export default function InvoicesTable({
               {filtered.map(inv => {
                 const tenant = inv.tenants
                 const unit = inv.units
+                const tenantRecord = tenants.find(t => t.id === inv.tenant_id)
                 return (
                   <tr key={inv.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-slate-900">{tenant?.full_name ?? '—'}</td>
@@ -127,7 +128,15 @@ export default function InvoicesTable({
                             units={units as never}
                           />
                           {['sent', 'overdue', 'draft'].includes(inv.status) && (
-                            <MarkPaidModal invoiceId={inv.id} />
+                            <MarkPaidModal
+                              invoiceId={inv.id}
+                              tenantEmail={tenantRecord?.email ?? null}
+                              tenantName={tenant?.full_name ?? tenantRecord?.full_name ?? null}
+                              amount={Number(inv.amount)}
+                              currency={inv.currency}
+                              invoiceType={inv.type}
+                              dueDate={inv.due_date}
+                            />
                           )}
                         </div>
                       )}
