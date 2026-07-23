@@ -25,9 +25,10 @@ export default async function AdminDashboard() {
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
 
-  const [orgsRes, usersRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
+  const [orgsRes, individualsRes, companiesRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
     admin.from('organizations').select('*', { count: 'exact', head: true }),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'owner'),
+    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
+    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
     admin.from('properties').select('*', { count: 'exact', head: true }),
     admin.from('units').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }),
@@ -45,8 +46,8 @@ export default async function AdminDashboard() {
   ])
 
   const stats = [
-    { label: 'Organizations', value: orgsRes.count ?? 0, icon: Shield, color: 'bg-navy-50 text-navy-700', href: '/dashboard/admin/owners' },
-    { label: 'Owner Accounts', value: usersRes.count ?? 0, icon: Users, color: 'bg-blue-50 text-blue-700', href: '/dashboard/admin/owners' },
+    { label: 'Individuals', value: individualsRes.count ?? 0, icon: Users, color: 'bg-amber-50 text-amber-700', href: '/dashboard/admin/owners' },
+    { label: 'Companies', value: companiesRes.count ?? 0, icon: Shield, color: 'bg-navy-50 text-navy-700', href: '/dashboard/admin/owners' },
     { label: 'Properties', value: propsRes.count ?? 0, icon: Building2, color: 'bg-purple-50 text-purple-700', href: '/dashboard/admin/reports' },
     { label: 'Units', value: unitsRes.count ?? 0, icon: Home, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/admin/reports' },
     { label: 'Tenants', value: tenantsRes.count ?? 0, icon: TrendingUp, color: 'bg-orange-50 text-orange-700', href: '/dashboard/admin/reports' },
