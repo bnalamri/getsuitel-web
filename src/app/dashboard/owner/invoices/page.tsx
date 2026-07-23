@@ -23,7 +23,7 @@ export default async function InvoicesPage() {
   const defaultCurrency = (org?.default_currency as string) ?? 'OMR'
 
   const [invoicesRes, tenantsRes, unitsRes, propertiesRes] = await Promise.all([
-    supabase.from('invoices').select('*, tenants(full_name), units(unit_number, properties(name))').eq('organization_id', orgId).order('created_at', { ascending: false }),
+    supabase.from('invoices').select('*, paid_date, tenants(full_name), units(unit_number, properties(name))').eq('organization_id', orgId).order('created_at', { ascending: false }),
     admin.from('tenants').select('id, full_name, email, contracts(unit_id, status)').eq('organization_id', orgId).order('full_name'),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
     supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),

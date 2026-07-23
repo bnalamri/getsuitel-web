@@ -85,6 +85,7 @@ export default function InvoicesTable({
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Type</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Amount</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Due Date</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Paid Date</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -104,6 +105,11 @@ export default function InvoicesTable({
                     <td className="px-4 py-3 text-slate-600 capitalize">{inv.type}</td>
                     <td className="px-4 py-3 font-semibold text-slate-900">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
                     <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
+                    <td className="px-4 py-3">
+                      {inv.paid_date
+                        ? <span className="text-emerald-700 font-medium">{inv.paid_date}</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`badge ${statusColor[inv.status]}`}>{inv.status}</span>
                       {inv.status === 'paid' && inv.paid_via && (
