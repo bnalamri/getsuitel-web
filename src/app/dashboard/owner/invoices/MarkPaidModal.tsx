@@ -189,17 +189,19 @@ export default function MarkPaidModal({
             </div>
 
             {/* Email notification checkbox */}
-            {tenantEmail && (
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={notify}
-                  onChange={e => setNotify(e.target.checked)}
-                  className="w-4 h-4 rounded accent-navy-700"
-                />
-                <span className="text-sm text-slate-600">Notify tenant by email with payment confirmation</span>
-              </label>
-            )}
+            <label className={`flex items-center gap-2 select-none ${tenantEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
+              <input
+                type="checkbox"
+                checked={notify}
+                onChange={e => setNotify(e.target.checked)}
+                disabled={!tenantEmail}
+                className="w-4 h-4 rounded accent-navy-700"
+              />
+              <span className="text-sm text-slate-600">
+                Notify tenant by email with payment confirmation
+                {!tenantEmail && <span className="text-xs text-slate-400 ml-1">(no email on file)</span>}
+              </span>
+            </label>
 
             {error && <p className="text-xs text-red-500">{error}</p>}
 
