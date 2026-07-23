@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
-  const { to, tenantName, amount, currency, dueDate, type, status, corrected } = await req.json()
+  const { to, tenantName, amount, currency, dueDate, paidDate, type, status, corrected } = await req.json()
   if (!to || !amount) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const isPaid = status === 'paid'
@@ -41,10 +41,14 @@ export async function POST(req: Request) {
       <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Type</div>
       <div style="font-size:14px;font-weight:600;color:#334155;text-transform:capitalize;margin-top:4px">${type}</div>
     </td></tr>
-    <tr><td style="padding:16px 20px">
+    <tr><td style="padding:16px 20px${paidDate ? ';border-bottom:1px solid #e2e8f0' : ''}">
       <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Due Date</div>
       <div style="font-size:14px;font-weight:600;color:${isOverdue ? '#dc2626' : '#334155'};margin-top:4px">${dueDate}</div>
     </td></tr>
+    ${paidDate ? `<tr><td style="padding:16px 20px">
+      <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Paid Date</div>
+      <div style="font-size:14px;font-weight:600;color:#059669;margin-top:4px">${paidDate}</div>
+    </td></tr>` : ''}
   </table>
   <div style="margin-top:24px;font-size:12px;color:#94a3b8">Log in to your GetSuitel portal to view full details.</div>
 </td></tr>
