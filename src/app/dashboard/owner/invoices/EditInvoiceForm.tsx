@@ -71,7 +71,7 @@ export default function EditInvoiceForm({
             amount: form.amount,
             currency: form.currency,
             dueDate: form.due_date,
-            paidDate: invoice.paid_date ?? null,
+            paidDate: form.status === 'paid' ? invoice.paid_date ?? null : null,
             type: form.type,
             status: form.status,
             corrected: true,

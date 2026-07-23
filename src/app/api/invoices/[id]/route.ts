@@ -31,6 +31,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       due_date,
       status,
       notes: notes ?? null,
+      // Clear paid_date when status is not paid
+      paid_date: status === 'paid' ? undefined : null,
     })
     .eq('id', params.id)
     .eq('organization_id', profile.organization_id)
