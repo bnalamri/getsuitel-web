@@ -148,8 +148,8 @@ export default async function ReportsPage() {
   // KPIs — scoped to current month for consistency
   const curMonthPrefix = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')
   const isThisMonth = (i: AnyRow) => typeof i.due_date === 'string' && i.due_date.startsWith(curMonthPrefix)
-  const totalRevenue = inv.filter(i => i.status === 'paid' && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
-  const pendingRevenue = inv.filter(i => ['sent', 'overdue'].includes(i.status) && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
+  const totalRevenue = inv.filter(i => (i.status === 'paid' || i.status === 'cleared') && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
+  const pendingRevenue = inv.filter(i => ['sent', 'overdue', 'deposited', 'registered'].includes(i.status) && isThisMonth(i)).reduce((s, i) => s + Number(i.amount), 0)
   const occupancyRate = u.length > 0 ? Math.round((u.filter(x => x.status === 'occupied').length / u.length) * 100) : 0
   const openMaint = maint.filter(m => !['completed', 'canceled'].includes(m.status)).length
 
@@ -161,9 +161,9 @@ export default async function ReportsPage() {
     if (!propRevMap.has(propId)) propRevMap.set(propId, { name: propName, paid: 0, overdue: 0, pending: 0 })
     const g = propRevMap.get(propId)!
     const amt = Number(i.amount)
-    if (i.status === 'paid') g.paid += amt
-    else if (i.status === 'overdue') g.overdue += amt
-    else if (['sent', 'pending'].includes(i.status)) g.pending += amt
+    if (i.status === 'paid' || i.status === 'cleared') g.paid += amt
+    else if (i.status === 'overdue' || i.status === 'bounced') g.overdue += amt
+    else if (['sent', 'pending', 'deposited', 'registered'].includes(i.status)) g.pending += amt
   })
   const propRevGroups = Array.from(propRevMap.entries())
     .map(([id, g]) => ({ id, ...g }))
@@ -176,12 +176,14 @@ export default async function ReportsPage() {
   })
   const invoicedByMonth: Record<string, number> = {}
   const collectedByMonth: Record<string, number> = {}
-  inv.forEach(i => {
-    const key = (i.created_at as string).slice(0, 7)
+  inv.filter(i => i.type === 'rent').forEach(i => {
+    const key = (i.due_date as string ?? i.created_at as string).slice(0, 7)
     invoicedByMonth[key] = (invoicedByMonth[key] ?? 0) + Number(i.amount)
-    if (i.status === 'paid') collectedByMonth[key] = (collectedByMonth[key] ?? 0) + Number(i.amount)
+    if (i.status === 'paid' || i.status === 'cleared') collectedByMonth[key] = (collectedByMonth[key] ?? 0) + Number(i.amount)
   })
-  const totalInvoiced = Object.values(invoicedByMonth).reduce((s, v) => s + v, 0)
+  const totalInvoiced  = months12.reduce((s, k) => s + (invoicedByMonth[k] ?? 0), 0)
+  const totalCollected = months12.reduce((s, k) => s + (collectedByMonth[k] ?? 0), 0)
+  const totalOutstanding = totalInvoiced - totalCollected
 
   // Property Performance (for section 4)
   const propPerf = props.map(p => {
@@ -479,9 +481,9 @@ export default async function ReportsPage() {
               <tr className="bg-slate-100">
                 <Td className="font-bold text-slate-900">Total</Td>
                 <Td className="font-bold">{fmtAmt(totalInvoiced, orgCurrency)}</Td>
-                <Td className="font-bold text-emerald-700">{fmtAmt(totalRevenue, orgCurrency)}</Td>
-                <Td className="font-bold text-orange-600">{fmtAmt(pendingRevenue, orgCurrency)}</Td>
-                <Td className="font-bold">{totalInvoiced > 0 ? Math.round((totalRevenue / totalInvoiced) * 100) + '%' : dash}</Td>
+                <Td className="font-bold text-emerald-700">{fmtAmt(totalCollected, orgCurrency)}</Td>
+                <Td className="font-bold text-orange-600">{fmtAmt(totalOutstanding, orgCurrency)}</Td>
+                <Td className="font-bold">{totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) + '%' : dash}</Td>
               </tr>
             </tbody>
           </table>
