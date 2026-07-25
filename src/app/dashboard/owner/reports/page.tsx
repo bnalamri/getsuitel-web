@@ -4,6 +4,7 @@ import { BarChart2, TrendingUp, Building2, AlertTriangle, Wrench, Users, CreditC
 import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import TenantDirectoryPDF from './TenantDirectoryPDF'
+import ReportsExcelButton from './ReportsExcelButton'
 
 export const metadata = { title: 'Reports' }
 export const dynamic = 'force-dynamic'
@@ -267,7 +268,15 @@ export default async function ReportsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Reports</h2>
           <p className="text-slate-500 text-sm mt-0.5">Financial &amp; operational overview</p>
         </div>
-        <PrintButton />
+        <div className="flex gap-2">
+          <ReportsExcelButton
+            propRevGroups={propRevGroups}
+            propPerf={propPerf}
+            overdueInv={overdueInv}
+            currency={orgCurrency}
+          />
+          <PrintButton />
+        </div>
       </div>
       <div className="hidden print:block mb-4">
         <h2 className="text-xl font-bold text-slate-900">GetSuitel Management Reports</h2>

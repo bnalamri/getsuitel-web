@@ -4,6 +4,7 @@ import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import MonthPicker from './MonthPicker'
 import PropertyFilter from './PropertyFilter'
+import MonthlyExcelButton from './MonthlyExcelButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -310,6 +311,7 @@ export default async function MonthlyRentStatement({
         <div className="flex items-center gap-3">
           <MonthPicker month={`${year}-${monthStr}`} />
           <PropertyFilter properties={propertyList} selected={selectedProp} month={`${year}-${monthStr}`} />
+          <MonthlyExcelButton rows={visibleRows} monthLabel={monthLabel} orgCurrency={orgCurrency} orgName={orgName} />
           <PrintButton />
         </div>
       </div>

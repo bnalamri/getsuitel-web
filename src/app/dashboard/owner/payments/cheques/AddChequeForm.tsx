@@ -139,7 +139,7 @@ export default function AddChequeForm({
                       <select className="input" required value={row.bank_name}
                         onChange={e => updateRow(i, 'bank_name', e.target.value)}>
                         <option value="">Select bank</option>
-                        {(banks.length > 0 ? banks : OMANI_BANKS).map(b => <option key={b} value={b}>{b}</option>)}
+                        {[...(banks.length > 0 ? banks : OMANI_BANKS)].sort().map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>

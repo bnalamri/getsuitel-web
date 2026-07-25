@@ -54,13 +54,18 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
+      { href:'/dashboard/owner/expenses', icon:TrendingUp, en:'Expenses', ar:'المصروفات' },
+    ]},
+    { en:'Reports', ar:'التقارير', items:[
+      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
+      { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
+      { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
-      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/staff', icon:UserCog, en:'Staff', ar:'الموظفون' },
@@ -101,12 +106,16 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/tenants', icon:Users, en:'Tenants', ar:'المستأجرون' },
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
     ]},
+    { en:'Reports', ar:'التقارير', items:[
+      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
+      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
+      { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
+      { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
+    ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
-      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -124,8 +133,13 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
-      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/owner/expenses', icon:TrendingUp, en:'Expenses', ar:'المصروفات' },
+    ]},
+    { en:'Reports', ar:'التقارير', items:[
+      { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
+      { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
+      { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },

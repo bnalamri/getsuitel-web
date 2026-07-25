@@ -75,7 +75,7 @@ export default async function OwnerDashboard() {
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
     supabase.from('units').select('id, status', { count: 'exact' }).eq('organization_id', orgId),
     supabase.from('tenants').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
-    supabase.from('invoices').select('id, amount, status, currency').eq('organization_id', orgId),
+    supabase.from('invoices').select('id, amount, status, currency, due_date, created_at').eq('organization_id', orgId),
     supabase.from('maintenance_requests').select('id, title, status, priority, created_at').eq('organization_id', orgId).in('status', ['open', 'assigned', 'in_progress']).order('created_at', { ascending: false }).limit(5),
     supabase.from('contracts').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
   ])
@@ -83,14 +83,24 @@ export default async function OwnerDashboard() {
   const vacant = units.data?.filter(u => u.status === 'vacant').length ?? 0
   const occupied = units.data?.filter(u => u.status === 'occupied').length ?? 0
   const totalUnits = units.count ?? 0
-  const paidRevenue = invoices.data?.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0) ?? 0
+  const now = new Date()
+  const thisMonth = now.getMonth()
+  const thisYear = now.getFullYear()
+  const isThisMonth = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear
+  }
+  // Month-scoped revenue (for dashboard card)
+  const paidRevenue = invoices.data?.filter(i => i.status === 'paid' && isThisMonth(i.due_date ?? i.created_at)).reduce((s, i) => s + Number(i.amount), 0) ?? 0
   const pendingRevenue = invoices.data?.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0) ?? 0
+  // YTD (for sub-label context)
+  const ytdRevenue = invoices.data?.filter(i => i.status === 'paid' && new Date(i.due_date ?? i.created_at).getFullYear() === thisYear).reduce((s, i) => s + Number(i.amount), 0) ?? 0
 
   const stats = [
     { label: 'Properties', value: props.count ?? 0, icon: Building2, color: 'bg-navy-50 text-navy-700', href: '/dashboard/owner/properties' },
     { label: 'Total Units', value: totalUnits, sub: `${vacant} vacant`, icon: DoorOpen, color: 'bg-blue-50 text-blue-700', href: '/dashboard/owner/units' },
     { label: 'Tenants', value: tenants.count ?? 0, icon: Users, color: 'bg-purple-50 text-purple-700', href: '/dashboard/owner/tenants' },
-    { label: 'Revenue Collected', value: `${paidRevenue.toLocaleString()} ${(org.default_currency as string) ?? 'OMR'}`, sub: `${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
+    { label: 'Revenue (This Month)', value: `${paidRevenue.toLocaleString()} ${(org.default_currency as string) ?? 'OMR'}`, sub: `${ytdRevenue.toLocaleString()} YTD · ${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
     { label: 'Open Maintenance', value: maintenance.count ?? maintenance.data?.length ?? 0, icon: Wrench, color: 'bg-orange-50 text-orange-700', href: '/dashboard/owner/maintenance' },
   ]
 
