@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,9 +29,14 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
   }
 
+  // Support ?type=national_id_copy to remove that column instead
+  const url = new URL(req.url)
+  const type = url.searchParams.get('type') ?? 'municipality_agreement'
+  const columnName = type === 'national_id_copy' ? 'national_id_copy_url' : 'municipality_agreement_url'
+
   const { error } = await admin
     .from('contracts')
-    .update({ municipality_agreement_url: null })
+    .update({ [columnName]: null })
     .eq('id', params.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

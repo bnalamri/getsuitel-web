@@ -20,6 +20,7 @@ type Contract = {
   payment_method: string
   status: string
   municipality_agreement_url?: string | null
+  national_id_copy_url?: string | null
 }
 
 export default function EditContractForm({
@@ -39,6 +40,13 @@ export default function EditContractForm({
   const [removing, setRemoving] = useState(false)
   const [docRemoved, setDocRemoved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [idCopyFile, setIdCopyFile] = useState<File | null>(null)
+  const [replacingIdCopy, setReplacingIdCopy] = useState(false)
+  const [removingIdCopy, setRemovingIdCopy] = useState(false)
+  const [idCopyRemoved, setIdCopyRemoved] = useState(false)
+  const idCopyRef = useRef<HTMLInputElement>(null)
+
   const router = useRouter()
 
   const [form, setForm] = useState({
@@ -60,6 +68,9 @@ export default function EditContractForm({
     setAgreementFile(null)
     setReplacingDoc(false)
     setDocRemoved(false)
+    setIdCopyFile(null)
+    setReplacingIdCopy(false)
+    setIdCopyRemoved(false)
   }
 
   async function handleRemoveAgreement() {
@@ -71,6 +82,17 @@ export default function EditContractForm({
     setDocRemoved(true)
     setAgreementFile(null)
     setReplacingDoc(false)
+  }
+
+  async function handleRemoveIdCopy() {
+    if (!window.confirm('Remove the National ID Copy from this contract?')) return
+    setRemovingIdCopy(true)
+    const res = await fetch(`/api/contracts/${contract.id}/agreement?type=national_id_copy`, { method: 'DELETE' })
+    setRemovingIdCopy(false)
+    if (!res.ok) { const j = await res.json(); setError(j.error ?? 'Failed to remove'); return }
+    setIdCopyRemoved(true)
+    setIdCopyFile(null)
+    setReplacingIdCopy(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,10 +127,27 @@ export default function EditContractForm({
       const fd = new FormData()
       fd.append('contractId', contract.id)
       fd.append('file', agreementFile)
+      fd.append('type', 'municipality_agreement')
       const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
       if (!upRes.ok) {
         const upJson = await upRes.json()
-        setError(`Contract updated, but document upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setError(`Contract updated, but Municipality Agreement upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setLoading(false)
+        router.refresh()
+        return
+      }
+    }
+
+    // Step 3: Upload National ID Copy if provided
+    if (idCopyFile) {
+      const fd = new FormData()
+      fd.append('contractId', contract.id)
+      fd.append('file', idCopyFile)
+      fd.append('type', 'national_id_copy')
+      const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
+      if (!upRes.ok) {
+        const upJson = await upRes.json()
+        setError(`Contract updated, but National ID Copy upload failed: ${upJson.error ?? 'Unknown error'}`)
         setLoading(false)
         router.refresh()
         return
@@ -245,6 +284,62 @@ export default function EditContractForm({
                 className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
               >
                 <Paperclip size={14} /> Attach Municipality Agreement
+              </button>
+            )}
+          </div>
+
+          {/* National ID Copy */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="label">National ID Copy</label>
+            <input
+              ref={idCopyRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              style={{ position: 'absolute', width: 0, height: 0, opacity: 0, overflow: 'hidden' }}
+              onChange={e => { setIdCopyFile(e.target.files?.[0] ?? null); setReplacingIdCopy(true) }}
+            />
+            {contract.national_id_copy_url && !idCopyRemoved && !replacingIdCopy ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={contract.national_id_copy_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 bg-navy-50 hover:bg-navy-100 border border-navy-200 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <ExternalLink size={12} /> View ID Copy
+                </a>
+                <button
+                  type="button"
+                  onClick={() => idCopyRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-400 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <RefreshCw size={12} /> Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveIdCopy}
+                  disabled={removingIdCopy}
+                  className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {removingIdCopy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Remove
+                </button>
+              </div>
+            ) : idCopyFile ? (
+              <div className="flex items-center gap-2 text-sm bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                <span className="text-green-800 truncate flex-1">{idCopyFile.name}</span>
+                <button type="button" onClick={() => { setIdCopyFile(null); setReplacingIdCopy(false); if (idCopyRef.current) idCopyRef.current.value = '' }}
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => idCopyRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
+              >
+                <Paperclip size={14} /> Attach National ID Copy
               </button>
             )}
           </div>

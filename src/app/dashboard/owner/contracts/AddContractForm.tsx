@@ -13,6 +13,8 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
   const [error, setError] = useState('')
   const [agreementFile, setAgreementFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [idCopyFile, setIdCopyFile] = useState<File | null>(null)
+  const idCopyRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const today = new Date().toISOString().split('T')[0]
   const nextYear = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
@@ -32,8 +34,8 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
     }
   }
 
-  function handleOpen() { setForm(freshForm()); setError(''); setAgreementFile(null); setOpen(true) }
-  function closeAndReset() { setError(''); setAgreementFile(null); setOpen(false) }
+  function handleOpen() { setForm(freshForm()); setError(''); setAgreementFile(null); setIdCopyFile(null); setOpen(true) }
+  function closeAndReset() { setError(''); setAgreementFile(null); setIdCopyFile(null); setOpen(false) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -65,11 +67,27 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
       const fd = new FormData()
       fd.append('contractId', json.id)
       fd.append('file', agreementFile)
+      fd.append('type', 'municipality_agreement')
       const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
       if (!upRes.ok) {
         const upJson = await upRes.json()
-        // Contract was created — warn but don't block
-        setError(`Contract created, but document upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setError(`Contract created, but Municipality Agreement upload failed: ${upJson.error ?? 'Unknown error'}`)
+        setLoading(false)
+        router.refresh()
+        return
+      }
+    }
+
+    // Step 3: Upload National ID Copy if provided
+    if (idCopyFile && json.id) {
+      const fd = new FormData()
+      fd.append('contractId', json.id)
+      fd.append('file', idCopyFile)
+      fd.append('type', 'national_id_copy')
+      const upRes = await fetch('/api/contracts/upload-agreement', { method: 'POST', body: fd })
+      if (!upRes.ok) {
+        const upJson = await upRes.json()
+        setError(`Contract created, but National ID Copy upload failed: ${upJson.error ?? 'Unknown error'}`)
         setLoading(false)
         router.refresh()
         return
@@ -152,7 +170,6 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
           {/* Municipality Agreement */}
           <div className="pt-1 border-t border-slate-100">
             <label className="label">Municipality Agreement <span className="text-slate-400 font-normal">(optional)</span></label>
-            <p className="text-xs text-slate-400 mb-2">Upload a copy of the agreement registered with the Municipality (PDF, JPG, or PNG).</p>
             <input
               ref={fileRef}
               type="file"
@@ -176,6 +193,36 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
                 className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
               >
                 <Paperclip size={14} /> Attach Municipality Agreement
+              </button>
+            )}
+          </div>
+
+          {/* National ID Copy */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="label">National ID Copy <span className="text-slate-400 font-normal">(optional)</span></label>
+            <input
+              ref={idCopyRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="sr-only"
+              onChange={e => setIdCopyFile(e.target.files?.[0] ?? null)}
+            />
+            {idCopyFile ? (
+              <div className="flex items-center gap-2 text-sm bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                <span className="text-green-800 truncate flex-1">{idCopyFile.name}</span>
+                <button type="button" onClick={() => { setIdCopyFile(null); if (idCopyRef.current) idCopyRef.current.value = '' }}
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => idCopyRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
+              >
+                <Paperclip size={14} /> Attach National ID Copy
               </button>
             )}
           </div>

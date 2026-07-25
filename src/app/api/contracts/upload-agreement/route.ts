@@ -18,7 +18,18 @@ export async function POST(req: Request) {
 
   const formData = await req.formData()
   const contractId = formData.get('contractId') as string | null
-  const file = formData.get('file') as File | null
+  const file       = formData.get('file')       as File   | null
+  const rawType    = (formData.get('type') as string | null) ?? 'municipality_agreement'
+
+  const validTypes = ['municipality_agreement', 'national_id_copy'] as const
+  type DocType = typeof validTypes[number]
+  if (!validTypes.includes(rawType as DocType)) {
+    return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
+  }
+  const docType = rawType as DocType
+  const columnName = docType === 'municipality_agreement'
+    ? 'municipality_agreement_url'
+    : 'national_id_copy_url'
 
   if (!contractId || !file) {
     return NextResponse.json({ error: 'Missing contractId or file' }, { status: 400 })
@@ -38,7 +49,7 @@ export async function POST(req: Request) {
   }
 
   const ext = file.name.split('.').pop() ?? 'pdf'
-  const path = `${profile.organization_id}/${contractId}/municipality_agreement.${ext}`
+  const path = `${profile.organization_id}/${contractId}/${docType}.${ext}`
 
   const arrayBuffer = await file.arrayBuffer()
   const { error: uploadError } = await admin.storage
@@ -56,7 +67,7 @@ export async function POST(req: Request) {
 
   const { error: updateError } = await admin
     .from('contracts')
-    .update({ municipality_agreement_url: publicUrl })
+    .update({ [columnName]: publicUrl })
     .eq('id', contractId)
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
