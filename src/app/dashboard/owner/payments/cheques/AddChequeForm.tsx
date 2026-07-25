@@ -26,12 +26,13 @@ interface ChequeRow {
 const emptyRow = (): ChequeRow => ({ cheque_number: '', bank_name: '', amount: '', due_date: '' })
 
 export default function AddChequeForm({
-  orgId, tenants, units, contracts,
+  orgId, tenants, units, contracts, banks = [],
 }: {
   orgId: string
   tenants: Tenant[]
   units: Unit[]
   contracts: Contract[]
+  banks?: string[]
 }) {
   const [open, setOpen]       = useState(false)
   const [loading, setLoading] = useState(false)
@@ -138,7 +139,7 @@ export default function AddChequeForm({
                       <select className="input" required value={row.bank_name}
                         onChange={e => updateRow(i, 'bank_name', e.target.value)}>
                         <option value="">Select bank</option>
-                        {OMANI_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                        {(banks.length > 0 ? banks : OMANI_BANKS).map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>

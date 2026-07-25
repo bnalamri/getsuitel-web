@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import OrgSettingsForm from './OrgSettingsForm'
 import ProfileSettingsForm from './ProfileSettingsForm'
 import PaymentSettingsForm from './PaymentSettingsForm'
+import BankSettingsForm from './BankSettingsForm'
 
 export const metadata = { title: 'Settings' }
 
@@ -26,6 +27,11 @@ export default async function SettingsPage() {
     const { data: ps } = await admin.from('platform_settings').select('value').eq('key', 'default_currency').single()
     if (ps?.value) platformCurrency = ps.value
   } catch { /* table may not exist yet */ }
+
+  // Fetch org's bank list
+  const { data: banks } = profile?.organization_id
+    ? await admin.from('org_banks').select('id, name').eq('organization_id', profile.organization_id).order('name')
+    : { data: [] }
 
   // Always use auth user email; fall back to registration metadata for new users
   const displayProfile = {
@@ -52,6 +58,7 @@ export default async function SettingsPage() {
         <>
           <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} platformCurrency={platformCurrency} />
           <PaymentSettingsForm org={org} orgId={profile?.organization_id ?? null} />
+          <BankSettingsForm orgId={profile?.organization_id ?? ''} initialBanks={banks ?? []} />
         </>
       )}
     </div>

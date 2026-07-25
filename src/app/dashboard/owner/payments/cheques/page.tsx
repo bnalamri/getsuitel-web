@@ -15,7 +15,7 @@ export default async function ChequesPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const [chequesRes, tenantsRes, unitsRes, contractsRes] = await Promise.all([
+  const [chequesRes, tenantsRes, unitsRes, contractsRes, banksRes] = await Promise.all([
     supabase.from('cheques')
       .select('*, tenants(full_name), units(unit_number), contracts(id)')
       .eq('organization_id', orgId)
@@ -23,11 +23,13 @@ export default async function ChequesPage() {
     supabase.from('tenants').select('id, full_name').eq('organization_id', orgId),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
     supabase.from('contracts').select('id, tenant_id, unit_id, payment_method').eq('organization_id', orgId).eq('status', 'active').eq('payment_method', 'cheque'),
+    supabase.from('org_banks').select('name').eq('organization_id', orgId).order('name'),
   ])
 
   const cheques   = chequesRes.data  ?? []
   const tenants   = tenantsRes.data  ?? []
   const contracts = contractsRes.data ?? []
+  const bankNames = (banksRes.data ?? []).map((b: { name: string }) => b.name)
 
   // Only units with an active cheque contract, sorted alphabetically
   const chequeUnitIds = new Set(contracts.map((c: { unit_id: string }) => c.unit_id))
@@ -70,7 +72,7 @@ export default async function ChequesPage() {
       )}
 
       {/* Add new cheque(s) */}
-      <AddChequeForm orgId={orgId} tenants={tenants} units={units} contracts={contracts} />
+      <AddChequeForm orgId={orgId} tenants={tenants} units={units} contracts={contracts} banks={bankNames} />
 
       {/* Cheque table with filter */}
       <ChequeTable cheques={cheques as never} units={units as never} />
