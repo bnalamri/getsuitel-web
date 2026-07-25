@@ -24,7 +24,7 @@ export default async function PaymentsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const [receiptsRes, invoicesRes] = await Promise.all([
+  const [receiptsRes, invoicesRes, recentPaidRes] = await Promise.all([
     supabase.from('payment_receipts')
       .select('*, invoices(amount, currency, due_date, type), tenants(full_name)')
       .eq('organization_id', orgId)
@@ -34,12 +34,20 @@ export default async function PaymentsPage() {
       .eq('organization_id', orgId)
       .in('status', ['sent', 'overdue'])
       .order('due_date', { ascending: true }),
+    supabase.from('invoices')
+      .select('id, amount, currency, paid_date, payment_method, tenants(full_name)')
+      .eq('organization_id', orgId)
+      .in('status', ['paid', 'cleared'])
+      .eq('type', 'rent')
+      .order('paid_date', { ascending: false })
+      .limit(10),
   ])
 
-  const receipts  = receiptsRes.data  ?? []
-  const invoices  = invoicesRes.data  ?? []
-  const pending   = receipts.filter(r => r.status === 'pending')
-  const confirmed = receipts.filter(r => r.status === 'confirmed')
+  const receipts    = receiptsRes.data    ?? []
+  const invoices    = invoicesRes.data    ?? []
+  const recentPaid  = recentPaidRes.data  ?? []
+  const pending     = receipts.filter(r => r.status === 'pending')
+  const confirmed   = receipts.filter(r => r.status === 'confirmed')
 
   return (
     <div className="space-y-6">
@@ -159,10 +167,10 @@ export default async function PaymentsPage() {
         )}
       </div>
 
-      {confirmed.length > 0 && (
+      {recentPaid.length > 0 && (
         <div>
           <h3 className="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
-            <CheckCircle size={16} className="text-green-500"/> Recent Confirmations
+            <CheckCircle size={16} className="text-green-500"/> Recent Payments
           </h3>
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
@@ -171,21 +179,18 @@ export default async function PaymentsPage() {
                   <th className="text-left px-4 py-3 text-slate-600 font-semibold">Tenant</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-semibold">Method</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-semibold">Amount</th>
-                  <th className="text-left px-4 py-3 text-slate-600 font-semibold">Date</th>
+                  <th className="text-left px-4 py-3 text-slate-600 font-semibold">Paid Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {confirmed.slice(0, 10).map(r => {
-                  const inv = r.invoices as { amount: number; currency: string } | null
-                  return (
-                    <tr key={r.id}>
-                      <td className="px-4 py-3 font-medium">{(r.tenants as { full_name: string })?.full_name}</td>
-                      <td className="px-4 py-3 text-slate-500">{methodLabel[r.method]}</td>
-                      <td className="px-4 py-3 font-bold">{Number(inv?.amount ?? r.amount).toLocaleString()} {inv?.currency ?? 'OMR'}</td>
-                      <td className="px-4 py-3 text-slate-500">{r.confirmed_at?.split('T')[0]}</td>
-                    </tr>
-                  )
-                })}
+                {recentPaid.map(inv => (
+                  <tr key={inv.id}>
+                    <td className="px-4 py-3 font-medium">{(inv.tenants as { full_name: string })?.full_name}</td>
+                    <td className="px-4 py-3 text-slate-500">{methodLabel[inv.payment_method] ?? inv.payment_method}</td>
+                    <td className="px-4 py-3 font-bold">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
+                    <td className="px-4 py-3 text-slate-500">{inv.paid_date ?? '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
