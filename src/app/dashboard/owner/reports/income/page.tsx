@@ -17,7 +17,8 @@ export default async function IncomeReportPage() {
   const [invoicesRes, propertiesRes, orgRes] = await Promise.all([
     admin.from('invoices')
       .select('id, amount, status, currency, due_date, created_at, unit_id, units(property_id, properties(id, name))')
-      .eq('organization_id', orgId),
+      .eq('organization_id', orgId)
+      .eq('type', 'rent'),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
     admin.from('organizations').select('default_currency, name').eq('id', orgId).single(),
   ])

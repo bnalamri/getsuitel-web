@@ -57,9 +57,9 @@ export default function IncomeReportClient({ invoices, properties, defaultCurren
   const monthRows: MonthRow[] = MONTHS.map((label, m) => {
     const rows = filtered.filter(inv => getDate(inv).getMonth() === m)
     const issued    = rows.reduce((s, i) => s + Number(i.amount), 0)
-    const collected = rows.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-    const pending   = rows.filter(i => i.status === 'sent').reduce((s, i) => s + Number(i.amount), 0)
-    const overdue   = rows.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0)
+    const collected = rows.filter(i => i.status === 'paid' || i.status === 'cleared').reduce((s, i) => s + Number(i.amount), 0)
+    const pending   = rows.filter(i => ['sent','deposited','registered'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
+    const overdue   = rows.filter(i => i.status === 'overdue' || i.status === 'bounced').reduce((s, i) => s + Number(i.amount), 0)
     return { month: m, label, issued, collected, pending, overdue, collectionRate: issued > 0 ? (collected / issued) * 100 : 0, currency }
   })
 
@@ -77,9 +77,9 @@ export default function IncomeReportClient({ invoices, properties, defaultCurren
     return {
       propertyId: p.id, propertyName: p.name,
       issued:    rows.reduce((s, i) => s + Number(i.amount), 0),
-      collected: rows.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0),
-      pending:   rows.filter(i => i.status === 'sent').reduce((s, i) => s + Number(i.amount), 0),
-      overdue:   rows.filter(i => i.status === 'overdue').reduce((s, i) => s + Number(i.amount), 0),
+      collected: rows.filter(i => i.status === 'paid' || i.status === 'cleared').reduce((s, i) => s + Number(i.amount), 0),
+      pending:   rows.filter(i => ['sent','deposited','registered'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0),
+      overdue:   rows.filter(i => i.status === 'overdue' || i.status === 'bounced').reduce((s, i) => s + Number(i.amount), 0),
     }
   })
 
