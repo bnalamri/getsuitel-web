@@ -27,12 +27,31 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // If cleared → mark linked invoice as paid
-  if (status === 'cleared' && cheque.invoice_id) {
-    await supabase.from('invoices').update({
-      status: 'paid',
-      paid_date: cleared_date ?? new Date().toISOString().split('T')[0],
-      payment_method: 'cheque',
-    }).eq('id', cheque.invoice_id)
+  if (status === 'cleared') {
+    const paidDate = cleared_date ?? new Date().toISOString().split('T')[0]
+    if (cheque.invoice_id) {
+      // Cheque was linked to a specific invoice — update it directly
+      await supabase.from('invoices').update({
+        status:         'paid',
+        paid_date:      paidDate,
+        payment_method: 'cheque',
+        paid_via:       'cheque',
+      }).eq('id', cheque.invoice_id)
+    } else if (cheque.unit_id) {
+      // Cheque not linked to invoice — find the rent invoice for this unit/month
+      const monthPrefix = (cheque.due_date ?? paidDate).slice(0, 7)
+      await supabase.from('invoices').update({
+        status:         'paid',
+        paid_date:      paidDate,
+        payment_method: 'cheque',
+        paid_via:       'cheque',
+      })
+        .eq('unit_id', cheque.unit_id)
+        .eq('type', 'rent')
+        .gte('due_date', `${monthPrefix}-01`)
+        .lte('due_date', `${monthPrefix}-31`)
+        .in('status', ['sent', 'overdue', 'draft'])
+    }
   }
 
   // If bounced → notify tenant by email
