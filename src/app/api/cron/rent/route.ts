@@ -87,7 +87,6 @@ export async function GET(req: Request) {
       units(unit_number, properties(name))
     `)
     .eq('status', 'active')
-    .neq('payment_method', 'cheque') // cheque payments tracked separately in Cheque Tracker
     .in('organization_id', eligibleOrgIds)
 
   if (contractsErr) {
