@@ -4,6 +4,14 @@ import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Minus, ChevronDown, ChevronUp } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 
+// #041: Predefined Omani bank list
+const OMANI_BANKS = [
+  'Bank Muscat', 'Bank Dhofar', 'National Bank of Oman',
+  'HSBC Oman', 'Ahli Bank', 'Oman Arab Bank',
+  'Alizz Islamic Bank', 'Bank Nizwa', 'Sohar International',
+  'First Abu Dhabi Bank (Oman)', 'Standard Chartered Oman', 'Citibank Oman',
+]
+
 interface Tenant   { id: string; full_name: string }
 interface Unit     { id: string; unit_number: string; properties: { name: string } | null }
 interface Contract { id: string; tenant_id: string; unit_id: string }
@@ -127,8 +135,11 @@ export default function AddChequeForm({
                     </div>
                     <div>
                       {i === 0 && <label className="label">Bank</label>}
-                      <input className="input" required placeholder="BankMuscat" value={row.bank_name}
-                        onChange={e => updateRow(i, 'bank_name', e.target.value)} />
+                      <select className="input" required value={row.bank_name}
+                        onChange={e => updateRow(i, 'bank_name', e.target.value)}>
+                        <option value="">Select bank</option>
+                        {OMANI_BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
                     </div>
                     <div>
                       {i === 0 && <label className="label">Amount (OMR)</label>}
