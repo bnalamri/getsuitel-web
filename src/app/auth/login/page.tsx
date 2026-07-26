@@ -93,7 +93,7 @@ function LoginForm() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-sm font-medium text-slate-700">{T.pass}</label>
-                <Link href="/auth/forgot-password" className="text-xs text-navy-700 hover:underline font-medium">
+                <Link href="/auth/forgot-password" tabIndex={-1} className="text-xs text-navy-700 hover:underline font-medium">
                   {T.forgot}
                 </Link>
               </div>
