@@ -1,12 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen, CheckCircle, ArrowRight, Shield, HardHat, Home, CheckCircle2, Clock, AlertCircle, TrendingUp } from 'lucide-react'
+import { Building2, Users, FileText, Receipt, Wrench, BarChart2, Bell, DoorOpen, CheckCircle, ArrowRight, Shield, HardHat, Home, CheckCircle2, Clock, AlertCircle, TrendingUp, Store } from 'lucide-react'
 
 const content = {
   en: {
     dir: 'ltr', lang: 'ع',
-    nav: { features: 'Features', explore: 'Explore', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up' },
+    nav: { features: 'Features', explore: 'Explore', forWho: "Who it's for", pricing: 'Pricing', signin: 'Sign in', trial: 'Sign Up', marketplace: 'Suitel Marketplace' },
     hero: { badge: 'Smart Real Estate Management Platform', h1a: 'Manage Properties', h1b: 'Effortlessly', sub: 'GetSuitel brings owners, tenants, and service teams together in one powerful platform. From contracts to maintenance — all in one place.', cta1: 'Start Free Trial', cta2: 'Sign In', stats: [{ v:'30', s:'-day', l:'Free Trial' },{ v:'4', s:'', l:'User Roles' },{ v:'∞', s:'', l:'Units' }] },
     features: {
       title: 'Everything you need to run your properties',
@@ -65,11 +65,11 @@ const content = {
         { key: 'reports',    label: 'Reports',    headline: 'Data-driven decisions',             desc: 'Get a complete financial and operational picture of your portfolio with printable reports, revenue breakdowns, and occupancy analytics.', points: ['Revenue collection and pending reports', 'Occupancy rate charts per property', 'Printable tenant directory with contracts', 'Maintenance cost breakdown by category'] },
       ],
     },
-    footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
+    footer: { desc:'Smart real estate management platform for property owners, tenants, and service teams.', product:'Product', legal:'Legal', links:{ features:'Features', pricing:'Pricing', signup:'Sign Up', signin:'Sign In', marketplace:'Suitel Marketplace' }, legal_links:{ privacy:'Privacy Policy', terms:'Terms of Service', contact:'Contact Us' }, copyright:'GetSuitel. All rights reserved.', status:'All systems operational' },
   },
   ar: {
     dir: 'rtl', lang: 'EN',
-    nav: { features: 'المميزات', explore: 'استكشف', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب' },
+    nav: { features: 'المميزات', explore: 'استكشف', forWho: 'لمن هو؟', pricing: 'الأسعار', signin: 'تسجيل الدخول', trial: 'إنشاء حساب', marketplace: 'سوق سويتل' },
     hero: { badge: 'منصة إدارة العقارات الذكية', h1a: 'أدر عقاراتك', h1b: 'بكل سهولة', sub: 'تجمع GetSuitel الملاك والمستأجرين وفرق الخدمة في منصة واحدة قوية. من العقود إلى الصيانة — كل شيء في مكان واحد.', cta1: 'ابدأ التجربة المجانية', cta2: 'تسجيل الدخول', stats: [{ v:'30', s:'', l:'يوم تجربة مجانية' },{ v:'4', s:'', l:'أدوار مستخدمين' },{ v:'∞', s:'', l:'وحدات' }] },
     features: {
       title: 'كل ما تحتاجه لإدارة عقاراتك',
@@ -128,7 +128,7 @@ const content = {
         { key: 'reports',    label: 'التقارير',   headline: 'قرارات مبنية على البيانات',         desc: 'احصل على صورة مالية وتشغيلية كاملة لمحفظتك مع تقارير قابلة للطباعة وتحليل الإيرادات ونسب الإشغال.', points: ['تقارير الإيرادات والمدفوعات والمتأخرات', 'رسوم بيانية لنسبة الإشغال لكل عقار', 'دليل مستأجرين قابل للطباعة مع العقود', 'تحليل تكاليف الصيانة حسب الفئة'] },
       ],
     },
-    footer: { desc:'منصة إدارة العقارات الذكية للملاك والمستأجرين وفرق الخدمة.', product:'المنتج', legal:'قانوني', links:{ features:'المميزات', pricing:'الأسعار', signup:'إنشاء حساب', signin:'تسجيل الدخول' }, legal_links:{ privacy:'سياسة الخصوصية', terms:'شروط الخدمة', contact:'تواصل معنا' }, copyright:'GetSuitel. جميع الحقوق محفوظة.', status:'جميع الأنظمة تعمل' },
+    footer: { desc:'منصة إدارة العقارات الذكية للملاك والمستأجرين وفرق الخدمة.', product:'المنتج', legal:'قانوني', links:{ features:'المميزات', pricing:'الأسعار', signup:'إنشاء حساب', signin:'تسجيل الدخول', marketplace:'سوق سويتل' }, legal_links:{ privacy:'سياسة الخصوصية', terms:'شروط الخدمة', contact:'تواصل معنا' }, copyright:'GetSuitel. جميع الحقوق محفوظة.', status:'جميع الأنظمة تعمل' },
   },
 } as const
 
@@ -163,6 +163,10 @@ export default function LandingPage() {
             <a href="#explore" className="hover:text-white transition-colors">{C.nav.explore}</a>
             <a href="#for-who" className="hover:text-white transition-colors">{C.nav.forWho}</a>
             <a href="#pricing" className="hover:text-white transition-colors">{C.nav.pricing}</a>
+            <a href="https://market.getsuitel.com" target="_blank" rel="noreferrer"
+              className="flex items-center gap-1.5 text-gold-300 hover:text-gold-200 transition-colors font-medium">
+              <Store size={13}/>{C.nav.marketplace}
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={toggleLang}
@@ -577,6 +581,7 @@ export default function LandingPage() {
                 <li><a href="#pricing" className="hover:text-white transition-colors">{C.footer.links.pricing}</a></li>
                 <li><Link href="/auth/register" className="hover:text-white transition-colors">{C.footer.links.signup}</Link></li>
                 <li><Link href="/auth/login" className="hover:text-white transition-colors">{C.footer.links.signin}</Link></li>
+                <li><a href="https://market.getsuitel.com" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-gold-400 hover:text-gold-300 transition-colors">{C.footer.links.marketplace}</a></li>
               </ul>
             </div>
             <div>
