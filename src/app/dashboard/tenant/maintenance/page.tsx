@@ -2,18 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Wrench } from 'lucide-react'
 import SubmitRequestForm from './SubmitRequestForm'
+import MaintenanceList from './MaintenanceList'
 
 export const metadata = { title: 'Maintenance' }
-
-const priorityColor: Record<string, string> = {
-  urgent: 'bg-red-100 text-red-700', high: 'bg-orange-100 text-orange-700',
-  medium: 'bg-yellow-100 text-yellow-700', low: 'bg-slate-100 text-slate-600',
-}
-const statusColor: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-700', assigned: 'bg-purple-100 text-purple-700',
-  in_progress: 'bg-orange-100 text-orange-700', completed: 'bg-green-100 text-green-700',
-  canceled: 'bg-slate-100 text-slate-400',
-}
 
 export default async function TenantMaintenancePage() {
   const supabase = await createClient()
@@ -61,40 +52,11 @@ export default async function TenantMaintenancePage() {
         <div className="card p-16 text-center">
           <Wrench size={40} className="mx-auto text-slate-300 mb-3" />
           <h3 className="font-semibold text-slate-700">No requests yet</h3>
-          <p className="text-slate-400 text-sm mt-1">Submit a maintenance request and we'll take care of it.</p>
+          <p className="text-slate-400 text-sm mt-1">Submit a maintenance request and we&apos;ll take care of it.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {reqs.map(r => {
-            const tech = r.profiles as { full_name: string } | null
-            return (
-              <div key={r.id} className="card p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="font-semibold text-slate-900">{r.title}</div>
-                    <div className="text-sm text-slate-500 mt-0.5 capitalize">{r.category}</div>
-                    <div className="text-xs text-slate-400 mt-1">{r.description}</div>
-                    <div className="text-xs mt-2">
-                      {r.status === 'completed' && tech
-                        ? <span className="text-green-600">Completed by <span className="font-medium">{tech.full_name}</span></span>
-                        : tech
-                          ? <span className="text-slate-500">Assigned to: <span className="font-medium text-slate-700">{tech.full_name}</span></span>
-                          : <span className="text-amber-600 font-medium">Awaiting assignment by property manager</span>
-                      }
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <span className={`badge ${priorityColor[r.priority]}`}>{r.priority}</span>
-                    <span className={`badge ${statusColor[r.status]}`}>{r.status.replace('_',' ')}</span>
-                  </div>
-                </div>
-                <div className="text-xs text-slate-400 mt-3">
-                  {new Date(r.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <MaintenanceList requests={reqs as any} />
       )}
     </div>
   )
