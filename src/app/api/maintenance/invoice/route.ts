@@ -118,12 +118,15 @@ export async function POST(req: Request) {
     if (chargeBy === 'tenant' && request.unit_id) {
       const { data: contract } = await admin
         .from('contracts')
-        .select('tenant_id, profiles!contracts_tenant_id_fkey(full_name, email)')
+        .select('tenant_id')
         .eq('unit_id', request.unit_id)
         .eq('status', 'active')
         .maybeSingle()
 
-      const tenantProfile = contract?.profiles as { full_name: string; email: string } | null
+      const { data: tenantProfile } = contract?.tenant_id
+        ? await admin.from('profiles').select('full_name, email').eq('id', contract.tenant_id).single()
+        : { data: null }
+
       if (tenantProfile?.email) {
         const unit = request.units as { unit_number: string; properties: { name: string } | null } | null
         const location = unit ? `${unit.properties?.name ?? ''} — Unit ${unit.unit_number}` : '—'
