@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const chargeBy = request.charge_by as string | null   // 'tenant' | 'owner' | null
+  const chargeBy = (request.charge_payer ?? request.charge_by) as string | null   // 'tenant' | 'owner' | 'none' | null
 
   // Send invoice email to owner
   try {
