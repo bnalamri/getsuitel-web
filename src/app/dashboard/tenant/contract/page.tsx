@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FileText, Calendar, Home, DollarSign, User } from 'lucide-react'
+import { FileText, Calendar, Home, DollarSign, User, ExternalLink } from 'lucide-react'
 
 export const metadata = { title: 'My Contract' }
 
@@ -97,6 +97,27 @@ export default async function TenantContractPage() {
           {tenant.national_id && <div><div className="text-slate-500">National ID</div><div className="font-semibold text-slate-900 mt-0.5">{tenant.national_id}</div></div>}
         </div>
       </div>
+
+      {/* Municipality Agreement */}
+      {contract.municipality_agreement_url && (
+        <div className="card p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-navy-50 flex items-center justify-center flex-shrink-0">
+            <FileText size={18} className="text-navy-700" />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-slate-900 text-sm">Municipality Agreement</div>
+            <div className="text-xs text-slate-400 mt-0.5">Official tenancy registration document</div>
+          </div>
+          <a
+            href={contract.municipality_agreement_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1.5"
+          >
+            <ExternalLink size={13} /> View Document
+          </a>
+        </div>
+      )}
     </div>
   )
 }
