@@ -114,18 +114,13 @@ export async function POST(req: Request) {
       })
     }
 
-    // If billed to tenant, also notify the tenant
-    if (chargeBy === 'tenant' && request.unit_id) {
-      const { data: contract } = await admin
-        .from('contracts')
-        .select('tenant_id')
-        .eq('unit_id', request.unit_id)
-        .eq('status', 'active')
-        .maybeSingle()
-
-      const { data: tenantProfile } = contract?.tenant_id
-        ? await admin.from('profiles').select('full_name, email').eq('id', contract.tenant_id).single()
-        : { data: null }
+    // If billed to tenant, notify the tenant directly via tenant_id on the request
+    if (chargeBy === 'tenant' && request.tenant_id) {
+      const { data: tenantProfile } = await admin
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', request.tenant_id)
+        .single()
 
       if (tenantProfile?.email) {
         const unit = request.units as { unit_number: string; properties: { name: string } | null } | null
