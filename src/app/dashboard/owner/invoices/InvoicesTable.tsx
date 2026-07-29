@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { Paperclip } from 'lucide-react'
+import { Paperclip, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import EditInvoiceForm from './EditInvoiceForm'
 import MarkPaidModal from './MarkPaidModal'
 
@@ -46,6 +48,20 @@ export default function InvoicesTable({
 }) {
   const [filterStatus,   setFilterStatus]   = useState('')
   const [filterProperty, setFilterProperty] = useState('')
+  const [cancelingId,    setCancelingId]    = useState<string | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
+
+  async function cancelInvoice(inv: Invoice) {
+    const confirmed = window.confirm(
+      `Cancel invoice for ${inv.tenants?.full_name ?? 'this tenant'} — ${Number(inv.amount).toLocaleString()} ${inv.currency}?\n\nThe record will be kept but marked as canceled.`
+    )
+    if (!confirmed) return
+    setCancelingId(inv.id)
+    await supabase.from('invoices').update({ status: 'canceled' }).eq('id', inv.id)
+    setCancelingId(null)
+    router.refresh()
+  }
 
   const filtered = invoices
     .filter(i => !filterStatus   || i.status === filterStatus)
@@ -133,7 +149,7 @@ export default function InvoicesTable({
                             tenants={tenants}
                             units={units as never}
                           />
-                          {['sent', 'overdue', 'draft'].includes(inv.status) && (
+                          {!['paid', 'canceled'].includes(inv.status) && (
                             <MarkPaidModal
                               invoiceId={inv.id}
                               tenantEmail={tenantRecord?.email ?? null}
@@ -143,6 +159,17 @@ export default function InvoicesTable({
                               invoiceType={inv.type}
                               dueDate={inv.due_date}
                             />
+                          )}
+                          {!['paid', 'canceled'].includes(inv.status) && (
+                            <button
+                              onClick={() => cancelInvoice(inv)}
+                              disabled={cancelingId === inv.id}
+                              title="Cancel invoice"
+                              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <XCircle size={13} />
+                              {cancelingId === inv.id ? 'Canceling…' : 'Cancel'}
+                            </button>
                           )}
                         </div>
                       )}
