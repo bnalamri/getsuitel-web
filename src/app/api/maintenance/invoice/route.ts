@@ -114,10 +114,11 @@ export async function POST(req: Request) {
       })
     }
 
-    // If billed to tenant, notify the tenant directly via tenant_id on the request
+    // If billed to tenant, notify the tenant
+    // tenant_id on maintenance_requests = tenants.id (not profiles.id)
     if (chargeBy === 'tenant' && request.tenant_id) {
       const { data: tenantProfile } = await admin
-        .from('profiles')
+        .from('tenants')
         .select('full_name, email')
         .eq('id', request.tenant_id)
         .single()
