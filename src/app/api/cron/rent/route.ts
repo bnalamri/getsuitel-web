@@ -52,6 +52,10 @@ export async function GET(req: Request) {
   const url   = new URL(req.url)
   const force = url.searchParams.get('force') === 'true'
 
+  // UTC date string for the response summary (not used for org-local logic)
+  const _now = new Date()
+  const runDateStr = `${_now.getUTCFullYear()}-${String(_now.getUTCMonth()+1).padStart(2,'0')}-${String(_now.getUTCDate()).padStart(2,'0')}`
+
   // ── Timezone filter: only process orgs where it's currently midnight ────────
   // Pass ?force=true to bypass when triggering manually as superadmin
   const { data: activeOrgs } = await admin
@@ -344,7 +348,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    date: todayStr,
+    date: runDateStr,
     invoicesCreated,
     invoicesMarkedOverdue,
     contractsExpired,
