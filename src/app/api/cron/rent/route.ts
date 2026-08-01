@@ -49,15 +49,20 @@ export async function GET(req: Request) {
   const _startTime = Date.now()
   const admin = createAdminClient()
 
+  const url   = new URL(req.url)
+  const force = url.searchParams.get('force') === 'true'
+
   // ── Timezone filter: only process orgs where it's currently midnight ────────
+  // Pass ?force=true to bypass when triggering manually as superadmin
   const { data: activeOrgs } = await admin
     .from('organizations')
     .select('id, org_timezone')
     .not('subscription_status', 'eq', 'canceled')
 
-  const eligibleOrgs = (activeOrgs ?? []).filter(o =>
-    isOrgMidnight((o.org_timezone as string) ?? 'UTC')
-  )
+  const eligibleOrgs = force
+    ? (activeOrgs ?? [])
+    : (activeOrgs ?? []).filter(o => isOrgMidnight((o.org_timezone as string) ?? 'UTC'))
+
   const eligibleOrgIds = eligibleOrgs.map(o => o.id as string)
 
   // Build timezone map for local-date calculations
