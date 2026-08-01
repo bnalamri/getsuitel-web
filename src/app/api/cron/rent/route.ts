@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { Resend } from 'resend'
 import { logCron } from '@/lib/cron-logger'
-import { isOrgMidnight } from '@/lib/countries'
+import { isOrgMidnight, getOrgLocalDate } from '@/lib/countries'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
@@ -48,13 +48,6 @@ export async function GET(req: Request) {
 
   const _startTime = Date.now()
   const admin = createAdminClient()
-  const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1 // 1–12
-  const monthStr = String(month).padStart(2, '0')
-  const monthStart = `${year}-${monthStr}-01`
-  const monthEnd   = `${year}-${monthStr}-28` // cap at 28 (UI enforces max=28)
 
   // ── Timezone filter: only process orgs where it's currently midnight ────────
   const { data: activeOrgs } = await admin
@@ -62,9 +55,15 @@ export async function GET(req: Request) {
     .select('id, org_timezone')
     .not('subscription_status', 'eq', 'canceled')
 
-  const eligibleOrgIds = (activeOrgs ?? [])
-    .filter(o => isOrgMidnight((o.org_timezone as string) ?? 'UTC'))
-    .map(o => o.id as string)
+  const eligibleOrgs = (activeOrgs ?? []).filter(o =>
+    isOrgMidnight((o.org_timezone as string) ?? 'UTC')
+  )
+  const eligibleOrgIds = eligibleOrgs.map(o => o.id as string)
+
+  // Build timezone map for local-date calculations
+  const orgTzMap = new Map<string, string>(
+    (activeOrgs ?? []).map(o => [o.id as string, (o.org_timezone as string) ?? 'UTC'])
+  )
 
   if (eligibleOrgIds.length === 0) {
     return NextResponse.json({ ok: true, skipped: true, reason: 'no orgs at midnight' })
@@ -95,6 +94,13 @@ export async function GET(req: Request) {
 
   for (const contract of contracts ?? []) {
     try {
+      // Use org-local date so invoice month matches the tenant's calendar, not UTC
+      const orgTz   = orgTzMap.get(contract.organization_id as string) ?? 'UTC'
+      const { year, month, todayStr } = getOrgLocalDate(orgTz)
+      const monthStr   = String(month).padStart(2, '0')
+      const monthStart = `${year}-${monthStr}-01`
+      const monthEnd   = `${year}-${monthStr}-28`
+
       const payDay  = Math.min(Number(contract.payment_day ?? 1), 28)
       const dueDate = `${year}-${monthStr}-${String(payDay).padStart(2, '0')}`
 
@@ -202,11 +208,15 @@ export async function GET(req: Request) {
       units(unit_number, properties(name))
     `)
     .eq('status', 'sent')
-    .lt('due_date', todayStr)
     .in('organization_id', eligibleOrgIds)
 
   for (const inv of sentPastDue ?? []) {
     try {
+      const orgTz = orgTzMap.get(inv.organization_id as string) ?? 'UTC'
+      const { todayStr: orgToday } = getOrgLocalDate(orgTz)
+      // Only mark overdue if past due in org-local time
+      if (orgToday <= inv.due_date) continue
+
       await admin.from('invoices').update({ status: 'overdue' }).eq('id', inv.id)
       invoicesMarkedOverdue++
 
@@ -214,7 +224,7 @@ export async function GET(req: Request) {
       const unit   = inv.units   as { unit_number: string; properties?: { name: string } | null } | null
 
       if (tenant?.email) {
-        const daysLate  = Math.floor((now.getTime() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86400000)
+        const daysLate  = Math.floor((new Date(orgToday).getTime() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86400000)
         const amount    = `${Number(inv.amount).toLocaleString()} ${inv.currency ?? 'OMR'}`
         const unitLabel = `${unit?.properties?.name ?? ''} — Unit ${unit?.unit_number ?? ''}`
 
@@ -260,11 +270,15 @@ export async function GET(req: Request) {
       profiles:organization_id(full_name, email)
     `)
     .eq('status', 'active')
-    .lt('end_date', todayStr)
     .in('organization_id', eligibleOrgIds)
 
   for (const contract of expiredContracts ?? []) {
     try {
+      const orgTz = orgTzMap.get(contract.organization_id as string) ?? 'UTC'
+      const { todayStr: orgToday } = getOrgLocalDate(orgTz)
+      // Only expire if past end_date in org-local time
+      if (orgToday <= contract.end_date) continue
+
       await admin.from('contracts').update({ status: 'expired' }).eq('id', contract.id)
       contractsExpired++
 

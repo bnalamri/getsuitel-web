@@ -179,6 +179,34 @@ export function isOrgMidnight(tz: string): boolean {
 }
 
 /**
+ * Returns the org-local { year, month (1-12), todayStr (YYYY-MM-DD) }
+ * using the org's timezone instead of UTC.
+ * Call this inside the cron so invoice months match the local calendar date.
+ */
+export function getOrgLocalDate(tz: string): { year: number; month: number; todayStr: string } {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year:  'numeric',
+      month: '2-digit',
+      day:   '2-digit',
+    }).formatToParts(new Date())
+    const year  = parseInt(parts.find(p => p.type === 'year')?.value  ?? '2026', 10)
+    const month = parseInt(parts.find(p => p.type === 'month')?.value ?? '1',    10)
+    const day   = parseInt(parts.find(p => p.type === 'day')?.value   ?? '1',    10)
+    const todayStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return { year, month, todayStr }
+  } catch {
+    // fallback to UTC
+    const now = new Date()
+    const year  = now.getUTCFullYear()
+    const month = now.getUTCMonth() + 1
+    const day   = now.getUTCDate()
+    return { year, month, todayStr: `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}` }
+  }
+}
+
+/**
  * Returns a display string like "GMT+4" for use in the UI.
  */
 export function getUTCOffset(tz: string): string {
