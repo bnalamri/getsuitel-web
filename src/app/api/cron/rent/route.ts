@@ -208,6 +208,10 @@ export async function GET(req: Request) {
   // ── 2. Mark existing sent invoices overdue + notify ───────────────────────
   // Only invoices already in DB with status='sent' and past their due_date.
   // Email is sent exactly once — on first transition from sent → overdue.
+  // After the loop we also send ONE summary email per org to the owner.
+
+  type OverdueItem = { tenant: string; unit: string; amount: string; daysLate: number }
+  const overdueByOrg = new Map<string, OverdueItem[]>()
 
   const { data: sentPastDue } = await admin
     .from('invoices')
@@ -231,11 +235,16 @@ export async function GET(req: Request) {
 
       const tenant = inv.tenants as { full_name: string; email: string | null } | null
       const unit   = inv.units   as { unit_number: string; properties?: { name: string } | null } | null
+      const daysLate  = Math.floor((new Date(orgToday).getTime() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86400000)
+      const amount    = `${Number(inv.amount).toLocaleString()} ${inv.currency ?? 'OMR'}`
+      const unitLabel = `${unit?.properties?.name ?? ''} — Unit ${unit?.unit_number ?? ''}`
+
+      // Accumulate for owner summary
+      const orgId = inv.organization_id as string
+      if (!overdueByOrg.has(orgId)) overdueByOrg.set(orgId, [])
+      overdueByOrg.get(orgId)!.push({ tenant: tenant?.full_name ?? 'Unknown Tenant', unit: unitLabel, amount, daysLate })
 
       if (tenant?.email) {
-        const daysLate  = Math.floor((new Date(orgToday).getTime() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86400000)
-        const amount    = `${Number(inv.amount).toLocaleString()} ${inv.currency ?? 'OMR'}`
-        const unitLabel = `${unit?.properties?.name ?? ''} — Unit ${unit?.unit_number ?? ''}`
 
         const html = emailHtml('#dc2626', 'Overdue Rent Notice', `
           <div style="font-size:15px;color:#334155;line-height:1.8">
@@ -266,6 +275,69 @@ export async function GET(req: Request) {
       }
     } catch (e) {
       errors.push(`Invoice ${inv.id}: ${e}`)
+    }
+  }
+
+  // ── 2b. Owner overdue summary — one email per org listing all newly-overdue invoices ──
+  for (const [overdueOrgId, items] of overdueByOrg) {
+    try {
+      const { data: ownerData } = await admin
+        .from('organizations')
+        .select('name, profiles:owner_id(full_name, email)')
+        .eq('id', overdueOrgId)
+        .single()
+
+      const owner   = ownerData?.profiles as { full_name: string; email: string } | null
+      const orgName = (ownerData?.name as string) ?? 'Your Organization'
+
+      if (!owner?.email) continue
+
+      const rows = items.map(item => `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px">${item.tenant}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b">${item.unit}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:600;color:#dc2626">${item.amount}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#dc2626">${item.daysLate}d late</td>
+        </tr>`).join('')
+
+      const html = emailHtml('#dc2626', 'Overdue Rent Alert', `
+        <div style="font-size:15px;color:#334155;line-height:1.8">
+          Dear ${owner.full_name},<br><br>
+          <strong>${items.length} rent invoice${items.length !== 1 ? 's' : ''}</strong> in <strong>${orgName}</strong>
+          have just been marked overdue. A payment reminder has been sent to each tenant,
+          but these accounts need your attention.
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+          <thead>
+            <tr style="background:#fef2f2">
+              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Tenant</th>
+              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Unit</th>
+              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Amount</th>
+              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Overdue</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:24px">
+          <a href="${APP_URL}/dashboard/owner/invoices"
+             style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+            View Overdue Invoices
+          </a>
+        </div>`)
+
+      try {
+        await resend.emails.send({
+          from: 'GetSuitel <notices@getsuitel.com>',
+          to:   [owner.email],
+          subject: `${items.length} overdue rent invoice${items.length !== 1 ? 's' : ''} — ${orgName}`,
+          html,
+        })
+        emailsSent++
+      } catch (e) {
+        errors.push(`Owner overdue summary to ${owner.email}: ${e}`)
+      }
+    } catch (e) {
+      errors.push(`Owner overdue summary for org ${overdueOrgId}: ${e}`)
     }
   }
 

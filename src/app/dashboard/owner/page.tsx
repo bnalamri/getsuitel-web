@@ -95,6 +95,10 @@ export default async function OwnerDashboard() {
   const pendingRevenue = invoices.data?.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0) ?? 0
   // YTD (for sub-label context)
   const ytdRevenue = invoices.data?.filter(i => i.status === 'paid' && new Date(i.due_date ?? i.created_at).getFullYear() === thisYear).reduce((s, i) => s + Number(i.amount), 0) ?? 0
+  // Overdue alert
+  const overdueInvoices = invoices.data?.filter(i => i.status === 'overdue') ?? []
+  const overdueCount = overdueInvoices.length
+  const overdueTotal = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0)
 
   const stats = [
     { label: 'Properties', value: props.count ?? 0, icon: Building2, color: 'bg-navy-50 text-navy-700', href: '/dashboard/owner/properties' },
@@ -153,6 +157,25 @@ export default async function OwnerDashboard() {
           </div>
           <span className="bg-white text-navy-700 text-xs font-bold px-2.5 py-1 rounded-full">
             {unreadPlatformNotices}
+          </span>
+        </Link>
+      )}
+
+      {/* Overdue invoice alert banner */}
+      {overdueCount > 0 && (
+        <Link href="/dashboard/owner/invoices"
+          className="flex items-center gap-3 bg-red-600 text-white rounded-xl px-5 py-3.5 hover:bg-red-700 transition-colors">
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <AlertCircle size={16} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">
+              {overdueCount} overdue invoice{overdueCount !== 1 ? 's' : ''} — {overdueTotal.toLocaleString()} {(org.default_currency as string) ?? 'OMR'} unpaid
+            </div>
+            <div className="text-xs text-white/70">These are past-due and need immediate attention</div>
+          </div>
+          <span className="bg-white text-red-600 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+            Review now
           </span>
         </Link>
       )}
