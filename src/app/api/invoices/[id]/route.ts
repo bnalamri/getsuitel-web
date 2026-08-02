@@ -12,12 +12,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['owner', 'manager'].includes(profile.role)) {
+  if (!profile || !['owner', 'manager', 'financial_manager'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const body = await req.json()
-  const { tenant_id, unit_id, type, amount, currency, due_date, status, notes } = body
+  const { tenant_id, unit_id, type, amount, currency, due_date, status, notes, payment_slip_url } = body
 
   const admin = createAdminClient()
   const { error } = await admin
@@ -33,6 +33,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       notes: notes ?? null,
       // Clear paid_date when status is not paid
       paid_date: status === 'paid' ? undefined : null,
+      ...(payment_slip_url !== undefined ? { payment_slip_url } : {}),
     })
     .eq('id', params.id)
     .eq('organization_id', profile.organization_id)

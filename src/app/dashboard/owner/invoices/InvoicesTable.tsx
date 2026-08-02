@@ -145,7 +145,7 @@ export default function InvoicesTable({
                       {canManage && (
                         <div className="flex items-center gap-1">
                           <EditInvoiceForm
-                            invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, paid_date: inv.paid_date ?? null, status: inv.status, notes: inv.notes }}
+                            invoice={{ id: inv.id, tenant_id: inv.tenant_id, unit_id: inv.unit_id, type: inv.type, amount: Number(inv.amount), currency: inv.currency, due_date: inv.due_date, paid_date: inv.paid_date ?? null, status: inv.status, notes: inv.notes, payment_slip_url: inv.payment_slip_url ?? null }}
                             tenants={tenants}
                             units={units as never}
                           />
