@@ -27,7 +27,6 @@ export async function POST(req: Request) {
     .from('maintenance_requests')
     .update({ final_amount: finalAmount, charge_notes: chargeNotes || null })
     .eq('id', requestId)
-    .eq('technician_id', userId)
     .select('*, units(unit_number, unit_id:id, properties(name))')
     .single()
 

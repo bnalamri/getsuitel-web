@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Mark invoice as paid
   const { error } = await admin
     .from('maintenance_requests')
     .update({ invoice_paid: true })
@@ -33,5 +34,39 @@ export async function POST(req: Request) {
     .eq('organization_id', profile.organization_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-record as a property expense
+  try {
+    const { data: request } = await admin
+      .from('maintenance_requests')
+      .select('final_amount, unit_id, title, charge_notes, organization_id')
+      .eq('id', requestId)
+      .single()
+
+    if (request?.final_amount && request.unit_id) {
+      const { data: unit } = await admin
+        .from('units')
+        .select('property_id')
+        .eq('id', request.unit_id)
+        .single()
+
+      if (unit?.property_id) {
+        await admin.from('expenses').insert({
+          organization_id: request.organization_id,
+          property_id:     unit.property_id,
+          date:            new Date().toISOString().split('T')[0],
+          category:        'Maintenance',
+          description:     request.title,
+          amount:          request.final_amount,
+          currency:        'OMR',
+          notes:           request.charge_notes ?? null,
+        })
+      }
+    }
+  } catch (expenseErr) {
+    // Expense creation failure doesn't fail the payment — log only
+    console.error('markpaid: expense insert failed', expenseErr)
+  }
+
   return NextResponse.json({ ok: true })
 }
