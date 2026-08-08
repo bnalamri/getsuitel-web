@@ -54,17 +54,26 @@ export async function POST(req: Request) {
         .from('units').select('property_id').eq('id', request.unit_id).single()
 
       if (unit?.property_id) {
-        await admin.from('expenses').upsert({
-          organization_id:        request.organization_id,
-          property_id:            unit.property_id,
-          maintenance_request_id: requestId,
-          date:                   new Date().toISOString().split('T')[0],
-          category:               'Maintenance',
-          description:            request.title,
-          amount:                 request.final_amount,
-          currency:               'OMR',
-          notes:                  request.charge_notes ?? null,
-        }, { onConflict: 'maintenance_request_id', ignoreDuplicates: true })
+        // Check first to avoid duplicates (partial unique index isn't reliable with PostgREST upsert)
+        const { data: existing } = await admin
+          .from('expenses')
+          .select('id')
+          .eq('maintenance_request_id', requestId)
+          .maybeSingle()
+
+        if (!existing) {
+          await admin.from('expenses').insert({
+            organization_id:        request.organization_id,
+            property_id:            unit.property_id,
+            maintenance_request_id: requestId,
+            date:                   new Date().toISOString().split('T')[0],
+            category:               'maintenance',
+            description:            request.title,
+            amount:                 request.final_amount,
+            currency:               'OMR',
+            notes:                  request.charge_notes ?? null,
+          })
+        }
       }
     }
 
