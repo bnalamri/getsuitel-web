@@ -42,9 +42,17 @@ export async function POST(req: Request) {
       admin.from('organizations').select('owner_id, name').eq('id', request.organization_id).single(),
     ])
 
-    const { data: owner } = org?.owner_id
-      ? await admin.from('profiles').select('full_name, email').eq('id', org.owner_id).single()
-      : { data: null }
+    let ownerFullName: string | null = null
+    let ownerEmail: string | null = null
+    if (org?.owner_id) {
+      const [{ data: ownerProfile }, { data: { user: ownerUser } }] = await Promise.all([
+        admin.from('profiles').select('full_name').eq('id', org.owner_id).single(),
+        admin.auth.admin.getUserById(org.owner_id),
+      ])
+      ownerFullName = ownerProfile?.full_name ?? null
+      ownerEmail = ownerUser?.email ?? null
+    }
+    const owner = ownerEmail ? { full_name: ownerFullName, email: ownerEmail } : null
 
     if (owner?.email) {
       const unit = request.units as { unit_number: string; properties: { name: string } | null } | null
