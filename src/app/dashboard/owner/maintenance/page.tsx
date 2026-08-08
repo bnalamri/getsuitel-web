@@ -37,7 +37,13 @@ export default async function MaintenancePage() {
     admin.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'technician'),
   ])
 
-  const requests = reqRes.data ?? []
+  const statusOrder: Record<string, number> = { open: 0, assigned: 1, in_progress: 2, completed: 3, canceled: 4 }
+  const requests = (reqRes.data ?? []).sort((a, b) => {
+    const sa = statusOrder[a.status] ?? 5
+    const sb = statusOrder[b.status] ?? 5
+    if (sa !== sb) return sa - sb
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
   const units = unitsRes.data ?? []
   const technicians = techRes.data ?? []
 
