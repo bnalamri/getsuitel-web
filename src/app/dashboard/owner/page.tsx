@@ -95,6 +95,13 @@ export default async function OwnerDashboard() {
   const pendingRevenue = invoices.data?.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0) ?? 0
   // YTD (for sub-label context)
   const ytdRevenue = invoices.data?.filter(i => i.status === 'paid' && new Date(i.due_date ?? i.created_at).getFullYear() === thisYear).reduce((s, i) => s + Number(i.amount), 0) ?? 0
+  // Arrears: prior-month unpaid (sent or overdue, due before this month)
+  const monthStart = `${thisYear}-${String(thisMonth + 1).padStart(2, '0')}-01`
+  const arrearsInvoices = invoices.data?.filter(i =>
+    ['sent', 'overdue'].includes(i.status) && (i.due_date ?? '') < monthStart
+  ) ?? []
+  const arrearsCount = arrearsInvoices.length
+  const arrearsTotal = arrearsInvoices.reduce((s, i) => s + Number(i.amount), 0)
   // Overdue alert
   const overdueInvoices = invoices.data?.filter(i => i.status === 'overdue') ?? []
   const overdueCount = overdueInvoices.length
@@ -157,6 +164,25 @@ export default async function OwnerDashboard() {
           </div>
           <span className="bg-white text-navy-700 text-xs font-bold px-2.5 py-1 rounded-full">
             {unreadPlatformNotices}
+          </span>
+        </Link>
+      )}
+
+      {/* Arrears banner — prior-month unpaid invoices */}
+      {arrearsCount > 0 && (
+        <Link href="/dashboard/owner/reports/closing"
+          className="flex items-center gap-3 bg-amber-600 text-white rounded-xl px-5 py-3.5 hover:bg-amber-700 transition-colors">
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Receipt size={16} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">
+              {arrearsCount} carry-forward invoice{arrearsCount !== 1 ? 's' : ''} unpaid — {arrearsTotal.toLocaleString()} {(org.default_currency as string) ?? 'OMR'} outstanding
+            </div>
+            <div className="text-xs text-white/70">Prior-month arrears — open closing report to review and follow up</div>
+          </div>
+          <span className="bg-white text-amber-600 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+            View Arrears
           </span>
         </Link>
       )}
