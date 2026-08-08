@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { BarChart2, TrendingUp, Building2, AlertTriangle, Wrench, Users, CreditCard, FileText, CalendarCheck, ArrowRight } from 'lucide-react'
+import { BarChart2, TrendingUp, Building2, AlertTriangle, Wrench, Users, CreditCard, FileText, CalendarCheck, ArrowRight, BookCheck } from 'lucide-react'
 import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
 import TenantDirectoryPDF from './TenantDirectoryPDF'
@@ -295,24 +295,42 @@ export default async function ReportsPage() {
         </div>
       </div>
 
-      {/* Monthly Statement shortcut */}
-      <Link
-        href="/dashboard/owner/reports/monthly"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="no-print flex items-center justify-between bg-navy-50 border border-navy-200 hover:border-navy-400 hover:bg-navy-100 rounded-xl px-5 py-4 transition-colors group"
-      >
-        <div className="flex items-center gap-3">
-          <div className="bg-navy-700 text-white rounded-lg p-2">
-            <CalendarCheck size={16} />
+      {/* Report shortcuts */}
+      <div className="no-print grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link
+          href="/dashboard/owner/reports/monthly"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between bg-navy-50 border border-navy-200 hover:border-navy-400 hover:bg-navy-100 rounded-xl px-5 py-4 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-navy-700 text-white rounded-lg p-2">
+              <CalendarCheck size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-navy-900 text-sm">Monthly Rent Statement</div>
+              <div className="text-xs text-navy-600 mt-0.5">See who paid, who is overdue, and who is pending — printable</div>
+            </div>
           </div>
-          <div>
-            <div className="font-semibold text-navy-900 text-sm">Monthly Rent Statement</div>
-            <div className="text-xs text-navy-600 mt-0.5">See who paid, who is overdue, and who is pending this month — printable</div>
+          <ArrowRight size={16} className="text-navy-400 group-hover:text-navy-700 transition-colors flex-shrink-0" />
+        </Link>
+
+        <Link
+          href="/dashboard/owner/reports/closing"
+          className="flex items-center justify-between bg-emerald-50 border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-100 rounded-xl px-5 py-4 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-700 text-white rounded-lg p-2">
+              <BookCheck size={16} />
+            </div>
+            <div>
+              <div className="font-semibold text-emerald-900 text-sm">Month-End Closing Report</div>
+              <div className="text-xs text-emerald-700 mt-0.5">Full summary: collected, outstanding, arrears, expenses & net income</div>
+            </div>
           </div>
-        </div>
-        <ArrowRight size={16} className="text-navy-400 group-hover:text-navy-700 transition-colors flex-shrink-0" />
-      </Link>
+          <ArrowRight size={16} className="text-emerald-400 group-hover:text-emerald-700 transition-colors flex-shrink-0" />
+        </Link>
+      </div>
 
       {/* 1. KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

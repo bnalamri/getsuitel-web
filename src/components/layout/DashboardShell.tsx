@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck, Activity,
+  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -58,6 +58,7 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
+      { href:'/dashboard/owner/reports/closing', icon:BookCheck, en:'Month-End Closing', ar:'إقفال الشهر' },
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
@@ -108,6 +109,7 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
+      { href:'/dashboard/owner/reports/closing', icon:BookCheck, en:'Month-End Closing', ar:'إقفال الشهر' },
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
@@ -137,6 +139,7 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
+      { href:'/dashboard/owner/reports/closing', icon:BookCheck, en:'Month-End Closing', ar:'إقفال الشهر' },
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
