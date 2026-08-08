@@ -2,11 +2,27 @@ import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Support both cookie-based (web) and Bearer token (mobile) auth
+  const authHeader = req.headers.get('Authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  let user: { id: string } | null = null
+  const admin = createAdminClient()
+
+  if (bearerToken) {
+    // Mobile: verify JWT directly with admin client
+    const { data } = await admin.auth.getUser(bearerToken)
+    user = data.user
+  } else {
+    // Web: read session from cookies
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  }
+
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('profiles')
     .select('role, organization_id')
     .eq('id', user.id)
@@ -28,7 +44,6 @@ export async function POST(req: Request) {
   const path   = `payment-slips/${profile.organization_id}/${invoiceId}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  const admin = createAdminClient()
   const { error: uploadErr } = await admin.storage
     .from('receipts')
     .upload(path, buffer, { contentType: file.type, upsert: true })
