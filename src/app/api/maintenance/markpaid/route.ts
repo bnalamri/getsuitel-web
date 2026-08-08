@@ -51,16 +51,18 @@ export async function POST(req: Request) {
         .single()
 
       if (unit?.property_id) {
-        await admin.from('expenses').insert({
-          organization_id: request.organization_id,
-          property_id:     unit.property_id,
-          date:            new Date().toISOString().split('T')[0],
-          category:        'Maintenance',
-          description:     request.title,
-          amount:          request.final_amount,
-          currency:        'OMR',
-          notes:           request.charge_notes ?? null,
-        })
+        // upsert on maintenance_request_id — double-tap safe
+        await admin.from('expenses').upsert({
+          organization_id:        request.organization_id,
+          property_id:            unit.property_id,
+          maintenance_request_id: requestId,
+          date:                   new Date().toISOString().split('T')[0],
+          category:               'Maintenance',
+          description:            request.title,
+          amount:                 request.final_amount,
+          currency:               'OMR',
+          notes:                  request.charge_notes ?? null,
+        }, { onConflict: 'maintenance_request_id', ignoreDuplicates: true })
       }
     }
   } catch (expenseErr) {
