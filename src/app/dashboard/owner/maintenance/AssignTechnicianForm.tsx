@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check } from 'lucide-react'
+import { Loader2, Check, CalendarDays } from 'lucide-react'
 
 type Tech = { id: string; full_name: string }
 
@@ -33,6 +33,8 @@ export default function AssignTechnicianForm({
   const [scheduledDate, setScheduledDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const datePickerRef = useRef<HTMLInputElement>(null)
+  const fmt = dateFormat ?? 'DD/MM/YYYY'
   const router = useRouter()
 
   async function save() {
@@ -101,20 +103,33 @@ export default function AssignTechnicianForm({
             />
           )}
 
-          {/* Scheduled date */}
+          {/* Scheduled date — custom display so placeholder matches org date format */}
           <div>
             <label className="block text-xs text-slate-400 mb-1">Schedule date (optional)</label>
-            <input
-              type="date"
-              value={scheduledDate}
-              onChange={e => { setScheduledDate(e.target.value); setSaved(false) }}
-              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-full"
-            />
-            {scheduledDate && (
-              <div className="text-xs text-slate-400 mt-0.5">
-                {formatDate(scheduledDate, dateFormat ?? 'DD/MM/YYYY')}
-              </div>
-            )}
+            <div className="relative">
+              {/* Visible text input showing date in org format */}
+              <input
+                type="text"
+                readOnly
+                value={scheduledDate ? formatDate(scheduledDate, fmt) : ''}
+                placeholder={fmt}
+                onClick={() => datePickerRef.current?.showPicker?.()}
+                className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 pr-7 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-full cursor-pointer"
+              />
+              <CalendarDays
+                size={13}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              {/* Hidden native date picker */}
+              <input
+                ref={datePickerRef}
+                type="date"
+                value={scheduledDate}
+                onChange={e => { setScheduledDate(e.target.value); setSaved(false) }}
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                tabIndex={-1}
+              />
+            </div>
           </div>
         </div>
       )}
