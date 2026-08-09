@@ -25,6 +25,7 @@ export default function AssignTechnicianForm({
   currentChargeAmount?: number | null
   dateFormat?: string
 }) {
+  const [expanded, setExpanded] = useState(!currentTechId)
   const [techId, setTechId] = useState(currentTechId ?? '')
   const [chargePayer, setChargePayer] = useState(currentChargePayer ?? 'none')
   const [chargeAmount, setChargeAmount] = useState(
@@ -36,6 +37,29 @@ export default function AssignTechnicianForm({
   const datePickerRef = useRef<HTMLInputElement>(null)
   const fmt = dateFormat ?? 'DD/MM/YYYY'
   const router = useRouter()
+
+  // Collapsed view — assigned tech + Reassign button
+  if (!expanded) {
+    const assignedTech = technicians.find(t => t.id === techId)
+    return (
+      <div className="space-y-1.5 min-w-[160px]">
+        <div className="text-xs font-semibold text-slate-700 truncate">
+          {assignedTech?.full_name ?? 'Assigned'}
+        </div>
+        {currentChargePayer && currentChargePayer !== 'none' && currentChargeAmount != null && (
+          <div className="text-xs text-slate-400">
+            OMR {Number(currentChargeAmount).toFixed(3)} · {currentChargePayer}
+          </div>
+        )}
+        <button
+          onClick={() => setExpanded(true)}
+          className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 hover:bg-slate-50 w-full text-center"
+        >
+          Reassign
+        </button>
+      </div>
+    )
+  }
 
   async function save() {
     setLoading(true)
@@ -53,7 +77,10 @@ export default function AssignTechnicianForm({
     })
     setLoading(false)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => {
+      setSaved(false)
+      if (techId) setExpanded(false)
+    }, 1200)
     router.refresh()
   }
 
