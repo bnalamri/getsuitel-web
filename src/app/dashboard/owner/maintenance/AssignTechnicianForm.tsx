@@ -152,6 +152,7 @@ export default function AssignTechnicianForm({
                 ref={datePickerRef}
                 type="date"
                 value={scheduledDate}
+                min={new Date().toISOString().split('T')[0]}
                 onChange={e => { setScheduledDate(e.target.value); setSaved(false) }}
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                 tabIndex={-1}
