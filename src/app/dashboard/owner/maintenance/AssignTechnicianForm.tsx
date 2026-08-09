@@ -19,6 +19,7 @@ export default function AssignTechnicianForm({
   const [chargeAmount, setChargeAmount] = useState(
     currentChargeAmount != null ? String(currentChargeAmount) : ''
   )
+  const [scheduledDate, setScheduledDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const router = useRouter()
@@ -34,6 +35,7 @@ export default function AssignTechnicianForm({
         chargePayer: techId ? (chargePayer || 'none') : null,
         chargeAmount: (techId && chargePayer !== 'none' && chargeAmount)
           ? parseFloat(chargeAmount) : null,
+        scheduledDate: techId && scheduledDate ? scheduledDate : null,
       }),
     })
     setLoading(false)
@@ -87,6 +89,17 @@ export default function AssignTechnicianForm({
               step="0.001"
             />
           )}
+
+          {/* Scheduled date */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Schedule date (optional)</label>
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={e => { setScheduledDate(e.target.value); setSaved(false) }}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-full"
+            />
+          </div>
         </div>
       )}
 

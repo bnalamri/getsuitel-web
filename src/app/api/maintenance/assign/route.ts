@@ -12,7 +12,7 @@ const priorityLabel: Record<string, string> = {
 }
 
 export async function POST(req: Request) {
-  const { requestId, technicianId, chargePayer, chargeAmount } = await req.json()
+  const { requestId, technicianId, chargePayer, chargeAmount, scheduledDate } = await req.json()
 
   if (!requestId) return NextResponse.json({ error: 'Missing requestId' }, { status: 400 })
 
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     status: technicianId ? 'assigned' : 'open',
     charge_payer: technicianId ? (chargePayer ?? 'none') : null,
     charge_amount: (technicianId && chargeAmount != null) ? chargeAmount : null,
+    scheduled_date: (technicianId && scheduledDate) ? scheduledDate : null,
   }
 
   const { error } = await supabase

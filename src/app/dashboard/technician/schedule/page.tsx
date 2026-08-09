@@ -1,94 +1,232 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Calendar, MapPin } from 'lucide-react'
+import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const metadata = { title: 'Schedule' }
 
-const priorityColor: Record<string, string> = {
-  urgent: 'border-l-red-500 bg-red-50',
-  high: 'border-l-orange-500 bg-orange-50',
-  medium: 'border-l-blue-400 bg-blue-50',
-  low: 'border-l-slate-300 bg-slate-50',
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+const priorityDot: Record<string, string> = {
+  urgent: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-blue-400', low: 'bg-slate-300',
+}
+const priorityBorder: Record<string, string> = {
+  urgent: 'border-l-red-500', high: 'border-l-orange-500', medium: 'border-l-blue-400', low: 'border-l-slate-300',
 }
 
-export default async function TechnicianSchedulePage() {
+function fmtMonth(y: number, m: number) {
+  return `${y}-${String(m + 1).padStart(2, '0')}`
+}
+
+export default async function TechnicianSchedulePage({
+  searchParams,
+}: {
+  searchParams: { month?: string; date?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  // Parse month
+  const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
+  let year = now.getFullYear()
+  let month = now.getMonth()
+  if (searchParams.month) {
+    const [y, m] = searchParams.month.split('-').map(Number)
+    year = y; month = m - 1
+  }
+  const selectedDate = searchParams.date ?? todayStr
+
+  // Fetch all active jobs
   const { data: orders } = await supabase
     .from('maintenance_requests')
-    .select('*, units(unit_number, floor, properties(name, address, city))')
+    .select('*, units(unit_number, properties(name))')
     .eq('technician_id', user.id)
     .in('status', ['open', 'assigned', 'in_progress'])
-    .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
 
-  const list = orders ?? []
+  const allJobs = orders ?? []
 
-  // Group by priority for display
-  const urgent = list.filter(o => o.priority === 'urgent')
-  const high = list.filter(o => o.priority === 'high')
-  const medium = list.filter(o => o.priority === 'medium')
-  const low = list.filter(o => o.priority === 'low')
+  // Group by scheduled_date
+  const byDate = new Map<string, typeof allJobs>()
+  const unscheduled: typeof allJobs = []
+  for (const job of allJobs) {
+    const d = job.scheduled_date as string | null
+    if (d) {
+      if (!byDate.has(d)) byDate.set(d, [])
+      byDate.get(d)!.push(job)
+    } else {
+      unscheduled.push(job)
+    }
+  }
 
-  const groups = [
-    { label: 'Urgent', items: urgent, dot: 'bg-red-500' },
-    { label: 'High', items: high, dot: 'bg-orange-500' },
-    { label: 'Medium', items: medium, dot: 'bg-blue-400' },
-    { label: 'Low', items: low, dot: 'bg-slate-300' },
-  ].filter(g => g.items.length > 0)
+  // Calendar math
+  const firstDayOfWeek = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const prevDate = new Date(year, month - 1, 1)
+  const nextDate = new Date(year, month + 1, 1)
+  const prevMonth = fmtMonth(prevDate.getFullYear(), prevDate.getMonth())
+  const nextMonth = fmtMonth(nextDate.getFullYear(), nextDate.getMonth())
+  const currentMonthStr = fmtMonth(year, month)
+
+  const selectedJobs = byDate.get(selectedDate) ?? []
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Schedule</h2>
-        <p className="text-slate-500 text-sm mt-0.5">{list.length} active jobs · sorted by priority</p>
+        <p className="text-slate-500 text-sm mt-0.5">
+          {allJobs.length} active · {unscheduled.length} unscheduled
+        </p>
       </div>
 
-      {list.length === 0 ? (
-        <div className="card p-16 text-center">
-          <Calendar size={40} className="mx-auto text-slate-300 mb-3" />
-          <h3 className="font-semibold text-slate-700">Schedule is clear</h3>
-          <p className="text-slate-400 text-sm mt-1">No active jobs assigned to you.</p>
+      {/* Calendar card */}
+      <div className="card p-5">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-4">
+          <a
+            href={`?month=${prevMonth}&date=${selectedDate}`}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </a>
+          <h3 className="font-semibold text-slate-800">{MONTHS[month]} {year}</h3>
+          <a
+            href={`?month=${nextMonth}&date=${selectedDate}`}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <ChevronRight size={18} />
+          </a>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {groups.map(group => (
-            <div key={group.label}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${group.dot}`} />
-                <h3 className="font-semibold text-slate-700">{group.label} Priority</h3>
-                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{group.items.length}</span>
-              </div>
-              <div className="space-y-3">
-                {group.items.map(order => {
-                  const unit = order.units as {
-                    unit_number: string; floor: number | null;
-                    properties: { name: string; address: string; city: string } | null
-                  } | null
-                  return (
-                    <div key={order.id} className={`rounded-xl border-l-4 p-4 ${priorityColor[order.priority] ?? 'border-l-slate-300 bg-slate-50'}`}>
-                      <div className="font-semibold text-slate-900">{order.title}</div>
-                      <div className="text-sm text-slate-600 mt-1 capitalize">{order.category} · {order.status.replace('_', ' ')}</div>
-                      <div className="flex items-start gap-1.5 mt-2 text-xs text-slate-500">
-                        <MapPin size={12} className="mt-0.5 flex-shrink-0" />
-                        <span>
-                          {unit?.properties?.name} — Unit {unit?.unit_number}
-                          {unit?.floor ? `, Floor ${unit.floor}` : ''}
-                          {unit?.properties?.address ? ` · ${unit.properties.address}${unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}` : ''}
-                          {unit?.properties?.city ? `, ${unit.properties.city}` : ''}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-400 mt-2">
-                        {order.description}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {DAYS.map(d => (
+            <div key={d} className="text-center text-xs font-semibold text-slate-400 py-1">{d}</div>
           ))}
+        </div>
+
+        {/* Date grid */}
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={`e${i}`} />)}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1
+            const dateStr = `${currentMonthStr}-${String(day).padStart(2, '0')}`
+            const isToday = dateStr === todayStr
+            const isSelected = dateStr === selectedDate
+            const jobs = byDate.get(dateStr) ?? []
+            const dots = jobs.slice(0, 3).map(j => j.priority as string)
+
+            return (
+              <a
+                key={day}
+                href={`?month=${currentMonthStr}&date=${dateStr}`}
+                className={`flex flex-col items-center py-1.5 rounded-lg transition-colors ${
+                  isSelected
+                    ? 'bg-orange-700 text-white'
+                    : isToday
+                    ? 'bg-orange-50 text-orange-700 font-semibold'
+                    : 'hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <span className="text-sm leading-none">{day}</span>
+                {jobs.length > 0 && (
+                  <div className="flex gap-0.5 mt-1">
+                    {dots.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : (priorityDot[p] ?? 'bg-slate-400')}`}
+                      />
+                    ))}
+                    {jobs.length > 3 && (
+                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white opacity-50' : 'bg-slate-400'}`} />
+                    )}
+                  </div>
+                )}
+              </a>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Jobs for selected date */}
+      <div>
+        <h3 className="font-semibold text-slate-700 mb-3">
+          {selectedDate === todayStr
+            ? 'Today'
+            : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
+                weekday: 'long', day: '2-digit', month: 'long',
+              })}
+          {selectedJobs.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-slate-400">
+              ({selectedJobs.length} job{selectedJobs.length !== 1 ? 's' : ''})
+            </span>
+          )}
+        </h3>
+
+        {selectedJobs.length === 0 ? (
+          <div className="card p-8 text-center">
+            <Calendar size={28} className="mx-auto text-slate-300 mb-2" />
+            <p className="text-slate-400 text-sm">No jobs scheduled for this date</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {selectedJobs.map(order => {
+              const unit = order.units as { unit_number: string; properties: { name: string } | null } | null
+              return (
+                <a
+                  key={order.id}
+                  href={`/dashboard/technician/orders/${order.id}`}
+                  className={`card block p-4 border-l-4 ${priorityBorder[order.priority] ?? 'border-l-slate-300'} hover:shadow-md transition-shadow`}
+                >
+                  <div className="font-semibold text-slate-900">{order.title}</div>
+                  <div className="text-sm text-slate-500 mt-0.5 capitalize">
+                    {order.category} · {(order.status as string).replace('_', ' ')}
+                  </div>
+                  {unit && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+                      <MapPin size={11} />
+                      <span>{unit.properties?.name} · Unit {unit.unit_number}</span>
+                    </div>
+                  )}
+                </a>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Unscheduled */}
+      {unscheduled.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-slate-700 mb-3">
+            Unscheduled
+            <span className="ml-2 text-sm font-normal text-slate-400">({unscheduled.length})</span>
+          </h3>
+          <div className="space-y-3">
+            {unscheduled.map(order => {
+              const unit = order.units as { unit_number: string; properties: { name: string } | null } | null
+              return (
+                <a
+                  key={order.id}
+                  href={`/dashboard/technician/orders/${order.id}`}
+                  className={`card block p-4 border-l-4 border-dashed ${priorityBorder[order.priority] ?? 'border-l-slate-300'} hover:shadow-md transition-shadow`}
+                >
+                  <div className="font-semibold text-slate-900">{order.title}</div>
+                  <div className="text-sm text-slate-500 mt-0.5 capitalize">
+                    {order.category} · {(order.status as string).replace('_', ' ')}
+                  </div>
+                  {unit && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+                      <MapPin size={11} />
+                      <span>{unit.properties?.name} · Unit {unit.unit_number}</span>
+                    </div>
+                  )}
+                </a>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
