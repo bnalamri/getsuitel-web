@@ -99,6 +99,11 @@ export default function AssignTechnicianForm({
               onChange={e => { setScheduledDate(e.target.value); setSaved(false) }}
               className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-full"
             />
+            {scheduledDate && (
+              <div className="text-xs text-slate-400 mt-0.5">
+                {new Date(scheduledDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </div>
+            )}
           </div>
         </div>
       )}

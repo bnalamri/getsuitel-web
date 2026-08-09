@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       const [{ data: request }, { data: tech }] = await Promise.all([
         supabase
           .from('maintenance_requests')
-          .select('title, description, category, priority, units(unit_number, properties(name))')
+          .select('title, description, category, priority, tenant_id, units(unit_number, properties(name))')
           .eq('id', requestId)
           .single(),
         supabase
@@ -138,6 +138,90 @@ export async function POST(req: Request) {
           subject: `Work order assigned: ${request.title} (${label} priority)`,
           html,
         })
+
+        // Send notification to tenant if this request has a tenant
+        if (request.tenant_id) {
+          try {
+            const { data: tenantRow } = await supabase
+              .from('tenants')
+              .select('full_name, profiles(email)')
+              .eq('id', request.tenant_id)
+              .single()
+
+            const tenantProfile = tenantRow?.profiles as { email: string } | null
+            const tenantEmail = tenantProfile?.email
+            const tenantName = tenantRow?.full_name ?? 'Tenant'
+
+            if (tenantEmail) {
+              const scheduledLine = scheduledDate
+                ? `<tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;width:140px;font-size:13px;font-weight:600;color:#64748b">Scheduled Date</td>
+                    <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a">${new Date(scheduledDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+                  </tr>`
+                : ''
+
+              const tenantHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:40px 20px">
+<tr><td align="center">
+<table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+
+<tr><td style="background:#1B3A6B;padding:28px 32px">
+  <div style="font-size:22px;font-weight:900;color:#fff">Get<span style="color:#C9931A">Suitel</span></div>
+  <div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:2px;margin-top:2px">MAINTENANCE UPDATE</div>
+  <div style="font-size:13px;color:#C9931A;font-weight:700;margin-top:6px">Your request has been assigned</div>
+</td></tr>
+
+<tr><td style="padding:28px 32px 0">
+  <div style="font-size:18px;font-weight:800;color:#0f172a">Hi ${tenantName},</div>
+  <div style="font-size:14px;color:#64748b;margin-top:6px">Good news — your maintenance request has been assigned to a technician who will handle it.</div>
+  <div style="height:3px;background:#C9931A;border-radius:2px;width:48px;margin-top:16px"></div>
+</td></tr>
+
+<tr><td style="padding:20px 32px">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;width:140px;font-size:13px;font-weight:600;color:#64748b">Request</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a">${request.title}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;font-weight:600;color:#64748b">Location</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#0f172a">${location}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 0;${scheduledDate ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:13px;font-weight:600;color:#64748b">Assigned To</td>
+      <td style="padding:10px 0;${scheduledDate ? 'border-bottom:1px solid #f1f5f9;' : ''}font-size:13px;color:#0f172a">${tech.full_name}</td>
+    </tr>
+    ${scheduledLine}
+  </table>
+</td></tr>
+
+<tr><td style="padding:0 32px 28px">
+  <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:14px 20px;font-size:13px;color:#15803d">
+    ${scheduledDate
+      ? `A technician will visit on the scheduled date. Please ensure access to the unit is available.`
+      : `A technician has been assigned and will contact you shortly to arrange a visit.`}
+  </div>
+</td></tr>
+
+<tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0">
+  <div style="font-size:11px;color:#94a3b8">Sent via getsuitel.com · ${new Date().toUTCString()}</div>
+</td></tr>
+
+</table></td></tr></table>
+</body></html>`
+
+              await resend.emails.send({
+                from: 'GetSuitel <notices@getsuitel.com>',
+                to: [tenantEmail],
+                subject: `Your maintenance request has been assigned — ${request.title}`,
+                html: tenantHtml,
+              })
+            }
+          } catch {
+            // Don't fail if tenant email fails
+          }
+        }
       }
     } catch {
       // Don't fail the assignment if email fails
