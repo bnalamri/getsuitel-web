@@ -31,7 +31,10 @@ export default async function MaintenancePage() {
     const sa = statusOrder[a.status] ?? 5
     const sb = statusOrder[b.status] ?? 5
     if (sa !== sb) return sa - sb
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    // Completed: sort by completed_at desc; others by created_at desc
+    const aDate = a.status === 'completed' ? (a.completed_at ?? a.created_at) : a.created_at
+    const bDate = b.status === 'completed' ? (b.completed_at ?? b.created_at) : b.created_at
+    return new Date(bDate).getTime() - new Date(aDate).getTime()
   })
   const units = unitsRes.data ?? []
   const technicians = (techRes.data ?? []) as { id: string; full_name: string }[]
