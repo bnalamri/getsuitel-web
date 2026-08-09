@@ -43,7 +43,20 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
     .eq('technician_id', user.id)
     .order('created_at', { ascending: false })
 
-  const all = orders ?? []
+  // Sort: Done tab by completed_at desc; others by created_at desc (already ordered above)
+  const sortedOrders = (orders ?? []).sort((a, b) => {
+    const aIsDone = a.status === 'completed'
+    const bIsDone = b.status === 'completed'
+    if (aIsDone && bIsDone) {
+      // Both done: sort by completed_at desc, fall back to created_at
+      const ca = a.completed_at ?? a.created_at
+      const cb = b.completed_at ?? b.created_at
+      return new Date(cb).getTime() - new Date(ca).getTime()
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
+  const all = sortedOrders
   const tab = searchParams.tab ?? 'open'
   const currentTab = TABS.find(t => t.key === tab) ?? TABS[0]
   const list = all.filter(o => currentTab.match(o.status))

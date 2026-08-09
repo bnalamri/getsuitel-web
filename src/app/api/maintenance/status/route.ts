@@ -23,7 +23,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const updates: Record<string, unknown> = { status: nextStatus }
+  const updates: Record<string, unknown> = {
+    status: nextStatus,
+    ...(nextStatus === 'completed' ? { completed_at: new Date().toISOString() } : {}),
+  }
 
   const { error } = await admin
     .from('maintenance_requests')
