@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ClipboardList } from 'lucide-react'
 import UpdateStatusButton from './UpdateStatusButton'
+import SubmitChargeForm from './SubmitChargeForm'
 
 export const metadata = { title: 'Work Orders' }
 
@@ -18,60 +19,80 @@ const nextStatus: Record<string, string> = {
   open: 'in_progress', assigned: 'in_progress', in_progress: 'completed',
 }
 
-export default async function WorkOrdersPage({ searchParams }: { searchParams: { filter?: string } }) {
+const TABS = [
+  { key: 'open',        label: 'Open',        match: (s: string) => s === 'open' || s === 'assigned' },
+  { key: 'in_progress', label: 'In Progress',  match: (s: string) => s === 'in_progress' },
+  { key: 'done',        label: 'Done',         match: (s: string) => s === 'completed' },
+]
+
+const emptyMsg: Record<string, string> = {
+  open: 'No open jobs assigned to you.',
+  in_progress: 'No jobs currently in progress.',
+  done: 'No completed jobs yet.',
+}
+
+export default async function WorkOrdersPage({ searchParams }: { searchParams: { tab?: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const filter = searchParams.filter ?? 'active'
-
-  let query = supabase
+  // Fetch all orders once — filter in memory for tab counts
+  const { data: orders } = await supabase
     .from('maintenance_requests')
     .select('*, units(unit_number, floor, properties(name, address))')
     .eq('technician_id', user.id)
-    .order('priority', { ascending: false })
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
 
-  if (filter === 'active') query = query.in('status', ['open', 'assigned', 'in_progress'])
-  else if (filter === 'completed') query = query.eq('status', 'completed')
-
-  const { data: orders } = await query
-  const list = orders ?? []
+  const all = orders ?? []
+  const tab = searchParams.tab ?? 'open'
+  const currentTab = TABS.find(t => t.key === tab) ?? TABS[0]
+  const list = all.filter(o => currentTab.match(o.status))
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Work Orders</h2>
-        <p className="text-slate-500 text-sm mt-0.5">{list.length} orders</p>
+        <p className="text-slate-500 text-sm mt-0.5">{all.length} total</p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        {[
-          { key: 'active', label: 'Active' },
-          { key: 'completed', label: 'Completed' },
-          { key: 'all', label: 'All' },
-        ].map(f => (
-          <a key={f.key} href={`?filter=${f.key}`}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f.key ? 'bg-navy-700 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-            {f.label}
-          </a>
-        ))}
+      {/* Tabs with counts */}
+      <div className="flex border-b border-slate-200">
+        {TABS.map(t => {
+          const count = all.filter(o => t.match(o.status)).length
+          const active = tab === t.key
+          return (
+            <a key={t.key} href={`?tab=${t.key}`}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                active
+                  ? 'border-orange-700 text-orange-800'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}>
+              {t.label}
+              <span className={`text-xs rounded-full px-2 py-0.5 font-semibold ${
+                active ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'
+              }`}>{count}</span>
+            </a>
+          )
+        })}
       </div>
 
       {list.length === 0 ? (
         <div className="card p-16 text-center">
           <ClipboardList size={40} className="mx-auto text-slate-300 mb-3" />
-          <h3 className="font-semibold text-slate-700">No work orders</h3>
-          <p className="text-slate-400 text-sm mt-1">
-            {filter === 'active' ? 'No active jobs assigned to you.' : 'Nothing to show here.'}
-          </p>
+          <h3 className="font-semibold text-slate-700">No orders here</h3>
+          <p className="text-slate-400 text-sm mt-1">{emptyMsg[tab]}</p>
         </div>
       ) : (
         <div className="space-y-3">
           {list.map(order => {
             const unit = order.units as { unit_number: string; floor: number | null; properties: { name: string; address: string } | null } | null
             const next = nextStatus[order.status]
+            const isDone = order.status === 'completed'
+            const chargePayer  = order.charge_payer  as string | null
+            const chargeAmount = order.charge_amount as number | null
+            const finalAmount  = order.final_amount  as number | null
+            const invoicePaid  = (order.invoice_paid as boolean | null) ?? false
+
             return (
               <div key={order.id} className="card p-5">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -84,8 +105,11 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                     <h3 className="font-semibold text-slate-900">{order.title}</h3>
                     <p className="text-sm text-slate-500 mt-1">{order.description}</p>
                     <div className="mt-3 text-xs text-slate-400 space-y-0.5">
-                      <div><span className="font-medium text-slate-600">{unit?.properties?.name}</span> · Unit {unit?.unit_number}{unit?.floor ? ` · Floor ${unit.floor}` : ''}</div>
-                      {unit?.properties?.address && <div>{unit.properties.address}{unit?.properties?.address_line2 ? `, ${unit.properties.address_line2}` : ''}</div>}
+                      <div>
+                        <span className="font-medium text-slate-600">{unit?.properties?.name}</span>
+                        {' · '}Unit {unit?.unit_number}
+                        {unit?.floor ? ` · Floor ${unit.floor}` : ''}
+                      </div>
                       <div>Reported: {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                     </div>
                   </div>
@@ -98,6 +122,27 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                     />
                   )}
                 </div>
+
+                {/* Charge form — shown on Done tab for owner-billed jobs */}
+                {isDone && chargePayer === 'owner' && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <SubmitChargeForm
+                      orderId={order.id}
+                      agreedAmount={chargeAmount}
+                      finalAmount={finalAmount}
+                      invoicePaid={invoicePaid}
+                    />
+                  </div>
+                )}
+
+                {/* Tenant-billed info on Done tab */}
+                {isDone && chargePayer === 'tenant' && chargeAmount != null && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      OMR {parseFloat(String(chargeAmount)).toFixed(3)} — collected directly from tenant
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
