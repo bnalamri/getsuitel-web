@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
-  const { orderId, nextStatus } = await req.json()
+  const { orderId, nextStatus, chargeAmount, chargePayer, chargeNotes } = await req.json()
   if (!orderId || !nextStatus) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   // Verify the caller is the assigned technician
@@ -26,6 +26,11 @@ export async function POST(req: Request) {
   const updates: Record<string, unknown> = {
     status: nextStatus,
     ...(nextStatus === 'completed' ? { completed_at: new Date().toISOString() } : {}),
+    ...(nextStatus === 'completed' && chargeAmount != null ? {
+      charge_amount: chargeAmount,
+      charge_payer: chargePayer ?? 'tenant',
+      ...(chargeNotes ? { charge_notes: chargeNotes } : {}),
+    } : {}),
   }
 
   const { error } = await admin

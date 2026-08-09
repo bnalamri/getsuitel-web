@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ClipboardList, CalendarDays, CheckCircle2 } from 'lucide-react'
 import UpdateStatusButton from './UpdateStatusButton'
 import SubmitChargeForm from './SubmitChargeForm'
+import CompleteJobModal from './CompleteJobModal'
 
 function fmtDate(iso: string) {
   const d = iso.substring(0, 10).split('-')
@@ -143,12 +144,20 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                       )}
                     </div>
                   </div>
-                  {next && (
+                  {next && next !== 'completed' && (
                     <UpdateStatusButton
                       orderId={order.id}
                       nextStatus={next}
-                      label={next === 'in_progress' ? 'Start Job' : 'Mark Complete'}
-                      variant={next === 'completed' ? 'success' : 'primary'}
+                      label="Start Job"
+                      variant="primary"
+                    />
+                  )}
+                  {next === 'completed' && (
+                    <CompleteJobModal
+                      orderId={order.id}
+                      orderTitle={order.title}
+                      agreedAmount={chargeAmount}
+                      agreedPayer={chargePayer}
                     />
                   )}
                 </div>
