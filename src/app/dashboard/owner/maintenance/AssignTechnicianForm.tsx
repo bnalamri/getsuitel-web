@@ -5,14 +5,25 @@ import { Loader2, Check } from 'lucide-react'
 
 type Tech = { id: string; full_name: string }
 
+function formatDate(isoDate: string, fmt: string): string {
+  const d = new Date(isoDate + 'T00:00:00')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(d.getFullYear())
+  if (fmt.toUpperCase().startsWith('MM')) return `${mm}/${dd}/${yyyy}`
+  if (fmt.toUpperCase().startsWith('YYYY')) return `${yyyy}/${mm}/${dd}`
+  return `${dd}/${mm}/${yyyy}` // DD/MM/YYYY default
+}
+
 export default function AssignTechnicianForm({
-  requestId, currentTechId, technicians, currentChargePayer, currentChargeAmount,
+  requestId, currentTechId, technicians, currentChargePayer, currentChargeAmount, dateFormat,
 }: {
   requestId: string
   currentTechId: string | null
   technicians: Tech[]
   currentChargePayer?: string | null
   currentChargeAmount?: number | null
+  dateFormat?: string
 }) {
   const [techId, setTechId] = useState(currentTechId ?? '')
   const [chargePayer, setChargePayer] = useState(currentChargePayer ?? 'none')
@@ -101,7 +112,7 @@ export default function AssignTechnicianForm({
             />
             {scheduledDate && (
               <div className="text-xs text-slate-400 mt-0.5">
-                {new Date(scheduledDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                {formatDate(scheduledDate, dateFormat ?? 'DD/MM/YYYY')}
               </div>
             )}
           </div>

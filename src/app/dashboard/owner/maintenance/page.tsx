@@ -16,7 +16,7 @@ export default async function MaintenancePage() {
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
   const admin = createAdminClient()
-  const [reqRes, unitsRes, techRes] = await Promise.all([
+  const [reqRes, unitsRes, techRes, orgRes] = await Promise.all([
     supabase
       .from('maintenance_requests')
       .select('*, units(unit_number, properties(name)), profiles(full_name)')
@@ -24,7 +24,9 @@ export default async function MaintenancePage() {
       .order('created_at', { ascending: false }),
     supabase.from('units').select('id, unit_number, properties(name)').eq('organization_id', orgId),
     admin.from('profiles').select('id, full_name').eq('organization_id', orgId).eq('role', 'technician'),
+    supabase.from('organizations').select('date_format').eq('id', orgId).single(),
   ])
+  const dateFormat = (orgRes.data?.date_format as string) ?? 'DD/MM/YYYY'
 
   const statusOrder: Record<string, number> = { open: 0, assigned: 1, in_progress: 2, completed: 3, canceled: 4 }
   const requests = (reqRes.data ?? []).sort((a, b) => {
@@ -56,7 +58,7 @@ export default async function MaintenancePage() {
           <p className="text-slate-400 text-sm">Maintenance requests from tenants will appear here.</p>
         </div>
       ) : (
-        <MaintenanceFilters requests={requests} technicians={technicians} canManage={canManage} />
+        <MaintenanceFilters requests={requests} technicians={technicians} canManage={canManage} dateFormat={dateFormat} />
       )}
     </div>
   )

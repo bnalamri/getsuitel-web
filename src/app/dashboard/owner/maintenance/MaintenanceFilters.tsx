@@ -16,11 +16,12 @@ const statusColor: Record<string, string> = {
 type Technician = { id: string; full_name: string }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function MaintenanceFilters({ requests, technicians, canManage }: {
+export default function MaintenanceFilters({ requests, technicians, canManage, dateFormat }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requests: any[]
   technicians: Technician[]
   canManage: boolean
+  dateFormat?: string
 }) {
   const [filterProp,    setFilterProp]    = useState<string>('')
   const [filterTech,    setFilterTech]    = useState<string>('')
@@ -202,6 +203,7 @@ export default function MaintenanceFilters({ requests, technicians, canManage }:
                           technicians={technicians}
                           currentChargePayer={chargePayer}
                           currentChargeAmount={chargeAmount}
+                          dateFormat={dateFormat}
                         />
                       ) : (
                         <span className="text-xs text-slate-400">{r.technician_id ? techProfile?.full_name ?? '—' : '—'}</span>
