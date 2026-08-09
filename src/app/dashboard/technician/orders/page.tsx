@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, CalendarDays, CheckCircle2 } from 'lucide-react'
 import UpdateStatusButton from './UpdateStatusButton'
 import SubmitChargeForm from './SubmitChargeForm'
+
+function fmtDate(iso: string) {
+  const d = iso.substring(0, 10).split('-')
+  return `${d[2]}/${d[1]}/${d[0]}`
+}
 
 export const metadata = { title: 'Work Orders' }
 
@@ -117,13 +122,25 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                     </div>
                     <h3 className="font-semibold text-slate-900">{order.title}</h3>
                     <p className="text-sm text-slate-500 mt-1">{order.description}</p>
-                    <div className="mt-3 text-xs text-slate-400 space-y-0.5">
+                    <div className="mt-3 text-xs text-slate-400 space-y-1">
                       <div>
                         <span className="font-medium text-slate-600">{unit?.properties?.name}</span>
                         {' · '}Unit {unit?.unit_number}
                         {unit?.floor ? ` · Floor ${unit.floor}` : ''}
                       </div>
                       <div>Reported: {new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                      {order.scheduled_date && (
+                        <div className="flex items-center gap-1 text-blue-600 font-semibold">
+                          <CalendarDays size={12} />
+                          Scheduled: {fmtDate(order.scheduled_date as string)}
+                        </div>
+                      )}
+                      {isDone && order.completed_at && (
+                        <div className="flex items-center gap-1 text-green-600 font-semibold">
+                          <CheckCircle2 size={12} />
+                          Completed: {fmtDate(order.completed_at as string)}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {next && (
