@@ -5,7 +5,7 @@ import { Plus, X, Loader2 } from 'lucide-react'
 
 export default function SubmitRequestForm({
   tenantId, orgId, unitId, unitNumber, tenantName,
-}: { tenantId: string; orgId: string; unitId: string; unitNumber: string; tenantName: string }) {
+}: { tenantId: string; orgId: string; unitId: string | null; unitNumber: string; tenantName: string }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

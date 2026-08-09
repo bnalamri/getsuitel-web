@@ -37,15 +37,13 @@ export default async function TenantMaintenancePage() {
           <h2 className="text-2xl font-bold text-slate-900">Maintenance</h2>
           <p className="text-slate-500 text-sm mt-0.5">{reqs.length} requests</p>
         </div>
-        {contract && (
-          <SubmitRequestForm
-            tenantId={tenant.id}
-            orgId={tenant.organization_id}
-            unitId={contract.unit_id}
-            unitNumber={(contract.units as { unit_number: string } | null)?.unit_number ?? ''}
-            tenantName={tenantName}
-          />
-        )}
+        <SubmitRequestForm
+          tenantId={tenant.id}
+          orgId={tenant.organization_id}
+          unitId={contract?.unit_id ?? null}
+          unitNumber={(contract?.units as { unit_number: string } | null)?.unit_number ?? ''}
+          tenantName={tenantName}
+        />
       </div>
 
       {reqs.length === 0 ? (
