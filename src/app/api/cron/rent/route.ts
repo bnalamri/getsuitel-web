@@ -409,11 +409,180 @@ export async function GET(req: Request) {
     }
   }
 
+  // ── 4. Last-cheque alert ─────────────────────────────────────────────────
+  // For each active contract, count cheques with status='pending' (not yet deposited).
+  // If exactly 1 remains and we haven't alerted in the past 30 days, send alerts.
+
+  let chequeAlertsSent = 0
+
+  const { data: activeContracts } = await admin
+    .from('contracts')
+    .select(`
+      id, organization_id, tenant_id, unit_id,
+      last_cheque_alert_sent_at,
+      tenants(full_name, email),
+      units(unit_number, properties(name))
+    `)
+    .eq('status', 'active')
+    .in('organization_id', eligibleOrgIds)
+
+  // Collect per-org alerts to send one consolidated owner email
+  type ChequeAlertItem = { tenant: string; unit: string; tenantEmail: string | null; contractId: string }
+  const chequeAlertsByOrg = new Map<string, ChequeAlertItem[]>()
+
+  for (const contract of activeContracts ?? []) {
+    try {
+      // Skip if alerted within 30 days
+      if (contract.last_cheque_alert_sent_at) {
+        const daysSince = (Date.now() - new Date(contract.last_cheque_alert_sent_at).getTime()) / 86400000
+        if (daysSince < 30) continue
+      }
+
+      // Count remaining pending cheques for this contract
+      const { count } = await admin
+        .from('cheques')
+        .select('id', { count: 'exact', head: true })
+        .eq('contract_id', contract.id)
+        .eq('status', 'pending')
+
+      if ((count ?? 0) !== 1) continue
+
+      const tenant = contract.tenants as { full_name: string; email: string | null } | null
+      const unit   = contract.units   as { unit_number: string; properties?: { name: string } | null } | null
+      const unitLabel = `${unit?.properties?.name ?? ''} — Unit ${unit?.unit_number ?? ''}`
+
+      const orgId = contract.organization_id as string
+      if (!chequeAlertsByOrg.has(orgId)) chequeAlertsByOrg.set(orgId, [])
+      chequeAlertsByOrg.get(orgId)!.push({
+        tenant:       tenant?.full_name ?? 'Unknown Tenant',
+        unit:         unitLabel,
+        tenantEmail:  tenant?.email ?? null,
+        contractId:   contract.id as string,
+      })
+    } catch (e) {
+      errors.push(`Cheque alert check for contract ${contract.id}: ${e}`)
+    }
+  }
+
+  // Send tenant emails + owner consolidated email per org
+  for (const [alertOrgId, items] of chequeAlertsByOrg) {
+    try {
+      // Fetch owner
+      const { data: ownerData } = await admin
+        .from('organizations')
+        .select('name, profiles:owner_id(full_name, email)')
+        .eq('id', alertOrgId)
+        .single()
+
+      const owner   = ownerData?.profiles as { full_name: string; email: string } | null
+      const orgName = (ownerData?.name as string) ?? 'Your Organization'
+
+      // Send tenant emails
+      for (const item of items) {
+        if (item.tenantEmail) {
+          const tenantHtml = emailHtml('#1B3A6B', 'Cheque Submission Reminder', `
+            <div style="font-size:15px;color:#334155;line-height:1.8">
+              Dear ${item.tenant},<br><br>
+              This is a reminder that your property manager has recorded
+              <strong style="color:#dc2626">only 1 post-dated cheque remaining</strong>
+              for your unit <strong>${item.unit}</strong>.<br><br>
+              Please submit new post-dated cheques to your property owner/manager
+              at your earliest convenience to ensure uninterrupted tenancy.
+            </div>
+            <div style="margin-top:24px">
+              <a href="${APP_URL}/dashboard/tenant/invoices"
+                 style="display:inline-block;background:#1B3A6B;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+                View My Account
+              </a>
+            </div>`)
+          try {
+            await resend.emails.send({
+              from:    'GetSuitel <notices@getsuitel.com>',
+              to:      [item.tenantEmail],
+              subject: `Action Required: Please submit new cheques — ${item.unit}`,
+              html:    tenantHtml,
+            })
+            emailsSent++
+          } catch (e) {
+            errors.push(`Cheque alert tenant email to ${item.tenantEmail}: ${e}`)
+          }
+        }
+
+        // Mark alert sent on the contract
+        await admin
+          .from('contracts')
+          .update({ last_cheque_alert_sent_at: new Date().toISOString() })
+          .eq('id', item.contractId)
+
+        chequeAlertsSent++
+      }
+
+      // Owner consolidated email
+      if (owner?.email) {
+        const rows = items.map(item => `
+          <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px">${item.tenant}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#64748b">${item.unit}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#dc2626;font-weight:600">1 cheque left</td>
+          </tr>`).join('')
+
+        const ownerHtml = emailHtml('#1B3A6B', 'Cheque Running Low Alert', `
+          <div style="font-size:15px;color:#334155;line-height:1.8">
+            Dear ${owner.full_name},<br><br>
+            The following tenant${items.length !== 1 ? 's have' : ' has'}
+            <strong style="color:#dc2626">only 1 post-dated cheque remaining</strong>
+            in <strong>${orgName}</strong>.
+            A reminder has been sent to each tenant to submit new cheques.
+          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">
+            <thead>
+              <tr style="background:#eff6ff">
+                <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Tenant</th>
+                <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Unit</th>
+                <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600">Status</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="margin-top:24px">
+            <a href="${APP_URL}/dashboard/owner/cheque-tracker"
+               style="display:inline-block;background:#1B3A6B;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+              View Cheque Tracker
+            </a>
+          </div>`)
+
+        try {
+          await resend.emails.send({
+            from:    'GetSuitel <notices@getsuitel.com>',
+            to:      [owner.email],
+            subject: `Cheque alert: ${items.length} tenant${items.length !== 1 ? 's' : ''} with 1 cheque remaining — ${orgName}`,
+            html:    ownerHtml,
+          })
+          emailsSent++
+        } catch (e) {
+          errors.push(`Cheque alert owner email to ${owner.email}: ${e}`)
+        }
+
+        // Create a notice on the owner's notices page
+        await admin.from('notices').insert({
+          organization_id: alertOrgId,
+          title:           `Cheque Alert: ${items.length} tenant${items.length !== 1 ? 's' : ''} with 1 cheque remaining`,
+          content:         items.map(i => `• ${i.tenant} — ${i.unit}`).join('\n'),
+          type:            'general',
+          recipient_type:  'all',
+          sent_by:         null,
+        })
+      }
+    } catch (e) {
+      errors.push(`Cheque alert for org ${alertOrgId}: ${e}`)
+    }
+  }
+
   const _hasErrors = errors.length > 0
   await logCron({
     jobName: 'rent_invoicing',
     status: _hasErrors ? 'partial' : 'success',
-    summary: { invoicesCreated, invoicesMarkedOverdue, contractsExpired, emailsSent, errorCount: errors.length },
+    summary: { invoicesCreated, invoicesMarkedOverdue, contractsExpired, chequeAlertsSent, emailsSent, errorCount: errors.length },
     errorMsg: _hasErrors ? errors.join(' | ') : undefined,
     durationMs: Date.now() - _startTime,
   })
@@ -424,6 +593,7 @@ export async function GET(req: Request) {
     invoicesCreated,
     invoicesMarkedOverdue,
     contractsExpired,
+    chequeAlertsSent,
     emailsSent,
     ...(_hasErrors && { errors }),
   })
