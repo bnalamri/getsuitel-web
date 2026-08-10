@@ -71,9 +71,9 @@ export default async function OwnerDashboard() {
   const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
   const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
 
-  // Low-cheque alert: cheque-paying active contracts across all properties with ≤ 2 pending cheques
-  const [pendingChequeRows, activeContractRows] = await Promise.all([
-    admin.from('cheques').select('contract_id').eq('organization_id', orgId).eq('status', 'pending'),
+  // Low-cheque alert: active cheque-paying contracts with ≤ 2 cheque records total
+  const [allChequeRows, activeContractRows] = await Promise.all([
+    admin.from('cheques').select('contract_id').eq('organization_id', orgId),
     admin.from('contracts')
       .select('id, tenants(full_name), units(unit_number, properties(name))')
       .eq('organization_id', orgId)
@@ -81,7 +81,7 @@ export default async function OwnerDashboard() {
       .eq('payment_method', 'cheque'),
   ])
   const chequeMap: Record<string, number> = {}
-  for (const ch of pendingChequeRows.data ?? []) {
+  for (const ch of allChequeRows.data ?? []) {
     chequeMap[ch.contract_id] = (chequeMap[ch.contract_id] ?? 0) + 1
   }
   type LowCheque = { id: string; tenantName: string; property: string; unit: string; count: number }
@@ -97,7 +97,7 @@ export default async function OwnerDashboard() {
         count: chequeMap[c.id] ?? 0,
       }
     })
-    .filter(c => c.id in chequeMap && c.count <= 2)
+    .filter(c => c.count <= 2)
 
   const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
