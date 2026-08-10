@@ -438,11 +438,13 @@ export async function GET(req: Request) {
         if (daysSince < 30) continue
       }
 
-      // Count remaining pending cheques for this contract
+      // Count remaining pending cheques for this tenant+unit (no contract_id column)
       const { count } = await admin
         .from('cheques')
         .select('id', { count: 'exact', head: true })
-        .eq('contract_id', contract.id)
+        .eq('organization_id', contract.organization_id)
+        .eq('tenant_id', contract.tenant_id)
+        .eq('unit_id', contract.unit_id)
         .eq('status', 'pending')
 
       if ((count ?? 0) !== 1) continue

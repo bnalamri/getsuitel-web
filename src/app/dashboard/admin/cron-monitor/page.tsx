@@ -2,6 +2,7 @@ import { requireSuperadmin } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CronMonitorPDF from './CronMonitorPDF'
+import CronRunButton from './CronRunButton'
 
 interface CronLog {
   id: string
@@ -119,6 +120,9 @@ export default async function CronMonitorPage() {
               {!last && (
                 <p className="text-xs text-slate-400 italic">No runs recorded yet.</p>
               )}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
+                <CronRunButton job={jobName} />
+              </div>
             </div>
           )
         })}
