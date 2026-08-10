@@ -97,7 +97,7 @@ export default async function OwnerDashboard() {
         count: chequeMap[c.id] ?? 0,
       }
     })
-    .filter(c => c.count <= 2)
+    .filter(c => c.id in chequeMap && c.count <= 2)
 
   const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
