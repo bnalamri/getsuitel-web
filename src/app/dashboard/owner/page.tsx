@@ -232,7 +232,7 @@ export default async function OwnerDashboard() {
 
       {/* Low cheque banner */}
       {lowChequeContracts.length > 0 && (
-        <Link href="/dashboard/owner/cheques"
+        <Link href="/dashboard/owner/payments/cheques"
           className="flex items-center gap-3 bg-orange-500 text-white rounded-xl px-5 py-3.5 hover:bg-orange-600 transition-colors">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
             <CreditCard size={16} />
