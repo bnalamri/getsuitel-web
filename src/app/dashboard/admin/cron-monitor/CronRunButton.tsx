@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Play, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 type State = 'idle' | 'running' | 'done' | 'error'
@@ -7,6 +8,7 @@ type State = 'idle' | 'running' | 'done' | 'error'
 export default function CronRunButton({ job }: { job: string }) {
   const [state, setState] = useState<State>('idle')
   const [msg,   setMsg]   = useState('')
+  const router = useRouter()
 
   async function run() {
     setState('running')
@@ -31,7 +33,9 @@ export default function CronRunButton({ job }: { job: string }) {
         ) || 'Done'
         setMsg(summary)
         setState('done')
-        // Reset after 8s so the card doesn't stay green forever
+        // Refresh server component data so Last run / Duration update
+        router.refresh()
+        // Reset button after 8s
         setTimeout(() => { setState('idle'); setMsg('') }, 8000)
       }
     } catch (e) {
