@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone } from 'lucide-react'
+import { useShell } from '@/components/layout/DashboardShell'
+import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages } from 'lucide-react'
 
 const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const CURRENCY_LABELS: Record<string, string> = {
@@ -29,6 +30,7 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
   const [loading, setLoading]   = useState(false)
   const [saved, setSaved]       = useState(false)
   const router = useRouter()
+  const { lang, setLang } = useShell()
   const [fullName, setFullName] = useState((profile?.full_name as string) ?? '')
 
   // ── Platform settings state ──────────────────────────────────────────────
@@ -114,6 +116,12 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
   const [confirmPass, setConfirmPass] = useState('')
   const [showNew,   setShowNew]       = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+
+  async function handleLangChange(newLang: 'en' | 'ar') {
+    setLang(newLang)
+    const supabase = createClient()
+    await supabase.from('profiles').update({ lang_pref: newLang }).eq('id', profile?.id as string)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -242,6 +250,36 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
             {saved ? 'Saved!' : 'Save Changes'}
           </button>
         </form>
+      </div>
+
+      {/* ── Language ── */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Languages size={16} className="text-navy-700" />
+          <h3 className="font-semibold text-slate-900">Language</h3>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleLangChange('en')}
+            className={`flex-1 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+              lang === 'en'
+                ? 'bg-navy-700 text-white border-navy-700'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-navy-300'
+            }`}
+          >
+            English
+          </button>
+          <button
+            onClick={() => handleLangChange('ar')}
+            className={`flex-1 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+              lang === 'ar'
+                ? 'bg-navy-700 text-white border-navy-700'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-navy-300'
+            }`}
+          >
+            العربية
+          </button>
+        </div>
       </div>
 
       {/* ── Change Password ── */}
