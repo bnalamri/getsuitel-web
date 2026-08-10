@@ -12,6 +12,7 @@ import { logCron } from '@/lib/cron-logger'
 import { isOrgMidnight } from '@/lib/countries'
 
 const CRON_SECRET = process.env.CRON_SECRET
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const KEEP_DAYS = 7
 
 // Tables to snapshot — in insertion order (least dependent first)
@@ -33,7 +34,8 @@ const SNAPSHOT_TABLES = [
 export async function GET(req: Request) {
   // Allow cron via secret OR authenticated superadmin
   const authHeader = req.headers.get('authorization')
-  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
+  const isCron = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`)
+             || (SERVICE_KEY && authHeader === `Bearer ${SERVICE_KEY}`)
   if (!isCron) {
     const auth = await requireSuperadmin()
     if (!auth.ok) return auth.response

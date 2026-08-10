@@ -7,7 +7,8 @@ import { isOrgMidnight, getOrgLocalDate } from '@/lib/countries'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
-const CRON_SECRET = process.env.CRON_SECRET
+const CRON_SECRET    = process.env.CRON_SECRET
+const SERVICE_KEY    = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
@@ -40,7 +41,8 @@ function emailHtml(headerColor: string, label: string, body: string) {
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
-  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
+  const isCron = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`)
+             || (SERVICE_KEY && authHeader === `Bearer ${SERVICE_KEY}`)
   if (!isCron) {
     const auth = await requireSuperadmin()
     if (!auth.ok) return auth.response

@@ -18,14 +18,14 @@ export default function CronRunButton({ job }: { job: string }) {
         body: JSON.stringify({ job }),
       })
       const json = await res.json()
-      if (!res.ok) {
+      if (!res.ok || json.ok === false) {
         setMsg(json.error ?? `HTTP ${res.status}`)
         setState('error')
       } else {
         const summary = (
           json.message ?? json.summary
             ?? Object.entries(json)
-                 .filter(([k]) => !['ok', 'status'].includes(k))
+                 .filter(([k]) => !['ok'].includes(k))
                  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
                  .join(' · ')
         ) || 'Done'

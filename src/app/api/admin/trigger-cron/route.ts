@@ -42,16 +42,21 @@ export async function POST(req: NextRequest) {
   const path = job ? JOB_PATHS[job] : null
   if (!path) return NextResponse.json({ error: `Unknown job: ${job}` }, { status: 400 })
 
-  // Call the cron internally using the CRON_SECRET so timezone filter is bypassed
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
-  const cronSecret = process.env.CRON_SECRET
+  // Call the cron internally — use service role key so auth always passes
+  // and add ?force=true to bypass the org-timezone midnight filter
+  const baseUrl   = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
+  const authToken = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.CRON_SECRET
 
   try {
-    const cronRes = await fetch(`${baseUrl}${path}`, {
-      headers: cronSecret ? { authorization: `Bearer ${cronSecret}` } : {},
+    const cronRes = await fetch(`${baseUrl}${path}?force=true`, {
+      headers: authToken ? { authorization: `Bearer ${authToken}` } : {},
     })
     const data = await cronRes.json().catch(() => ({}))
-    return NextResponse.json({ ok: cronRes.ok, status: cronRes.status, ...data })
+    // Forward the actual HTTP status so the client can detect errors
+    if (!cronRes.ok) {
+      return NextResponse.json({ ok: false, ...data }, { status: cronRes.status })
+    }
+    return NextResponse.json({ ok: true, ...data })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

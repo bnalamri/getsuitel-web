@@ -8,6 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'admin@getsuitel.com'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
 const CRON_SECRET = process.env.CRON_SECRET
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 function formatDate(d: Date) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -59,7 +60,8 @@ async function purgeOrganization(admin: ReturnType<typeof createAdminClient>, or
 export async function GET(req: Request) {
   // Allow cron job via secret OR authenticated superadmin
   const authHeader = req.headers.get('authorization')
-  const isCron = CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`
+  const isCron = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`)
+             || (SERVICE_KEY && authHeader === `Bearer ${SERVICE_KEY}`)
   if (!isCron) {
     const auth = await requireSuperadmin()
     if (!auth.ok) return auth.response
