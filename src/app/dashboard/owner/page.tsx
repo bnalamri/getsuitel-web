@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle, Bell } from 'lucide-react'
+import { Building2, DoorOpen, Users, Receipt, Wrench, TrendingUp, AlertCircle, Bell, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import WelcomeModal from '@/components/WelcomeModal'
 import StaffWelcomeModal from '@/components/StaffWelcomeModal'
@@ -70,6 +70,26 @@ export default async function OwnerDashboard() {
 
   const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
   const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
+
+  // Low-cheque alert: active contracts with ≤ 2 pending cheques
+  const [pendingChequeRows, activeContractRows] = await Promise.all([
+    admin.from('cheques').select('contract_id').eq('organization_id', orgId).eq('status', 'pending'),
+    admin.from('contracts')
+      .select('id, tenants(full_name), units(unit_number, properties(name))')
+      .eq('organization_id', orgId).eq('status', 'active'),
+  ])
+  const chequeMap: Record<string, number> = {}
+  for (const ch of pendingChequeRows.data ?? []) {
+    chequeMap[ch.contract_id] = (chequeMap[ch.contract_id] ?? 0) + 1
+  }
+  type LowCheque = { id: string; tenantName: string; unit: string; count: number }
+  const lowChequeContracts: LowCheque[] = (activeContractRows.data ?? [])
+    .map(c => {
+      const t = c.tenants as { full_name: string } | null
+      const u = c.units as { unit_number: string; properties: { name: string } } | null
+      return { id: c.id, tenantName: t?.full_name ?? 'Unknown', unit: `${u?.properties?.name ?? ''} — Unit ${u?.unit_number ?? ''}`, count: chequeMap[c.id] ?? 0 }
+    })
+    .filter(c => c.count <= 2)
 
   const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
@@ -202,6 +222,31 @@ export default async function OwnerDashboard() {
           </div>
           <span className="bg-white text-red-600 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
             Review now
+          </span>
+        </Link>
+      )}
+
+      {/* Low cheque banner */}
+      {lowChequeContracts.length > 0 && (
+        <Link href="/dashboard/owner/cheques"
+          className="flex items-center gap-3 bg-orange-500 text-white rounded-xl px-5 py-3.5 hover:bg-orange-600 transition-colors">
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <CreditCard size={16} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">
+              {lowChequeContracts.length === 1
+                ? `${lowChequeContracts[0].tenantName} has only ${lowChequeContracts[0].count} post-dated cheque${lowChequeContracts[0].count !== 1 ? 's' : ''} remaining`
+                : `${lowChequeContracts.length} tenants are running low on post-dated cheques`}
+            </div>
+            <div className="text-xs text-white/80">
+              {lowChequeContracts.length === 1
+                ? lowChequeContracts[0].unit
+                : lowChequeContracts.map(c => `${c.tenantName} (${c.count})`).join(' · ')}
+            </div>
+          </div>
+          <span className="bg-white text-orange-600 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+            View Cheques
           </span>
         </Link>
       )}

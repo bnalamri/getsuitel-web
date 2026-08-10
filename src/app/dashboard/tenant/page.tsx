@@ -1,6 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FileText, Receipt, Wrench, Home, Phone, Mail, User } from 'lucide-react'
+import { FileText, Receipt, Wrench, Home, Phone, Mail, User, CreditCard } from 'lucide-react'
 
 export const metadata = { title: 'Dashboard' }
 
@@ -16,6 +16,18 @@ export default async function TenantDashboard() {
     supabase.from('maintenance_requests').select('id,title,status,created_at').eq('tenant_id', tenant.id).order('created_at',{ascending:false}).limit(3),
     supabase.from('contracts').select('id,status,end_date,rent_amount,currency,units(unit_number,properties(name))').eq('tenant_id', tenant.id).eq('status','active').single(),
   ]) : [{ data:[] }, { data:[] }, { data: null }]
+
+  // Count pending cheques for active contract
+  let pendingCheques = 0
+  const contractData = (contracts as { data: unknown }).data as { id: string } | null
+  if (contractData?.id) {
+    const { count } = await supabase
+      .from('cheques')
+      .select('id', { count: 'exact', head: true })
+      .eq('contract_id', contractData.id)
+      .eq('status', 'pending')
+    pendingCheques = count ?? 0
+  }
 
   const activeContract = (contracts as {data: unknown}).data as {
     id:string; end_date:string; rent_amount:number; currency:string;
@@ -105,12 +117,29 @@ export default async function TenantDashboard() {
         <div className="card p-5 text-center text-slate-500 text-sm">No active contract found.</div>
       )}
 
+      {/* Low cheque warning banner */}
+      {pendingCheques <= 2 && activeContract && (
+        <div className={`flex items-center gap-3 rounded-xl px-5 py-3.5 ${pendingCheques === 0 ? 'bg-red-600' : 'bg-orange-500'} text-white`}>
+          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+            <CreditCard size={16} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-sm">
+              {pendingCheques === 0
+                ? 'No post-dated cheques on file'
+                : `Only ${pendingCheques} post-dated cheque${pendingCheques !== 1 ? 's' : ''} remaining`}
+            </div>
+            <div className="text-xs text-white/80">Please submit new cheques to your property manager</div>
+          </div>
+        </div>
+      )}
+
       {/* Quick stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label:'Overdue Invoices', value:overdue, icon:Receipt, color:'bg-red-50 text-red-600', href:'/dashboard/tenant/invoices' },
           { label:'Open Maintenance', value:openMaint, icon:Wrench, color:'bg-orange-50 text-orange-600', href:'/dashboard/tenant/maintenance' },
-          { label:'Contract', value:activeContract?'Active':'None', icon:FileText, color:'bg-green-50 text-green-600', href:'/dashboard/tenant/contract' },
+          { label: `Cheques on File`, value: pendingCheques, icon: CreditCard, color: pendingCheques <= 2 ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600', href: '/dashboard/tenant/contract' },
         ].map(c => (
           <a key={c.label} href={c.href} className="card p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${c.color}`}>
