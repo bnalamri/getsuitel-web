@@ -71,34 +71,35 @@ export default async function OwnerDashboard() {
   const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
   const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
 
-  // Low-cheque alert: active cheque-paying contracts with ≤ 2 pending cheques
-  const activeContractRows = await admin.from('contracts')
-    .select('id, tenants(full_name), units(unit_number, properties(name))')
-    .eq('organization_id', orgId)
-    .eq('status', 'active')
-    .eq('payment_method', 'cheque')
-  const chequeContractIds = (activeContractRows.data ?? []).map(c => c.id)
+  // Low-cheque alert: cheques table has tenant_id+unit_id, no contract_id
+  const [activeContractRows, pendingChequeRows] = await Promise.all([
+    admin.from('contracts')
+      .select('id, tenant_id, unit_id, tenants(full_name), units(unit_number, properties(name))')
+      .eq('organization_id', orgId)
+      .eq('status', 'active')
+      .eq('payment_method', 'cheque'),
+    admin.from('cheques')
+      .select('tenant_id, unit_id')
+      .eq('organization_id', orgId)
+      .eq('status', 'pending'),
+  ])
   const chequeMap: Record<string, number> = {}
-  if (chequeContractIds.length > 0) {
-    const pendingChequeRows = await admin.from('cheques')
-      .select('contract_id')
-      .eq('status', 'pending')
-      .in('contract_id', chequeContractIds)
-    for (const ch of pendingChequeRows.data ?? []) {
-      chequeMap[ch.contract_id] = (chequeMap[ch.contract_id] ?? 0) + 1
-    }
+  for (const ch of pendingChequeRows.data ?? []) {
+    const key = `${ch.tenant_id}_${ch.unit_id}`
+    chequeMap[key] = (chequeMap[key] ?? 0) + 1
   }
   type LowCheque = { id: string; tenantName: string; property: string; unit: string; count: number }
   const lowChequeContracts: LowCheque[] = (activeContractRows.data ?? [])
     .map(c => {
       const t = c.tenants as { full_name: string } | null
       const u = c.units as { unit_number: string; properties: { name: string } } | null
+      const key = `${c.tenant_id}_${c.unit_id}`
       return {
         id: c.id,
         tenantName: t?.full_name ?? 'Unknown',
         property: u?.properties?.name ?? '',
         unit: u?.unit_number ?? '',
-        count: chequeMap[c.id] ?? 0,
+        count: chequeMap[key] ?? 0,
       }
     })
     .filter(c => c.count <= 2)
