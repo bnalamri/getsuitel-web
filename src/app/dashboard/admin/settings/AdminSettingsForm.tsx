@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useShell } from '@/components/layout/DashboardShell'
-import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages } from 'lucide-react'
+import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages, ExternalLink } from 'lucide-react'
 
 const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const CURRENCY_LABELS: Record<string, string> = {
@@ -318,6 +318,36 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
             {pwSaved ? 'Updated!' : 'Update Password'}
           </button>
         </form>
+      </div>
+
+      {/* ── Platform ── */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe size={16} className="text-navy-700" />
+          <h3 className="font-semibold text-slate-900">Platform</h3>
+        </div>
+        <div className="divide-y divide-slate-100">
+          <div className="flex items-center justify-between py-3">
+            <span className="text-sm text-slate-500">Website</span>
+            <a
+              href="https://getsuitel.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:underline"
+            >
+              getsuitel.com
+              <ExternalLink size={13} />
+            </a>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <span className="text-sm text-slate-500">Role</span>
+            <span className="text-sm font-semibold text-slate-800">Superadmin</span>
+          </div>
+          <div className="flex items-center justify-between py-3">
+            <span className="text-sm text-slate-500">Version</span>
+            <span className="text-sm font-mono text-slate-600">1.0.2</span>
+          </div>
+        </div>
       </div>
 
     </div>
