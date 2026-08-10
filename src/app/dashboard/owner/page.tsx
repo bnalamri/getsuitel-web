@@ -71,23 +71,31 @@ export default async function OwnerDashboard() {
   const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
   const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
 
-  // Low-cheque alert: all active contracts across all properties with ≤ 2 pending cheques
+  // Low-cheque alert: cheque-paying active contracts across all properties with ≤ 2 pending cheques
   const [pendingChequeRows, activeContractRows] = await Promise.all([
     admin.from('cheques').select('contract_id').eq('organization_id', orgId).eq('status', 'pending'),
     admin.from('contracts')
       .select('id, tenants(full_name), units(unit_number, properties(name))')
-      .eq('organization_id', orgId).eq('status', 'active'),
+      .eq('organization_id', orgId)
+      .eq('status', 'active')
+      .eq('payment_method', 'cheque'),
   ])
   const chequeMap: Record<string, number> = {}
   for (const ch of pendingChequeRows.data ?? []) {
     chequeMap[ch.contract_id] = (chequeMap[ch.contract_id] ?? 0) + 1
   }
-  type LowCheque = { id: string; tenantName: string; unit: string; count: number }
+  type LowCheque = { id: string; tenantName: string; property: string; unit: string; count: number }
   const lowChequeContracts: LowCheque[] = (activeContractRows.data ?? [])
     .map(c => {
       const t = c.tenants as { full_name: string } | null
       const u = c.units as { unit_number: string; properties: { name: string } } | null
-      return { id: c.id, tenantName: t?.full_name ?? 'Unknown', unit: `${u?.properties?.name ?? ''} — Unit ${u?.unit_number ?? ''}`, count: chequeMap[c.id] ?? 0 }
+      return {
+        id: c.id,
+        tenantName: t?.full_name ?? 'Unknown',
+        property: u?.properties?.name ?? '',
+        unit: u?.unit_number ?? '',
+        count: chequeMap[c.id] ?? 0,
+      }
     })
     .filter(c => c.count <= 2)
 
@@ -241,8 +249,8 @@ export default async function OwnerDashboard() {
             </div>
             <div className="text-xs text-white/80">
               {lowChequeContracts.length === 1
-                ? lowChequeContracts[0].unit
-                : lowChequeContracts.map(c => `${c.tenantName} (${c.count})`).join(' · ')}
+                ? `${lowChequeContracts[0].property} · Unit ${lowChequeContracts[0].unit}`
+                : lowChequeContracts.map(c => `${c.tenantName} — ${c.property} · Unit ${c.unit} (${c.count})`).join(' | ')}
             </div>
           </div>
           <span className="bg-white text-orange-600 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
