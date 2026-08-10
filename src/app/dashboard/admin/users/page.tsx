@@ -22,7 +22,7 @@ export default async function UsersPage() {
   // Fetch all profiles with org name
   const { data: profiles, error: profilesError } = await admin
     .from('profiles')
-    .select('id, full_name, email, phone, role, organization_id, created_at, organizations(name)')
+    .select('id, full_name, email, phone, role, organization_id, created_at, organizations!organization_id(name)')
     .neq('role', 'superadmin')
     .order('created_at', { ascending: false })
 
