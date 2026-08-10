@@ -36,17 +36,13 @@ export function UsersTable({
   const [filterRole,   setFilterRole]   = useState('')
   const [filterStatus, setFilterStatus] = useState('')
 
-  // Build unique org options from the data
+  // Build unique org name options (deduplicated by name, not by ID)
   const orgOptions = useMemo(() => {
-    const seen = new Map<string, string>() // orgId → name
-    for (const p of list) {
-      if (p.organization_id && p.organizations?.name) {
-        seen.set(p.organization_id, p.organizations.name)
-      }
-    }
-    const entries: [string, string][] = []
-    seen.forEach((name, id) => entries.push([id, name]))
-    return entries.sort((a, b) => a[1].localeCompare(b[1]))
+    const seen = new Set<string>()
+    list.forEach(p => { if (p.organizations?.name) seen.add(p.organizations.name) })
+    const names: string[] = []
+    seen.forEach(n => names.push(n))
+    return names.sort((a, b) => a.localeCompare(b))
   }, [list])
 
   const roleOptions = useMemo(() => {
@@ -58,7 +54,7 @@ export function UsersTable({
   }, [list])
 
   const filtered = useMemo(() => list.filter(p => {
-    if (filterOrg && p.organization_id !== filterOrg) return false
+    if (filterOrg && p.organizations?.name !== filterOrg) return false
     if (filterRole && p.role !== filterRole) return false
     if (filterStatus === 'disabled' && !banned.has(p.id)) return false
     if (filterStatus === 'active'   &&  banned.has(p.id)) return false
@@ -102,8 +98,8 @@ export function UsersTable({
           className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-navy-400"
         >
           <option value="">All Organizations</option>
-          {orgOptions.map(([id, name]) => (
-            <option key={id} value={id}>{name}</option>
+          {orgOptions.map(name => (
+            <option key={name} value={name}>{name}</option>
           ))}
         </select>
 
