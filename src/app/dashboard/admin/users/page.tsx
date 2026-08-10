@@ -20,19 +20,24 @@ export default async function UsersPage() {
   const admin = createAdminClient()
 
   // Fetch all profiles with org name
-  const { data: profiles } = await admin
+  const { data: profiles, error: profilesError } = await admin
     .from('profiles')
-    .select('*, organizations(name)')
+    .select('id, full_name, email, phone, role, organization_id, created_at, organizations(name)')
     .neq('role', 'superadmin')
     .order('created_at', { ascending: false })
 
-  // Fetch banned users from auth
-  const { data: { users: authUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 })
-  const bannedIds = new Set(
-    authUsers
-      .filter(u => u.banned_until && new Date(u.banned_until) > new Date())
-      .map(u => u.id)
-  )
+  if (profilesError) console.error('Users page profiles error:', profilesError)
+
+  // Fetch banned users from auth (defensive — listUsers can fail)
+  let bannedIds = new Set<string>()
+  try {
+    const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    bannedIds = new Set(
+      (authData?.users ?? [])
+        .filter(u => u.banned_until && new Date(u.banned_until) > new Date())
+        .map(u => u.id)
+    )
+  } catch { /* non-fatal — status column will show Active for all */ }
 
   const list = profiles ?? []
 
