@@ -27,15 +27,27 @@ interface Cheque {
   units?: { unit_number: string } | null
 }
 
-interface Unit { id: string; unit_number: string }
+interface Unit { id: string; unit_number: string; properties?: { name: string } | null }
+interface Property { id: string; name: string }
 
-export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; units: Unit[] }) {
-  const [filterUnit, setFilterUnit] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [searchNum, setSearchNum] = useState('')
+export default function ChequeTable({ cheques, units, properties = [] }: { cheques: Cheque[]; units: Unit[]; properties?: Property[] }) {
+  const [filterProperty, setFilterProperty] = useState('')
+  const [filterUnit,     setFilterUnit]     = useState('')
+  const [filterStatus,   setFilterStatus]   = useState('')
+  const [searchNum,      setSearchNum]      = useState('')
+
+  // Units scoped to selected property
+  const visibleUnits = filterProperty
+    ? units.filter(u => u.properties?.name === filterProperty)
+    : units
   const today = new Date().toISOString().split('T')[0]
 
   const filtered = cheques
+    .filter(c => {
+      if (filterProperty === '') return true
+      const unitNum = (c.units as { unit_number: string } | null)?.unit_number ?? ''
+      return visibleUnits.some(u => u.unit_number === unitNum)
+    })
     .filter(c => filterUnit === '' || (c.units as { unit_number: string } | null)?.unit_number === filterUnit)
     .filter(c => filterStatus === '' || c.status === filterStatus)
     .filter(c => searchNum === '' || c.cheque_number.toLowerCase().includes(searchNum.toLowerCase()))
@@ -55,7 +67,7 @@ export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; uni
           {filterUnit ? `Cheques — Unit ${filterUnit}` : `All Cheques`}
           <span className="text-slate-400 font-normal text-sm">({filtered.length})</span>
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -80,13 +92,25 @@ export default function ChequeTable({ cheques, units }: { cheques: Cheque[]; uni
             <option value="cancelled">Cancelled</option>
             <option value="replaced">Replaced</option>
           </select>
+          {properties.length > 1 && (
+            <select
+              className="input w-40 text-sm"
+              value={filterProperty}
+              onChange={e => { setFilterProperty(e.target.value); setFilterUnit('') }}
+            >
+              <option value="">All properties</option>
+              {properties.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+          )}
           <select
-            className="input w-32 text-sm"
+            className="input w-36 text-sm"
             value={filterUnit}
             onChange={e => setFilterUnit(e.target.value)}
           >
             <option value="">All units</option>
-            {units.map(u => (
+            {visibleUnits.map(u => (
               <option key={u.id} value={u.unit_number}>{u.unit_number}</option>
             ))}
           </select>
