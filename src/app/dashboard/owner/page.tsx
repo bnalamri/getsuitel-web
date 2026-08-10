@@ -71,11 +71,9 @@ export default async function OwnerDashboard() {
   const platformReadSet = new Set((platformReads ?? []).map(r => r.notice_id))
   const unreadPlatformNotices = (platformNotices ?? []).filter(n => !platformReadSet.has(n.id)).length
 
-  // Low-cheque alert: active contracts with ≤ 2 pending cheques
-  // Only warn contracts that have EVER had a cheque — contracts with 0 total cheques don't use this payment method
-  const [pendingChequeRows, allChequeRows, activeContractRows] = await Promise.all([
+  // Low-cheque alert: all active contracts across all properties with ≤ 2 pending cheques
+  const [pendingChequeRows, activeContractRows] = await Promise.all([
     admin.from('cheques').select('contract_id').eq('organization_id', orgId).eq('status', 'pending'),
-    admin.from('cheques').select('contract_id').eq('organization_id', orgId),
     admin.from('contracts')
       .select('id, tenants(full_name), units(unit_number, properties(name))')
       .eq('organization_id', orgId).eq('status', 'active'),
@@ -84,8 +82,6 @@ export default async function OwnerDashboard() {
   for (const ch of pendingChequeRows.data ?? []) {
     chequeMap[ch.contract_id] = (chequeMap[ch.contract_id] ?? 0) + 1
   }
-  // Set of contract IDs that have ever had any cheque (any status)
-  const contractsWithCheques = new Set((allChequeRows.data ?? []).map(ch => ch.contract_id))
   type LowCheque = { id: string; tenantName: string; unit: string; count: number }
   const lowChequeContracts: LowCheque[] = (activeContractRows.data ?? [])
     .map(c => {
@@ -93,7 +89,7 @@ export default async function OwnerDashboard() {
       const u = c.units as { unit_number: string; properties: { name: string } } | null
       return { id: c.id, tenantName: t?.full_name ?? 'Unknown', unit: `${u?.properties?.name ?? ''} — Unit ${u?.unit_number ?? ''}`, count: chequeMap[c.id] ?? 0 }
     })
-    .filter(c => contractsWithCheques.has(c.id) && c.count <= 2)
+    .filter(c => c.count <= 2)
 
   const [props, units, tenants, invoices, maintenance, contracts] = await Promise.all([
     supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', orgId),
