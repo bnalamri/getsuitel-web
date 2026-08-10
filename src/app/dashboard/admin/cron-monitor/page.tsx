@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CronMonitorPDF from './CronMonitorPDF'
 import CronRunButton from './CronRunButton'
+import LocalTime from './LocalTime'
 
 interface CronLog {
   id: string
@@ -107,7 +108,7 @@ export default async function CronMonitorPage() {
               <p className="text-xs text-slate-500 mb-3">{meta.description}</p>
               {last && (
                 <div className="text-xs text-slate-600 space-y-1">
-                  <div><span className="font-medium">Last run:</span> {formatDate(last.ran_at)}</div>
+                  <div><span className="font-medium">Last run:</span> <LocalTime iso={last.ran_at} /></div>
                   <div><span className="font-medium">Duration:</span> {formatDuration(last.duration_ms)}</div>
                   <div><span className="font-medium">Summary:</span> {summarize(last.summary)}</div>
                   {last.error_msg && (
@@ -157,7 +158,7 @@ export default async function CronMonitorPage() {
                 logs.map(log => (
                   <tr key={log.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap font-mono">
-                      {formatDate(log.ran_at)}
+                      <LocalTime iso={log.ran_at} />
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium text-slate-800">

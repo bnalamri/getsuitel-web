@@ -72,13 +72,15 @@ export async function GET(req: Request) {
     }
   }
 
-  // Filter to orgs where it's currently midnight in their timezone
-  targetOrgs = targetOrgs.filter(o =>
-    isOrgMidnight(((o as Record<string, unknown>).org_timezone as string) ?? 'UTC')
-  )
-
-  if (targetOrgs.length === 0) {
-    return NextResponse.json({ ok: true, skipped: true, reason: 'no orgs at midnight' })
+  // Filter to orgs where it's currently midnight in their timezone (bypass with ?force=true)
+  const force = new URL(req.url).searchParams.get('force') === 'true'
+  if (!force) {
+    targetOrgs = targetOrgs.filter(o =>
+      isOrgMidnight(((o as Record<string, unknown>).org_timezone as string) ?? 'UTC')
+    )
+    if (targetOrgs.length === 0) {
+      return NextResponse.json({ ok: true, skipped: true, reason: 'no orgs at midnight' })
+    }
   }
 
   let snapshotted = 0
