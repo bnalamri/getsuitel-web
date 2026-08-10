@@ -41,8 +41,13 @@ export default function ContractTable({
 
   const daysLeft = (endDate: string) => Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000)
 
+  // Only show units that belong to the currently selected property
   const uniqueUnits = Array.from(
-    new Map(contracts.map(c => [(c.units as Unit | null)?.unit_number ?? '', c.units])).entries()
+    new Map(
+      contracts
+        .filter(c => filterProperty === '' || (c.units as Unit | null)?.properties?.name === filterProperty)
+        .map(c => [(c.units as Unit | null)?.unit_number ?? '', c.units])
+    ).entries()
   ).filter(([k]) => k).sort(([a], [b]) => a.localeCompare(b))
 
   const filtered = contracts
@@ -60,7 +65,7 @@ export default function ContractTable({
       {/* Filters */}
       <div className="flex items-center gap-3 justify-end flex-wrap">
         {properties.length > 1 && (
-          <select className="input w-44 text-sm" value={filterProperty} onChange={e => setFilterProperty(e.target.value)}>
+          <select className="input w-44 text-sm" value={filterProperty} onChange={e => { setFilterProperty(e.target.value); setFilterUnit('') }}>
             <option value="">All Properties</option>
             {properties.map(p => (
               <option key={p.id} value={p.name}>{p.name}</option>
