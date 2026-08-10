@@ -22,12 +22,13 @@ export default function CronRunButton({ job }: { job: string }) {
         setMsg(json.error ?? `HTTP ${res.status}`)
         setState('error')
       } else {
-        const summary = json.message ?? json.summary
-          ?? Object.entries(json)
-               .filter(([k]) => !['ok','status'].includes(k))
-               .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
-               .join(' · ')
-          || 'Done'
+        const summary = (
+          json.message ?? json.summary
+            ?? Object.entries(json)
+                 .filter(([k]) => !['ok', 'status'].includes(k))
+                 .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+                 .join(' · ')
+        ) || 'Done'
         setMsg(summary)
         setState('done')
         // Reset after 8s so the card doesn't stay green forever
