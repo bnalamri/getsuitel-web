@@ -3,6 +3,9 @@ import OrgSettingsForm from './OrgSettingsForm'
 import ProfileSettingsForm from './ProfileSettingsForm'
 import PaymentSettingsForm from './PaymentSettingsForm'
 import BankSettingsForm from './BankSettingsForm'
+import ChangePasswordForm from './ChangePasswordForm'
+import LanguageSettingsForm from './LanguageSettingsForm'
+import PlatformInfoCard from './PlatformInfoCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -54,6 +57,7 @@ export default async function SettingsPage() {
       </div>
 
       <ProfileSettingsForm profile={displayProfile} />
+      <ChangePasswordForm />
       {!isStaff && (
         <>
           <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} platformCurrency={platformCurrency} />
@@ -61,6 +65,8 @@ export default async function SettingsPage() {
           <BankSettingsForm orgId={profile?.organization_id ?? ''} initialBanks={banks ?? []} />
         </>
       )}
+      <LanguageSettingsForm userId={user.id} />
+      <PlatformInfoCard version="1.0.0" />
     </div>
   )
 }

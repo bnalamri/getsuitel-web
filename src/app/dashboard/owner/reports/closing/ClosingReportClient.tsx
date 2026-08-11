@@ -12,8 +12,8 @@ type Invoice = {
 }
 type Expense = {
   id: string; description: string; amount: number | string; currency: string
-  category: string; date: string
-  properties?: { name: string } | null
+  category: string; date: string; property_id?: string | null
+  properties?: { id?: string; name: string } | null
 }
 type Property = { id: string; name: string }
 
@@ -100,9 +100,10 @@ export default function ClosingReportClient({
   const now = new Date()
   // Default to previous completed month
   const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const [year,     setYear]     = useState(String(prevMonth.getFullYear()))
-  const [month,    setMonth]    = useState(String(prevMonth.getMonth())) // 0-indexed
-  const [currency, setCurrency] = useState(defaultCurrency)
+  const [year,       setYear]       = useState(String(prevMonth.getFullYear()))
+  const [month,      setMonth]      = useState(String(prevMonth.getMonth())) // 0-indexed
+  const [currency,   setCurrency]   = useState(defaultCurrency)
+  const [propertyId, setPropertyId] = useState<string>('') // '' = all properties
   const [showArrears, setShowArrears] = useState(true)
 
   const years = Array.from({ length: 4 }, (_, i) => String(now.getFullYear() - i))
@@ -118,8 +119,19 @@ export default function ClosingReportClient({
 
   // ── Invoice splits ─────────────────────────────────────────────────────────
   const allCurrInvoices = useMemo(
-    () => invoices.filter(i => i.currency === currency && i.status !== 'canceled'),
-    [invoices, currency]
+    () => invoices.filter(i => {
+      if (i.currency !== currency || i.status === 'canceled') return false
+      if (propertyId && i.units?.properties?.id !== propertyId) return false
+      return true
+    }),
+    [invoices, currency, propertyId]
+  )
+
+  const allCurrExpenses = useMemo(
+    () => propertyId
+      ? expenses.filter(e => e.property_id === propertyId)
+      : expenses,
+    [expenses, propertyId]
   )
 
   // This month's invoices (due_date in selected month)
@@ -138,8 +150,8 @@ export default function ClosingReportClient({
 
   // This month's expenses
   const thisMonthExpenses = useMemo(
-    () => expenses.filter(e => e.currency === currency && e.date >= monthStart && e.date <= monthEnd),
-    [expenses, currency, monthStart, monthEnd]
+    () => allCurrExpenses.filter(e => e.currency === currency && e.date >= monthStart && e.date <= monthEnd),
+    [allCurrExpenses, currency, monthStart, monthEnd]
   )
 
   // ── Totals ────────────────────────────────────────────────────────────────
@@ -158,7 +170,8 @@ export default function ClosingReportClient({
   // ── Excel export ──────────────────────────────────────────────────────────
   function handleExcel() {
     const rows: string[][] = []
-    rows.push([`${orgName} — Month-End Closing Report — ${monthLabel}`])
+    const propName = propertyId ? (properties.find(p => p.id === propertyId)?.name ?? propertyId) : 'All Properties'
+    rows.push([`${orgName} — Month-End Closing Report — ${monthLabel} — ${propName}`])
     rows.push([`Generated: ${new Date().toLocaleDateString()}`, `Prepared by: ${printerName}`])
     rows.push([])
 
@@ -268,7 +281,18 @@ export default function ClosingReportClient({
         <select className="input w-24 text-sm" value={currency} onChange={e => setCurrency(e.target.value)}>
           {['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR'].map(c => <option key={c}>{c}</option>)}
         </select>
-        <span className="text-sm text-slate-400">Showing: <strong className="text-slate-700">{monthLabel}</strong></span>
+        {properties.length > 0 && (
+          <select className="input w-44 text-sm" value={propertyId} onChange={e => setPropertyId(e.target.value)}>
+            <option value="">All Properties</option>
+            {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        )}
+        <span className="text-sm text-slate-400">
+          Showing: <strong className="text-slate-700">{monthLabel}</strong>
+          {propertyId && properties.length > 0 && (
+            <> · <strong className="text-slate-700">{properties.find(p => p.id === propertyId)?.name}</strong></>
+          )}
+        </span>
       </div>
 
       {/* ── Summary KPI cards ─────────────────────────────────────────────── */}

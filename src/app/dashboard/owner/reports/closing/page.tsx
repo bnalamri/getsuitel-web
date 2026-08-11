@@ -27,7 +27,7 @@ export default async function ClosingReportPage() {
       .order('due_date', { ascending: false }),
     admin
       .from('expenses')
-      .select('id, description, amount, currency, category, date, properties(name)')
+      .select('id, description, amount, currency, category, date, property_id, properties(id, name)')
       .eq('organization_id', orgId)
       .order('date', { ascending: false }),
     admin
