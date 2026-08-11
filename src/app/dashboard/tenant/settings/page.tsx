@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TenantSettingsForm from './TenantSettingsForm'
+import ChangePasswordForm from './ChangePasswordForm'
+import LanguageSettingsForm from './LanguageSettingsForm'
+import PlatformInfoCard from './PlatformInfoCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -16,6 +19,9 @@ export default async function TenantSettingsPage() {
     <div className="space-y-6 max-w-lg">
       <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
       <TenantSettingsForm profile={profile} tenant={tenant} />
+      <ChangePasswordForm />
+      <LanguageSettingsForm userId={user.id} />
+      <PlatformInfoCard />
     </div>
   )
 }

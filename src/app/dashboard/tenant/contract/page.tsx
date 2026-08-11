@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FileText, Calendar, Home, DollarSign, User, ExternalLink } from 'lucide-react'
+import { FileText, Calendar, Home, DollarSign, ExternalLink } from 'lucide-react'
+import MyDetailsForm from './MyDetailsForm'
 
 export const metadata = { title: 'My Contract' }
 
@@ -87,16 +88,8 @@ export default async function TenantContractPage() {
         </div>
       </div>
 
-      {/* Tenant info */}
-      <div className="card p-6">
-        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><User size={16} />My Details</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><div className="text-slate-500">Full Name</div><div className="font-semibold text-slate-900 mt-0.5">{tenant.full_name}</div></div>
-          <div><div className="text-slate-500">Email</div><div className="font-semibold text-slate-900 mt-0.5">{tenant.email}</div></div>
-          <div><div className="text-slate-500">Phone</div><div className="font-semibold text-slate-900 mt-0.5">{tenant.phone}</div></div>
-          {tenant.national_id && <div><div className="text-slate-500">National ID</div><div className="font-semibold text-slate-900 mt-0.5">{tenant.national_id}</div></div>}
-        </div>
-      </div>
+      {/* Tenant info — editable */}
+      <MyDetailsForm tenant={tenant} />
 
       {/* Municipality Agreement */}
       {contract.municipality_agreement_url && (
