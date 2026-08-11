@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TechSettingsForm from './TechSettingsForm'
+import ChangePasswordForm from './ChangePasswordForm'
+import LanguageSettingsForm from './LanguageSettingsForm'
+import PlatformInfoCard from './PlatformInfoCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -15,6 +18,9 @@ export default async function TechnicianSettingsPage() {
     <div className="space-y-6 max-w-lg">
       <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
       <TechSettingsForm profile={profile} />
+      <ChangePasswordForm />
+      <LanguageSettingsForm userId={user.id} />
+      <PlatformInfoCard />
     </div>
   )
 }

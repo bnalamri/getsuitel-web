@@ -48,11 +48,11 @@ export default async function TechnicianSchedulePage({
 
   const allJobs = orders ?? []
 
-  // Group by scheduled_date
+  // Group by scheduled_date — slice to 10 chars to normalize timestamp vs date format
   const byDate = new Map<string, typeof allJobs>()
   const unscheduled: typeof allJobs = []
   for (const job of allJobs) {
-    const d = job.scheduled_date as string | null
+    const d = (job.scheduled_date as string | null)?.substring(0, 10) ?? null
     if (d) {
       if (!byDate.has(d)) byDate.set(d, [])
       byDate.get(d)!.push(job)
