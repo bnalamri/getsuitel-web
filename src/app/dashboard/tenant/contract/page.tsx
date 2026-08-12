@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { FileText, Calendar, Home, DollarSign, ExternalLink } from 'lucide-react'
 import MyDetailsForm from './MyDetailsForm'
+import FloorPlanCard from './FloorPlanCard'
 
 export const metadata = { title: 'My Contract' }
 
@@ -15,7 +16,7 @@ export default async function TenantContractPage() {
 
   const { data: contract } = await supabase
     .from('contracts')
-    .select('*, units(unit_number, floor, area_sqm, bedrooms, bathrooms, properties(name, address, city))')
+    .select('*, units(unit_number, floor, area_sqm, bedrooms, bathrooms, floor_plan_url, properties(name, address, city))')
     .eq('tenant_id', tenant.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -34,6 +35,7 @@ export default async function TenantContractPage() {
 
   const unit = contract.units as {
     unit_number: string; floor: number; area_sqm: number; bedrooms: number; bathrooms: number;
+    floor_plan_url: string | null;
     properties: { name: string; address: string; city: string }
   } | null
 
@@ -62,6 +64,11 @@ export default async function TenantContractPage() {
           {unit?.bedrooms && <div><div className="text-slate-500">Bedrooms / Bathrooms</div><div className="font-semibold text-slate-900 mt-0.5">{unit.bedrooms} BR / {unit.bathrooms} BA</div></div>}
         </div>
       </div>
+
+      {/* Floor Plan */}
+      {unit?.floor_plan_url && (
+        <FloorPlanCard url={unit.floor_plan_url} unitNumber={unit.unit_number} />
+      )}
 
       {/* Contract terms */}
       <div className="card p-6">

@@ -3,6 +3,7 @@ import { DoorOpen, ArrowRight } from 'lucide-react'
 import AddUnitForm from './AddUnitForm'
 import EditUnitForm from './EditUnitForm'
 import DeleteUnitButton from './DeleteUnitButton'
+import FloorPlanUploadButton from './FloorPlanUploadButton'
 import Link from 'next/link'
 import PropertyFilterSelect from './PropertyFilterSelect'
 
@@ -33,7 +34,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
 
   const hasProperties = (properties?.length ?? 0) > 0
 
-  let query = supabase.from('units').select('*, properties(name)').eq('organization_id', orgId).order('created_at', { ascending: false })
+  let query = supabase.from('units').select('*, properties(name), floor_plan_url').eq('organization_id', orgId).order('created_at', { ascending: false })
   if (searchParams.property) query = query.eq('property_id', searchParams.property)
   const { data: units } = await query
 
@@ -89,6 +90,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Details</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Rent</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Status</th>
+                <th className="text-left px-4 py-3 text-slate-600 font-semibold">Floor Plan</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -107,6 +109,14 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900">{Number(u.rent_amount).toLocaleString()} {u.currency}</td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[u.status]}`}>{u.status}</span></td>
+                    <td className="px-4 py-3">
+                      <FloorPlanUploadButton
+                        unitId={u.id}
+                        unitNumber={u.unit_number}
+                        currentUrl={(u as Record<string, unknown>).floor_plan_url as string | null}
+                        readOnly={!canEdit}
+                      />
+                    </td>
                     {canEdit && (
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
