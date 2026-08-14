@@ -128,7 +128,7 @@ export default function ExpensesClient({
 
   return (
     <div className="space-y-4">
-      {/* Print header — visible always, styled in print */}
+      {/* Print header — hidden on screen, shown when printing */}
       <PrintHeader
         reportTitle="Expenses Report"
         orgName={orgName}

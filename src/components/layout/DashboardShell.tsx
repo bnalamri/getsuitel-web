@@ -179,7 +179,7 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
   }
 
   return (
-    <aside className={`flex flex-col h-full bg-gradient-to-b ${gradient} text-white transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
+    <aside className={`flex flex-col h-full bg-gradient-to-b ${gradient} text-white transition-all duration-300 print:hidden ${collapsed ? 'w-16' : 'w-60'}`}>
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
         {!collapsed && (
@@ -307,7 +307,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
   const title = labels[segment]?.[lang] ?? segment
 
   return (
-    <header className="h-14 flex items-center px-4 bg-white border-b border-slate-200 gap-4 flex-shrink-0">
+    <header className="h-14 flex items-center px-4 bg-white border-b border-slate-200 gap-4 flex-shrink-0 print:hidden">
       <button onClick={onMobileOpen} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 text-slate-600">
         <Menu size={20}/>
       </button>

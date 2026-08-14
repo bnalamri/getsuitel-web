@@ -28,7 +28,7 @@ export default function PrintHeader({ reportTitle, orgName, userName, printDate 
   const generated = printDate ?? todayDMY()
 
   return (
-    <div className="mb-5">
+    <div className="hidden print:block mb-5">
 
       {/* ── Navy title band ──────────────────────────────────────────────── */}
       <div
