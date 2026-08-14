@@ -28,10 +28,9 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/owners', icon:Shield, en:'Owners', ar:'الملاك' },
       { href:'/dashboard/admin/subscriptions', icon:CreditCard, en:'Subscriptions', ar:'الاشتراكات' },
       { href:'/dashboard/admin/notices', icon:Bell, en:'Notices', ar:'الإشعارات' },
-      { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
-      { href:'/dashboard/admin/financial-report', icon:TrendingUp, en:'Financial', ar:'المالية' },
     ]},
     { en:'Accounts', ar:'الحسابات', items:[
+      { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
       { href:'/dashboard/admin/users', icon:Users, en:'Users', ar:'المستخدمون' },
       { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
