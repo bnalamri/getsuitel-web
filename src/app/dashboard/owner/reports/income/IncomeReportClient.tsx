@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { TrendingUp, Download, Printer } from 'lucide-react'
 import { exportIncomeToExcel } from './exportIncomeExcel'
+import PrintHeader from '@/components/PrintHeader'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -29,8 +30,8 @@ function getDate(inv: Invoice) {
   return new Date(inv.due_date ?? inv.created_at)
 }
 
-export default function IncomeReportClient({ invoices, properties, defaultCurrency, orgName }: {
-  invoices: Invoice[]; properties: Property[]; defaultCurrency: string; orgName: string
+export default function IncomeReportClient({ invoices, properties, defaultCurrency, orgName, userName }: {
+  invoices: Invoice[]; properties: Property[]; defaultCurrency: string; orgName: string; userName: string
 }) {
   const now = new Date()
   const [year,         setYear]         = useState(String(now.getFullYear()))
@@ -118,10 +119,7 @@ export default function IncomeReportClient({ invoices, properties, defaultCurren
       </div>
 
       {/* Print header (hidden on screen) */}
-      <div className="hidden print:block mb-4">
-        <h1 className="text-2xl font-bold text-slate-900">{orgName} — Monthly Income Report</h1>
-        <p className="text-slate-500">{showMonthView ? `${selectedMonthLabel} ${year}` : `Year ${year}`} · {currency}</p>
-      </div>
+      <PrintHeader reportTitle="Monthly Income Report" orgName={orgName} userName={userName} />
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap print:hidden">

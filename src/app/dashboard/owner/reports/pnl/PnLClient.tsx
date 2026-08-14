@@ -1,4 +1,5 @@
 'use client'
+import PrintHeader from '@/components/PrintHeader'
 import { useState } from 'react'
 import { BarChart3, Download, Printer } from 'lucide-react'
 import { exportPnLToExcel } from './exportPnLExcel'
@@ -14,9 +15,9 @@ const EXPENSE_CATS: Record<string, string> = {
   management_fee: 'Management Fee', repair: 'Repair', other: 'Other',
 }
 
-export default function PnLClient({ invoices, expenses, maintenance, properties, defaultCurrency, orgName }: {
+export default function PnLClient({ invoices, expenses, maintenance, properties, defaultCurrency, orgName, userName }: {
   invoices: Invoice[]; expenses: Expense[]; maintenance: Maintenance[]
-  properties: Property[]; defaultCurrency: string; orgName: string
+  properties: Property[]; defaultCurrency: string; orgName: string; userName: string
 }) {
   const now = new Date()
   const thisYear = now.getFullYear()
@@ -104,10 +105,7 @@ export default function PnLClient({ invoices, expenses, maintenance, properties,
       </div>
 
       {/* Print header */}
-      <div className="hidden print:block mb-4">
-        <h1 className="text-2xl font-bold text-slate-900">{orgName} — Income Statement (P&L)</h1>
-        <p className="text-slate-500">{from} to {to} · {currency}</p>
-      </div>
+      <PrintHeader reportTitle="Income Statement (P&L)" orgName={orgName} userName={userName} />
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap print:hidden">

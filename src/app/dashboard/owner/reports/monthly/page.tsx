@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { ArrowLeft, Building2, CheckCircle2, AlertCircle, Clock, FileQuestion, ArrowDownToLine } from 'lucide-react'
 import Link from 'next/link'
 import PrintButton from '@/components/PrintButton'
+import PrintHeader from '@/components/PrintHeader'
 import MonthPicker from './MonthPicker'
 import PropertyFilter from './PropertyFilter'
 import MonthlyExcelButton from './MonthlyExcelButton'
@@ -106,7 +107,7 @@ export default async function MonthlyRentStatement({
   if (!user) return null
 
   const { data: profile } = await supabase
-    .from('profiles').select('organization_id').eq('id', user.id).single()
+    .from('profiles').select('organization_id, full_name').eq('id', user.id).single()
   const orgId = profile?.organization_id
   if (!orgId) return (
     <div className="text-slate-400 text-center py-20">No organization found</div>
@@ -127,7 +128,8 @@ export default async function MonthlyRentStatement({
   const monthStart = `${year}-${monthStr}-01`
   const monthEnd   = new Date(year, month, 0).toISOString().slice(0, 10)
   const monthLabel = new Date(year, month - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const printDate  = applyDateFmt(now.toISOString().slice(0, 10), orgDateFmt)
+  const printDate    = applyDateFmt(now.toISOString().slice(0, 10), orgDateFmt)
+  const printerName  = (profile?.full_name as string) || user.email || ''
 
   const admin = createAdminClient()
 
@@ -317,25 +319,7 @@ export default async function MonthlyRentStatement({
       </div>
 
       {/* Print header */}
-      <div className="hidden print:block border-b-2 border-slate-800 pb-4 mb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">
-              GetSuitel &mdash; Property Management
-            </p>
-            <h1 className="text-2xl font-bold text-slate-900">Monthly Rent Statement</h1>
-            <p className="text-base text-slate-700 mt-1 font-medium" dir="rtl">كشف الإيجارات الشهري</p>
-          </div>
-          <div className="text-right text-sm text-slate-600 space-y-1">
-            <p className="font-semibold text-slate-900">{orgName}</p>
-            <p>{monthLabel}</p>
-            <p>Printed: {printDate}</p>
-            <p className="mt-2 text-xs font-bold tracking-widest text-red-600 uppercase">
-              Strictly Confidential / سري للغاية
-            </p>
-          </div>
-        </div>
-      </div>
+      <PrintHeader reportTitle="Monthly Rent Statement" orgName={orgName} userName={printerName} printDate={printDate} />
 
       {/* Overall KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 no-print">

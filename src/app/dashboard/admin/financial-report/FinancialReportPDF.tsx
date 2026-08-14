@@ -237,10 +237,10 @@ export default function FinancialReportPDF({
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:Arial,sans-serif; font-size:11px; color:#1e293b; padding:24px; }
-    .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; border-bottom:2px solid #1B3A6B; padding-bottom:12px; }
-    .logo { font-size:20px; font-weight:900; color:#1B3A6B; }
-    .logo span { color:#b8972f; }
-    .meta { text-align:right; font-size:10px; color:#64748b; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; background:#1B3A6B; color:#fff; padding:14px 20px 12px; border-radius:6px 6px 0 0; margin-bottom:0; }
+    .logo { font-size:20px; font-weight:900; color:#fff; }
+    .logo span { color:#C9931A; }
+    .meta { text-align:right; font-size:10px; color:#AAC0E0; }
     h2 { font-size:14px; font-weight:700; color:#1B3A6B; margin-bottom:4px; }
     h3 { font-size:11px; font-weight:700; color:#1B3A6B; margin:16px 0 6px; text-transform:uppercase; letter-spacing:0.05em; }
     .sub { font-size:10px; color:#64748b; margin-bottom:14px; }
@@ -275,14 +275,14 @@ export default function FinancialReportPDF({
     </div>
   </div>
 
-  <div style="margin-bottom:16px;border:1.5px solid #dc2626;border-radius:6px;padding:10px 14px;background:#fff5f5;text-align:center;">
+  <div style="margin-bottom:20px;border:1.5px solid #dc2626;border-top:none;border-radius:0 0 6px 6px;padding:10px 14px;background:#fff;text-align:center;">
     <div style="font-size:11px;font-weight:700;color:#dc2626;letter-spacing:0.05em;">STRICTLY CONFIDENTIAL &nbsp;·&nbsp; سري للغاية</div>
-    <div style="font-size:9px;color:#7f1d1d;margin-top:4px;line-height:1.6;">
+    <div style="font-size:9px;color:#333;margin-top:4px;line-height:1.6;">
       This document is intended solely for authorised internal use within the organisation.
       Unauthorised disclosure, copying, distribution or use of this information is strictly prohibited.
     </div>
-    <div style="font-size:9px;color:#7f1d1d;margin-top:2px;line-height:1.6;">
-      هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تمامًا الإفصاح أو النسخ أو التوزيع أو استخدام هذه المعلومات بدون إذن.
+    <div style="font-size:9px;color:#333;margin-top:4px;line-height:1.6;direction:rtl;">
+      هذه الوثيقة مخصصة للاستعمال الداخلي المصرح به داخل المؤسسة فقط. يُحظر تماماً الإفصاح أو التوزيع أو استخدام هذه المعلومات بدون إذن.
     </div>
     <div dir="ltr" style="font-size:9px;color:#64748b;margin-top:8px;border-top:1px solid #fecaca;padding-top:6px;">
       Printed by: <strong style="unicode-bidi:isolate">${printerName}</strong> &nbsp;·&nbsp; <span style="unicode-bidi:isolate">${printDate}</span> &nbsp;·&nbsp; GetSuitel Platform Report

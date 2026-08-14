@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
 import { CalendarCheck, Download, Printer, TrendingUp, AlertTriangle, CheckCircle, Clock, Receipt, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
+import PrintHeader from '@/components/PrintHeader'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Invoice = {
@@ -240,14 +241,7 @@ export default function ClosingReportClient({
     <div className="p-6 space-y-6 print:p-0">
 
       {/* ── Print header ─────────────────────────────────────────────────── */}
-      <div className="hidden print:block mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">{orgName}</h1>
-        <h2 className="text-lg font-semibold text-slate-700 mt-0.5">Month-End Closing Report — {monthLabel}</h2>
-        <p className="text-xs text-slate-400 mt-1">Generated: {printDate} · Prepared by: {printerName} · Currency: {currency}</p>
-        <div className="mt-3 border border-red-400 rounded-md px-4 py-2 bg-red-50 text-center">
-          <p className="text-sm font-bold text-red-600">CONFIDENTIAL — FOR INTERNAL USE ONLY</p>
-        </div>
-      </div>
+      <PrintHeader reportTitle="Month-End Closing Report" orgName={orgName} userName={printerName} printDate={printDate} />
 
       {/* ── Screen header ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">

@@ -9,9 +9,10 @@ export default async function IncomeReportPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('organization_id, full_name').eq('id', user.id).single()
   const orgId = profile?.organization_id
   if (!orgId) return null
+  const userName = (profile?.full_name as string) || user.email || ''
 
   const admin = createAdminClient()
   const [invoicesRes, propertiesRes, orgRes] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function IncomeReportPage() {
       properties={propertiesRes.data ?? []}
       defaultCurrency={(orgRes.data?.default_currency as string) ?? 'OMR'}
       orgName={(orgRes.data?.name as string) ?? ''}
+      userName={userName}
     />
   )
 }

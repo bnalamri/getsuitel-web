@@ -1,12 +1,21 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { BarChart2, TrendingUp, CreditCard } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
+import PrintButton from '@/components/PrintButton'
+import PrintHeader from '@/components/PrintHeader'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Reports' }
 
 export default async function AdminReportsPage() {
   noStore()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: adminProfile } = user
+    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    : { data: null }
+  const printerName = (adminProfile?.full_name as string) || user?.email || 'Superadmin'
+
   const admin = createAdminClient()
 
   const [orgs, props, units, tenants, contracts, maintenance, proofs] = await Promise.all([
@@ -67,9 +76,16 @@ export default async function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Platform Reports</h2>
-        <p className="text-slate-500 text-sm mt-0.5">Aggregated data across all organizations</p>
+
+      {/* Print header — hidden on screen */}
+      <PrintHeader reportTitle="Platform Reports" orgName="GetSuitel" userName={printerName} />
+
+      <div className="flex items-center justify-between no-print">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Platform Reports</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Aggregated data across all organizations</p>
+        </div>
+        <PrintButton />
       </div>
 
       {/* Top stats */}
