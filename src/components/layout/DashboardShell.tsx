@@ -10,6 +10,7 @@ import {
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
   ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
+  UserCheck, DollarSign,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -31,6 +32,8 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Accounts', ar:'الحسابات', items:[
       { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/admin/reports/platform-growth', icon:TrendingUp, en:'Platform Growth', ar:'نمو المنصة' },
+      { href:'/dashboard/admin/reports/revenue-forecast', icon:DollarSign, en:'Revenue Forecast', ar:'توقعات الإيرادات' },
       { href:'/dashboard/admin/users', icon:Users, en:'Users', ar:'المستخدمون' },
       { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
@@ -62,6 +65,18 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
+    ]},
+    { en:'Advanced Reports', ar:'تقارير متقدمة', items:[
+      { href:'/dashboard/owner/reports/vacancy', icon:Building2, en:'Vacancy Duration', ar:'مدة الشغور' },
+      { href:'/dashboard/owner/reports/lease-pipeline', icon:CalendarCheck, en:'Lease Renewal Pipeline', ar:'خط تجديد العقود' },
+      { href:'/dashboard/owner/reports/payment-aging', icon:AlertTriangle, en:'Payment Aging', ar:'تقادم المدفوعات' },
+      { href:'/dashboard/owner/reports/noi', icon:TrendingUp, en:'NOI Report', ar:'صافي الدخل التشغيلي' },
+      { href:'/dashboard/owner/reports/cash-flow', icon:Activity, en:'Cash Flow Forecast', ar:'توقعات التدفق النقدي' },
+      { href:'/dashboard/owner/reports/unit-yield', icon:BarChart2, en:'Unit Yield', ar:'عائد الوحدة' },
+      { href:'/dashboard/owner/reports/maintenance-cost', icon:Wrench, en:'Maintenance Cost', ar:'تكلفة الصيانة' },
+      { href:'/dashboard/owner/reports/tech-performance', icon:Users, en:'Technician Performance', ar:'أداء الفنيين' },
+      { href:'/dashboard/owner/reports/tenant-retention', icon:UserCheck, en:'Tenant Retention', ar:'الاحتفاظ بالمستأجرين' },
+      { href:'/dashboard/owner/reports/annual-portfolio', icon:FileText, en:'Annual Portfolio', ar:'ملخص المحفظة السنوي' },
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
@@ -115,6 +130,9 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
+      { href:'/dashboard/owner/reports/vacancy', icon:Building2, en:'Vacancy Duration', ar:'مدة الشغور' },
+      { href:'/dashboard/owner/reports/lease-pipeline', icon:CalendarCheck, en:'Lease Renewal Pipeline', ar:'خط تجديد العقود' },
+      { href:'/dashboard/owner/reports/tenant-retention', icon:Users, en:'Tenant Retention', ar:'الاحتفاظ بالمستأجرين' },
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
@@ -146,6 +164,10 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
+      { href:'/dashboard/owner/reports/payment-aging', icon:AlertTriangle, en:'Payment Aging', ar:'تقادم المدفوعات' },
+      { href:'/dashboard/owner/reports/noi', icon:TrendingUp, en:'NOI Report', ar:'صافي الدخل التشغيلي' },
+      { href:'/dashboard/owner/reports/cash-flow', icon:Activity, en:'Cash Flow Forecast', ar:'توقعات التدفق النقدي' },
+      { href:'/dashboard/owner/reports/annual-portfolio', icon:FileText, en:'Annual Portfolio', ar:'ملخص المحفظة السنوي' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
