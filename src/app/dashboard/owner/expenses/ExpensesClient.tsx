@@ -1,8 +1,10 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Pencil, Trash2, Filter } from 'lucide-react'
+import { Plus, X, Loader2, Pencil, Trash2, Download, Printer } from 'lucide-react'
 import DateInput from '@/components/DateInput'
+import PrintHeader from '@/components/PrintHeader'
+import { exportExpensesToExcel } from './exportExpensesExcel'
 
 const CATEGORIES = [
   { value: 'maintenance', label: 'Maintenance' },
@@ -33,9 +35,10 @@ const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function ExpensesClient({
-  expenses, properties, defaultCurrency,
+  expenses, properties, defaultCurrency, orgName, userName,
 }: {
   expenses: Expense[]; properties: Property[]; defaultCurrency: string
+  orgName: string; userName: string
 }) {
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
@@ -43,6 +46,7 @@ export default function ExpensesClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   // Filters
   const now = new Date()
@@ -97,10 +101,42 @@ export default function ExpensesClient({
 
   const years = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() - i))
 
+  const filterLabel = [
+    filterYear || 'All Years',
+    filterMonth !== '' ? MONTHS[parseInt(filterMonth)] : 'All Months',
+    filterProperty ? (properties.find(p => p.id === filterProperty)?.name ?? '') : 'All Properties',
+    filterCat ? (CATEGORIES.find(c => c.value === filterCat)?.label ?? '') : 'All Categories',
+  ].filter(Boolean).join(' · ')
+
+  async function handleExcelExport() {
+    setExporting(true)
+    await exportExpensesToExcel({
+      orgName,
+      filterLabel,
+      rows: filtered.map(e => ({
+        date: e.date,
+        category: CATEGORIES.find(c => c.value === e.category)?.label ?? e.category,
+        description: e.description,
+        propertyName: (e.properties as { name: string } | null)?.name ?? '',
+        amount: Number(e.amount),
+        currency: e.currency,
+        notes: e.notes,
+      })),
+    })
+    setExporting(false)
+  }
+
   return (
     <div className="space-y-4">
+      {/* Print header — visible always, styled in print */}
+      <PrintHeader
+        reportTitle="Expenses Report"
+        orgName={orgName}
+        userName={userName}
+      />
+
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap justify-between">
+      <div className="flex items-center gap-3 flex-wrap justify-between print:hidden">
         <div className="flex items-center gap-2 flex-wrap">
           <select className="input w-28 text-sm" value={filterYear} onChange={e => setFilterYear(e.target.value)}>
             <option value="">All Years</option>
@@ -121,9 +157,27 @@ export default function ExpensesClient({
             {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-2">
-          <Plus size={16} /> Add Expense
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExcelExport}
+            disabled={exporting || filtered.length === 0}
+            className="btn-secondary flex items-center gap-2 text-sm"
+            title="Export to Excel"
+          >
+            {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            Excel
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="btn-secondary flex items-center gap-2 text-sm"
+            title="Print / Save as PDF"
+          >
+            <Printer size={15} /> PDF
+          </button>
+          <button onClick={openAdd} className="btn-primary flex items-center gap-2">
+            <Plus size={16} /> Add Expense
+          </button>
+        </div>
       </div>
 
       {/* Summary chips */}
@@ -152,7 +206,7 @@ export default function ExpensesClient({
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Description</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Property</th>
                 <th className="text-right px-4 py-3 text-slate-600 font-semibold">Amount</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3 print:hidden"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -172,7 +226,7 @@ export default function ExpensesClient({
                   <td className="px-4 py-3 text-right font-semibold text-red-700">
                     {Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 3 })} {e.currency}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 print:hidden">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => openEdit(e)} className="text-slate-400 hover:text-navy-700 transition-colors"><Pencil size={14} /></button>
                       <button onClick={() => handleDelete(e.id, e.description)} disabled={deleting === e.id} className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50">

@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
-  ClipboardList, Calendar, Shield, AlertCircle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
+  ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,6 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
-      { href:'/dashboard/owner/expenses', icon:TrendingUp, en:'Expenses', ar:'المصروفات' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -62,6 +61,8 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
+      { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
@@ -113,6 +114,8 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
+      { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
     ]},
     { en:'Operations', ar:'العمليات', items:[
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
@@ -135,7 +138,6 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
-      { href:'/dashboard/owner/expenses', icon:TrendingUp, en:'Expenses', ar:'المصروفات' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -143,6 +145,8 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
+      { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -298,6 +302,7 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     income:       {en:'Income Report',ar:'تقرير الإيرادات'},
     pnl:          {en:'P&L Report',ar:'تقرير الأرباح والخسائر'},
     expenses:     {en:'Expenses',ar:'المصروفات'},
+    arrears:      {en:'Arrears & Overdue',ar:'المتأخرات والمستحقات'},
   }
   const title = labels[segment]?.[lang] ?? segment
 

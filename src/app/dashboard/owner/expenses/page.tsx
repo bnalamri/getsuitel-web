@@ -10,15 +10,16 @@ export default async function ExpensesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
-  const orgId = profile?.organization_id
+  const { data: profile } = await supabase.from('profiles').select('organization_id, role, full_name').eq('id', user.id).single()
+  const orgId   = profile?.organization_id
+  const userName = (profile?.full_name as string) ?? ''
   if (!orgId) return null
 
   const admin = createAdminClient()
   const [expensesRes, propertiesRes, orgRes] = await Promise.all([
     admin.from('expenses').select('*, properties(name)').eq('organization_id', orgId).order('date', { ascending: false }),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
-    admin.from('organizations').select('default_currency').eq('id', orgId).single(),
+    admin.from('organizations').select('default_currency, name').eq('id', orgId).single(),
   ])
 
   return (
@@ -36,6 +37,8 @@ export default async function ExpensesPage() {
         expenses={expensesRes.data ?? []}
         properties={propertiesRes.data ?? []}
         defaultCurrency={(orgRes.data?.default_currency as string) ?? 'OMR'}
+        orgName={(orgRes.data?.name as string) ?? ''}
+        userName={userName}
       />
     </div>
   )
