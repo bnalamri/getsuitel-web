@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import UnitYieldExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Unit Yield Report' }
 export const dynamic = 'force-dynamic'
@@ -153,8 +154,8 @@ export default async function UnitYieldPage({ searchParams }: { searchParams: Pr
               <tfoot>
                 <tr className="bg-slate-100 font-bold">
                   <td colSpan={4} className="px-4 py-3 text-slate-700">Portfolio Total</td>
-                  <td className="px-4 py-3 text-blue-700">{fmtAmt(totalAnnual, currency)}</td>
-                  <td className="px-4 py-3 text-emerald-700">{fmtAmt(totalYTD, currency)}</td>
+                  <td className="px-4 py-3 text-blue-700"><OmrAmount value={totalAnnual} /></td>
+                  <td className="px-4 py-3 text-emerald-700"><OmrAmount value={totalYTD} /></td>
                   <td className="px-4 py-3 text-slate-500">—</td>
                 </tr>
               </tfoot>

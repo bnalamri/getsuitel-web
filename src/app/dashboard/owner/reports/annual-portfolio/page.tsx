@@ -5,6 +5,7 @@ import PrintHeader from '@/components/PrintHeader'
 import YearSelectClient from '@/components/YearSelectClient'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import AnnualPortfolioExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Annual Portfolio Summary' }
 export const dynamic = 'force-dynamic'
@@ -189,7 +190,7 @@ export default async function AnnualPortfolioPage({ searchParams }: { searchPara
                 <div className="flex-1 bg-slate-100 rounded-full h-2">
                   <div className="bg-red-400 h-2 rounded-full" style={{ width: `${Math.min(100, (c.total / (totalExpenses || 1)) * 100)}%` }} />
                 </div>
-                <div className="text-sm font-semibold text-red-600 w-36 text-right">{fmtAmt(c.total, currency)}</div>
+                <div className="text-sm font-semibold text-red-600 w-36 text-right"><OmrAmount value={c.total} /></div>
               </div>
             ))}
           </div>

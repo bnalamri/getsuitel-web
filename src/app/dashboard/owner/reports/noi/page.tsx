@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import NOIExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'NOI Report' }
 export const dynamic = 'force-dynamic'
@@ -125,10 +126,10 @@ export default async function NOIReportPage({ searchParams }: { searchParams: Pr
                 return (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                     <td className="px-4 py-3 font-medium text-slate-800">{p.name}</td>
-                    <td className="px-4 py-3 text-emerald-700 font-semibold">{fmtAmt(p.income, currency)}</td>
-                    <td className="px-4 py-3 text-red-600">{fmtAmt(p.expCost, currency)}</td>
-                    <td className="px-4 py-3 text-orange-600">{fmtAmt(p.maintCost, currency)}</td>
-                    <td className="px-4 py-3 text-red-700 font-semibold">{fmtAmt(p.totalExpenses, currency)}</td>
+                    <td className="px-4 py-3 text-emerald-700 font-semibold"><OmrAmount value={p.income} /></td>
+                    <td className="px-4 py-3 text-red-600"><OmrAmount value={p.expCost} /></td>
+                    <td className="px-4 py-3 text-orange-600"><OmrAmount value={p.maintCost} /></td>
+                    <td className="px-4 py-3 text-red-700 font-semibold"><OmrAmount value={p.totalExpenses} /></td>
                     <td className={`px-4 py-3 font-bold ${p.noi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                       {p.noi >= 0 ? '+' : ''}{fmtAmt(p.noi, currency)}
                     </td>
@@ -144,7 +145,7 @@ export default async function NOIReportPage({ searchParams }: { searchParams: Pr
               <tfoot>
                 <tr className="bg-slate-100 font-bold">
                   <td className="px-4 py-3 text-slate-700">Total</td>
-                  <td className="px-4 py-3 text-emerald-700">{fmtAmt(totalIncome, currency)}</td>
+                  <td className="px-4 py-3 text-emerald-700"><OmrAmount value={totalIncome} /></td>
                   <td colSpan={3} className="px-4 py-3 text-red-700">{fmtAmt(totalExpenses, currency)} total</td>
                   <td className={`px-4 py-3 ${totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                     {totalNOI >= 0 ? '+' : ''}{fmtAmt(totalNOI, currency)}

@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import PaymentAgingExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Payment Aging Report' }
 export const dynamic = 'force-dynamic'
@@ -103,7 +104,7 @@ export default async function PaymentAgingPage({ searchParams }: { searchParams:
           <div key={b.label} className={`card p-4 border ${b.border} ${b.bg}`}>
             <div className="text-2xl font-bold text-slate-800">{b.count}</div>
             <div className="text-xs font-semibold text-slate-600 mt-0.5">{b.label}</div>
-            <div className="text-sm font-semibold text-red-700 mt-1">{fmtAmt(b.total, currency)}</div>
+            <div className="text-sm font-semibold text-red-700 mt-1"><OmrAmount value={b.total} /></div>
           </div>
         ))}
       </div>
@@ -150,7 +151,7 @@ export default async function PaymentAgingPage({ searchParams }: { searchParams:
                           {r.daysPast}d
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-bold text-red-600">{fmtAmt(r.amount, r.currency)}</td>
+                      <td className="px-4 py-3 font-bold text-red-600"><OmrAmount value={r.amount} /></td>
                     </tr>
                   )
                 })}
@@ -158,7 +159,7 @@ export default async function PaymentAgingPage({ searchParams }: { searchParams:
               <tfoot>
                 <tr className="bg-slate-100 font-bold">
                   <td colSpan={5} className="px-4 py-3 text-slate-700">Grand Total</td>
-                  <td className="px-4 py-3 text-red-700">{fmtAmt(grandTotal, currency)}</td>
+                  <td className="px-4 py-3 text-red-700"><OmrAmount value={grandTotal} /></td>
                 </tr>
               </tfoot>
             </table>

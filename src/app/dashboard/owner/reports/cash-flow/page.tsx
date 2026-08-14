@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import CashFlowExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Cash Flow Forecast' }
 export const dynamic = 'force-dynamic'
@@ -123,8 +124,8 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
                 <tr key={m.key} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                   <td className="px-4 py-3 font-medium text-slate-800">{m.label}</td>
                   <td className="px-4 py-3 text-slate-600">{m.contractsActive}</td>
-                  <td className="px-4 py-3 text-emerald-700 font-semibold">{fmtAmt(m.income, currency)}</td>
-                  <td className="px-4 py-3 text-red-600">{fmtAmt(m.expenses, currency)}</td>
+                  <td className="px-4 py-3 text-emerald-700 font-semibold"><OmrAmount value={m.income} /></td>
+                  <td className="px-4 py-3 text-red-600"><OmrAmount value={m.expenses} /></td>
                   <td className={`px-4 py-3 font-bold ${m.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                     {m.net >= 0 ? '+' : ''}{fmtAmt(m.net, currency)}
                   </td>
@@ -135,8 +136,8 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
               <tr className="bg-slate-100 font-bold">
                 <td className="px-4 py-3 text-slate-700">6-Month Total</td>
                 <td className="px-4 py-3 text-slate-500">—</td>
-                <td className="px-4 py-3 text-emerald-700">{fmtAmt(totalForecastIncome, currency)}</td>
-                <td className="px-4 py-3 text-red-600">{fmtAmt(totalForecastExpenses, currency)}</td>
+                <td className="px-4 py-3 text-emerald-700"><OmrAmount value={totalForecastIncome} /></td>
+                <td className="px-4 py-3 text-red-600"><OmrAmount value={totalForecastExpenses} /></td>
                 <td className={`px-4 py-3 ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{totalNet >= 0 ? '+' : ''}{fmtAmt(totalNet, currency)}</td>
               </tr>
             </tfoot>

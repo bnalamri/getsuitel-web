@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import VacancyExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Vacancy Duration Report' }
 export const dynamic = 'force-dynamic'
@@ -138,7 +139,7 @@ export default async function VacancyReportPage({ searchParams }: { searchParams
               <tfoot>
                 <tr className="bg-slate-100 font-bold">
                   <td colSpan={5} className="px-4 py-3 text-slate-700">Total Estimated Revenue Lost</td>
-                  <td className="px-4 py-3 text-red-700">{fmtAmt(totalLost, currency)}</td>
+                  <td className="px-4 py-3 text-red-700"><OmrAmount value={totalLost} /></td>
                 </tr>
               </tfoot>
             </table>

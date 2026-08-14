@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import MaintenanceCostExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Maintenance Cost Analysis' }
 export const dynamic = 'force-dynamic'
@@ -120,7 +121,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
               <div key={p.name}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-slate-700 font-medium">{p.name}</span>
-                  <span className="text-red-600 font-semibold">{fmtAmt(p.total, currency)}</span>
+                  <span className="text-red-600 font-semibold"><OmrAmount value={p.total} /></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-slate-100 rounded-full h-2">
@@ -141,7 +142,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
               <div key={c.cat}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-slate-700 font-medium capitalize">{c.cat}</span>
-                  <span className="text-red-600 font-semibold">{fmtAmt(c.total, currency)}</span>
+                  <span className="text-red-600 font-semibold"><OmrAmount value={c.total} /></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-slate-100 rounded-full h-2">
@@ -173,8 +174,8 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
                 <tr key={t.tech} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                   <td className="px-4 py-3 font-medium text-slate-800">{t.tech}</td>
                   <td className="px-4 py-3 text-slate-600">{t.count}</td>
-                  <td className="px-4 py-3 font-semibold text-red-600">{fmtAmt(t.total, currency)}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmtAmt(t.total / t.count, currency)}</td>
+                  <td className="px-4 py-3 font-semibold text-red-600"><OmrAmount value={t.total} /></td>
+                  <td className="px-4 py-3 text-slate-600"><OmrAmount value={t.total / t.count} /></td>
                 </tr>
               ))}
               {techRows.length === 0 && (
