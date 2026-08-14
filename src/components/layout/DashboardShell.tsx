@@ -350,7 +350,7 @@ export default function DashboardShell({
   return (
     <DateFormatContext.Provider value={{ dateFormat, setDateFormat }}>
     <Ctx.Provider value={{ lang, setLang, profile }}>
-      <div dir={dir} className="flex h-screen overflow-hidden bg-slate-50">
+      <div dir={dir} className="flex h-screen overflow-hidden bg-slate-50 print:h-auto print:overflow-visible">
 
         {/* Mobile overlay */}
         {mobileOpen && (
@@ -373,9 +373,9 @@ export default function DashboardShell({
         </div>
 
         {/* Main */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:overflow-visible">
           <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto print:overflow-visible">
             <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
               {children}
             </div>
