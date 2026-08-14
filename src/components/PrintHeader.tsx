@@ -28,7 +28,7 @@ export default function PrintHeader({ reportTitle, orgName, userName, printDate 
   const generated = printDate ?? todayDMY()
 
   return (
-    <div className="hidden print:block mb-5">
+    <div className="mb-5">
 
       {/* ── Navy title band ──────────────────────────────────────────────── */}
       <div
@@ -37,6 +37,8 @@ export default function PrintHeader({ reportTitle, orgName, userName, printDate 
           color: '#fff',
           padding: '14px 20px 12px',
           borderRadius: '6px 6px 0 0',
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
         }}
       >
         <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.3px' }}>
