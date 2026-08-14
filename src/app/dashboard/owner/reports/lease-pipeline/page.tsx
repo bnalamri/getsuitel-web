@@ -1,7 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { CalendarCheck, AlertTriangle, Clock, CheckCircle } from 'lucide-react'
+import { CalendarCheck, CheckCircle } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import LeasePipelineExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Lease Renewal Pipeline' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function daysBetween(from: Date, to: Date) {
   return Math.floor((to.getTime() - from.getTime()) / 86400000)
 }
 
-export default async function LeasePipelinePage() {
+export default async function LeasePipelinePage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -24,31 +26,40 @@ export default async function LeasePipelinePage() {
   const today = new Date()
   const in180 = new Date(today.getTime() + 180 * 86400000)
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [contractsRes, orgRes] = await Promise.all([
+  const [contractsRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('contracts')
-      .select('id, end_date, rent_amount, currency, status, tenants(full_name, email, phone), units(unit_number, properties(name))')
+      .select('id, end_date, rent_amount, currency, status, tenants(full_name, email, phone), units(unit_number, property_id, properties(id, name))')
       .eq('organization_id', orgId)
       .eq('status', 'active')
       .lte('end_date', in180.toISOString().split('T')[0])
       .gte('end_date', today.toISOString().split('T')[0])
       .order('end_date', { ascending: true }),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const orgName = (orgRes.data?.name as string) ?? ''
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
-  const contracts = (contractsRes.data ?? []) as {
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
+
+  const allContracts = (contractsRes.data ?? []) as {
     id: string; end_date: string; rent_amount: number; currency: string; status: string;
     tenants: { full_name: string; email: string; phone: string } | null;
-    units: { unit_number: string; properties: { name: string } | null } | null;
+    units: { unit_number: string; property_id: string; properties: { id: string; name: string } | null } | null;
   }[]
 
+  const contracts = propertyId
+    ? allContracts.filter(c => (c.units as any)?.property_id === propertyId)
+    : allContracts
+
   function bucket(days: number) {
-    if (days <= 30)  return { label: 'Within 30 days', color: 'red',    bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-700' }
-    if (days <= 60)  return { label: '31-60 days',     color: 'orange',  bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-700' }
-    if (days <= 90)  return { label: '61-90 days',     color: 'amber',   bg: 'bg-amber-50',  border: 'border-amber-200',  badge: 'bg-amber-100 text-amber-700' }
-    return            { label: '91-180 days',           color: 'blue',    bg: 'bg-blue-50',   border: 'border-blue-200',   badge: 'bg-blue-100 text-blue-700' }
+    if (days <= 30)  return { label: 'Within 30 days', badge: 'bg-red-100 text-red-700' }
+    if (days <= 60)  return { label: '31-60 days',     badge: 'bg-orange-100 text-orange-700' }
+    if (days <= 90)  return { label: '61-90 days',     badge: 'bg-amber-100 text-amber-700' }
+    return            { label: '91-180 days',           badge: 'bg-blue-100 text-blue-700' }
   }
 
   const rows = contracts.map(c => ({
@@ -57,9 +68,9 @@ export default async function LeasePipelinePage() {
     bucket: bucket(daysBetween(today, new Date(c.end_date))),
   }))
 
-  const b30 = rows.filter(r => r.daysLeft <= 30).length
-  const b60 = rows.filter(r => r.daysLeft > 30 && r.daysLeft <= 60).length
-  const b90 = rows.filter(r => r.daysLeft > 60 && r.daysLeft <= 90).length
+  const b30  = rows.filter(r => r.daysLeft <= 30).length
+  const b60  = rows.filter(r => r.daysLeft > 30 && r.daysLeft <= 60).length
+  const b90  = rows.filter(r => r.daysLeft > 60 && r.daysLeft <= 90).length
   const b180 = rows.filter(r => r.daysLeft > 90).length
 
   return (
@@ -71,7 +82,11 @@ export default async function LeasePipelinePage() {
           <h2 className="text-2xl font-bold text-slate-900">Lease Renewal Pipeline</h2>
           <p className="text-slate-500 text-sm mt-0.5">Active contracts expiring within 6 months — act before vacancies occur</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <LeasePipelineExcelButton rows={rows} currency={currency} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Lease Renewal Pipeline" orgName={orgName} userName={userName} printDate={printDate} />
 
@@ -118,12 +133,10 @@ export default async function LeasePipelinePage() {
                   <tr key={r.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                     <td className="px-4 py-3 font-medium text-slate-800">{r.tenants?.full_name ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{r.units?.unit_number ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{r.units?.properties?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{(r.units as any)?.properties?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{new Date(r.end_date).toLocaleDateString('en-GB')}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.bucket.badge}`}>
-                        {r.daysLeft}d
-                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.bucket.badge}`}>{r.daysLeft}d</span>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-700">
                       {r.rent_amount.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {r.currency}

@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { CreditCard, AlertTriangle } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import PaymentAgingExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Payment Aging Report' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function PaymentAgingPage() {
+export default async function PaymentAgingPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,25 +25,32 @@ export default async function PaymentAgingPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [invoicesRes, orgRes] = await Promise.all([
+  const [invoicesRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('invoices')
-      .select('id, amount, currency, status, due_date, type, tenants(full_name), units(unit_number, properties(name))')
+      .select('id, amount, currency, status, due_date, type, tenants(full_name), units(unit_number, property_id, properties(id, name))')
       .eq('organization_id', orgId)
       .or('status.eq.overdue,status.eq.pending')
       .order('due_date', { ascending: true }),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
   type Inv = {
     id: string; amount: number; currency: string; status: string; due_date: string; type: string;
     tenants: { full_name: string } | null;
-    units: { unit_number: string; properties: { name: string } | null } | null;
+    units: { unit_number: string; property_id: string; properties: { id: string; name: string } | null } | null;
   }
-  const invoices = (invoicesRes.data ?? []) as Inv[]
+  const allInvoices = (invoicesRes.data ?? []) as Inv[]
+  const invoices = propertyId
+    ? allInvoices.filter(inv => (inv.units as any)?.property_id === propertyId)
+    : allInvoices
 
   function daysPastDue(due: string) {
     const d = new Date(due)
@@ -55,10 +64,10 @@ export default async function PaymentAgingPage() {
     .sort((a, b) => b.daysPast - a.daysPast)
 
   const buckets = [
-    { label: '1–30 days',  min: 1,  max: 30,  color: 'amber',  bg: 'bg-amber-50',  border: 'border-amber-200',  badge: 'bg-amber-100 text-amber-800',   total: 0, count: 0 },
-    { label: '31–60 days', min: 31, max: 60,  color: 'orange', bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-100 text-orange-800',  total: 0, count: 0 },
-    { label: '61–90 days', min: 61, max: 90,  color: 'red',    bg: 'bg-red-50',    border: 'border-red-200',    badge: 'bg-red-100 text-red-800',        total: 0, count: 0 },
-    { label: '90+ days',   min: 91, max: 9999, color: 'rose',   bg: 'bg-rose-50',   border: 'border-rose-200',   badge: 'bg-rose-100 text-rose-900',      total: 0, count: 0 },
+    { label: '1–30 days',  min: 1,  max: 30,   border: 'border-amber-200',  bg: 'bg-amber-50',  badge: 'bg-amber-100 text-amber-800',  total: 0, count: 0 },
+    { label: '31–60 days', min: 31, max: 60,   border: 'border-orange-200', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-800', total: 0, count: 0 },
+    { label: '61–90 days', min: 61, max: 90,   border: 'border-red-200',    bg: 'bg-red-50',    badge: 'bg-red-100 text-red-800',       total: 0, count: 0 },
+    { label: '90+ days',   min: 91, max: 9999,  border: 'border-rose-200',   bg: 'bg-rose-50',   badge: 'bg-rose-100 text-rose-900',     total: 0, count: 0 },
   ]
 
   for (const row of rows) {
@@ -81,11 +90,14 @@ export default async function PaymentAgingPage() {
           <h2 className="text-2xl font-bold text-slate-900">Payment Aging Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Overdue invoices bucketed by days past due — prioritize collection</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <PaymentAgingExcelButton rows={rows} grandTotal={grandTotal} currency={currency} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Payment Aging Report" orgName={orgName} userName={userName} printDate={printDate} />
 
-      {/* Aging buckets summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {buckets.map(b => (
           <div key={b.label} className={`card p-4 border ${b.border} ${b.bg}`}>
@@ -104,7 +116,6 @@ export default async function PaymentAgingPage() {
         </div>
       </div>
 
-      {/* Detail table */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
           <CreditCard size={15} className="text-slate-500" />
@@ -131,8 +142,8 @@ export default async function PaymentAgingPage() {
                   return (
                     <tr key={r.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                       <td className="px-4 py-3 font-medium text-slate-800">{r.tenants?.full_name ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-600">{r.units?.unit_number ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-600">{r.units?.properties?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-600">{(r.units as any)?.unit_number ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-600">{(r.units as any)?.properties?.name ?? '—'}</td>
                       <td className="px-4 py-3 text-slate-500">{new Date(r.due_date).toLocaleDateString('en-GB')}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${b?.badge ?? 'bg-slate-100 text-slate-600'}`}>

@@ -1,7 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Building2, TrendingUp } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import NOIExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'NOI Report' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function NOIReportPage() {
+export default async function NOIReportPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,8 +25,9 @@ export default async function NOIReportPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  // Current year
   const year = today.getFullYear()
   const yearStart = `${year}-01-01`
   const yearEnd = `${year}-12-31`
@@ -33,31 +36,26 @@ export default async function NOIReportPage() {
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
     admin.from('invoices')
       .select('amount, currency, status, unit_id, units(property_id)')
-      .eq('organization_id', orgId)
-      .eq('status', 'paid')
-      .gte('created_at', yearStart)
-      .lte('created_at', yearEnd),
+      .eq('organization_id', orgId).eq('status', 'paid').gte('created_at', yearStart).lte('created_at', yearEnd),
     admin.from('expenses')
       .select('amount, currency, property_id')
-      .eq('organization_id', orgId)
-      .gte('date', yearStart)
-      .lte('date', yearEnd),
+      .eq('organization_id', orgId).gte('date', yearStart).lte('date', yearEnd),
     admin.from('maintenance_requests')
       .select('charge_amount, unit_id, units(property_id)')
-      .eq('organization_id', orgId)
-      .not('charge_amount', 'is', null),
+      .eq('organization_id', orgId).not('charge_amount', 'is', null),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
-
-  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
-  const invoices = (invoicesRes.data ?? []) as { amount: number; currency: string; status: string; units: { property_id: string } | null }[]
-  const expenses = (expensesRes.data ?? []) as { amount: number; currency: string; property_id: string | null }[]
+  const allProperties = (propertiesRes.data ?? []) as { id: string; name: string }[]
+  const invoices = (invoicesRes.data ?? []) as { amount: number; units: { property_id: string } | null }[]
+  const expenses = (expensesRes.data ?? []) as { amount: number; property_id: string | null }[]
   const maint = (maintRes.data ?? []) as { charge_amount: number; units: { property_id: string } | null }[]
 
-  // Aggregate per property
+  // Filter by property if selected
+  const properties = propertyId ? allProperties.filter(p => p.id === propertyId) : allProperties
+
   const propData = properties.map(p => {
     const income = invoices.filter(inv => inv.units?.property_id === p.id).reduce((s, inv) => s + inv.amount, 0)
     const expCost = expenses.filter(e => e.property_id === p.id).reduce((s, e) => s + e.amount, 0)
@@ -81,16 +79,20 @@ export default async function NOIReportPage() {
           <h2 className="text-2xl font-bold text-slate-900">NOI Report — Net Operating Income</h2>
           <p className="text-slate-500 text-sm mt-0.5">Gross rental income minus operating expenses per property · {year}</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={allProperties} selectedId={propertyId} />
+          <NOIExcelButton propData={propData} currency={currency} totalIncome={totalIncome} totalExpenses={totalExpenses} totalNOI={totalNOI} noiMargin={noiMargin} year={year} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle={`NOI Report ${year}`} orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Gross Income',     value: fmtAmt(totalIncome, currency),   color: 'text-emerald-700' },
-          { label: 'Total Expenses',   value: fmtAmt(totalExpenses, currency),  color: 'text-red-600' },
-          { label: 'Net Operating Income', value: fmtAmt(totalNOI, currency),  color: totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700' },
-          { label: 'NOI Margin',       value: `${noiMargin}%`,                  color: 'text-blue-700' },
+          { label: 'Gross Income',         value: fmtAmt(totalIncome, currency),    color: 'text-emerald-700' },
+          { label: 'Total Expenses',        value: fmtAmt(totalExpenses, currency),  color: 'text-red-600' },
+          { label: 'Net Operating Income',  value: fmtAmt(totalNOI, currency),       color: totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700' },
+          { label: 'NOI Margin',            value: `${noiMargin}%`,                  color: 'text-blue-700' },
         ].map(s => (
           <div key={s.label} className="card p-4">
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>

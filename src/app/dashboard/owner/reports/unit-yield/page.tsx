@@ -1,7 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Building2, TrendingUp, Info } from 'lucide-react'
+import { Building2, Info } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import UnitYieldExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Unit Yield Report' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function UnitYieldPage() {
+export default async function UnitYieldPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,37 +25,34 @@ export default async function UnitYieldPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
   const year = today.getFullYear()
   const yearStart = `${year}-01-01`
 
-  const [unitsRes, contractsRes, invoicesRes, orgRes] = await Promise.all([
+  const [unitsRes, contractsRes, invoicesRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('units').select('id, unit_number, status, property_id, properties(name)').eq('organization_id', orgId).order('unit_number'),
-    admin.from('contracts')
-      .select('unit_id, rent_amount, currency, status, start_date, end_date')
-      .eq('organization_id', orgId)
-      .eq('status', 'active'),
-    admin.from('invoices')
-      .select('amount, currency, status, unit_id')
-      .eq('organization_id', orgId)
-      .eq('status', 'paid')
-      .gte('created_at', yearStart),
+    admin.from('contracts').select('unit_id, rent_amount, currency, status, start_date, end_date').eq('organization_id', orgId).eq('status', 'active'),
+    admin.from('invoices').select('amount, currency, status, unit_id').eq('organization_id', orgId).eq('status', 'paid').gte('created_at', yearStart),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
-  const units = (unitsRes.data ?? []) as { id: string; unit_number: string; status: string; property_id: string; properties: { name: string } | null }[]
+  const allUnits = (unitsRes.data ?? []) as { id: string; unit_number: string; status: string; property_id: string; properties: { name: string } | null }[]
   const contracts = (contractsRes.data ?? []) as { unit_id: string; rent_amount: number; currency: string; status: string }[]
   const invoices = (invoicesRes.data ?? []) as { amount: number; currency: string; status: string; unit_id: string }[]
+
+  const units = propertyId ? allUnits.filter(u => u.property_id === propertyId) : allUnits
 
   const rows = units.map(unit => {
     const contract = contracts.find(c => c.unit_id === unit.id)
     const monthlyRent = contract?.rent_amount ?? 0
     const annualRent = monthlyRent * 12
     const ytdCollected = invoices.filter(inv => inv.unit_id === unit.id).reduce((s, inv) => s + inv.amount, 0)
-    // Yield % requires estimated property value — shown as placeholder
     return { unit, monthlyRent, annualRent, ytdCollected, contract }
   }).sort((a, b) => b.annualRent - a.annualRent)
 
@@ -70,7 +69,11 @@ export default async function UnitYieldPage() {
           <h2 className="text-2xl font-bold text-slate-900">Unit Yield Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Annual rent income per unit and year-to-date collection performance · {year}</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <UnitYieldExcelButton rows={rows} currency={currency} totalAnnual={totalAnnual} totalYTD={totalYTD} year={year} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle={`Unit Yield Report ${year}`} orgName={orgName} userName={userName} printDate={printDate} />
 
@@ -78,7 +81,6 @@ export default async function UnitYieldPage() {
         <Info size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
         <p className="text-sm text-blue-700">
           <strong>Yield %</strong> = Annual Rent ÷ Estimated Property Value × 100.
-          To calculate yield %, enter unit values in your property management settings.
           This report shows annual rent income and YTD collection performance.
         </p>
       </div>
@@ -121,7 +123,7 @@ export default async function UnitYieldPage() {
                 return (
                   <tr key={r.unit.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                     <td className="px-4 py-3 font-medium text-slate-800">{r.unit.unit_number}</td>
-                    <td className="px-4 py-3 text-slate-600">{(r.unit.properties as {name:string}|null)?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{(r.unit.properties as any)?.name ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.unit.status === 'occupied' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         {r.unit.status}

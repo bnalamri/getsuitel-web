@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { User, Clock, CheckCircle } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import TechExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Technician Performance Report' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function TechPerformancePage() {
+export default async function TechPerformancePage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,32 +25,39 @@ export default async function TechPerformancePage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [maintRes, orgRes] = await Promise.all([
+  const [maintRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('maintenance_requests')
-      .select('id, status, priority, charge_amount, charge_payer, created_at, completed_at, assigned_to_name, category')
-      .eq('organization_id', orgId)
-      .not('assigned_to_name', 'is', null),
+      .select('id, status, priority, charge_amount, charge_payer, created_at, completed_at, assigned_to_name, category, units(property_id)')
+      .eq('organization_id', orgId),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
   type MaintRow = {
     id: string; status: string; priority: string; charge_amount: number | null;
-    created_at: string; completed_at: string | null; assigned_to_name: string; category: string;
+    created_at: string; completed_at: string | null; assigned_to_name: string | null; category: string;
+    units: { property_id: string } | null;
   }
-  const maint = (maintRes.data ?? []) as MaintRow[]
+  const allMaint = (maintRes.data ?? []) as MaintRow[]
 
-  // Group by technician
+  // Apply property filter
+  const maint = propertyId ? allMaint.filter(m => m.units?.property_id === propertyId) : allMaint
+
+  // Group by technician (null → 'Unassigned')
   const byTech: Record<string, {
     name: string; total: number; completed: number; open: number;
     totalRevenue: number; resolutionTimes: number[]
   }> = {}
 
   for (const m of maint) {
-    const name = m.assigned_to_name
+    const name = m.assigned_to_name ?? 'Unassigned'
     if (!byTech[name]) byTech[name] = { name, total: 0, completed: 0, open: 0, totalRevenue: 0, resolutionTimes: [] }
     byTech[name].total++
     if (m.status === 'completed') {
@@ -86,16 +95,20 @@ export default async function TechPerformancePage() {
           <h2 className="text-2xl font-bold text-slate-900">Technician Performance Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Jobs completed, resolution time, and revenue billed per technician</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <TechExcelButton techRows={techRows} currency={currency} totalJobs={totalJobs} totalRevenue={totalRevenue} totalCompleted={totalCompleted} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Technician Performance Report" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Assigned Jobs',    value: totalJobs.toString(),        color: 'text-slate-700' },
-          { label: 'Jobs Completed',         value: totalCompleted.toString(),    color: 'text-emerald-700' },
-          { label: 'Active Technicians',     value: techRows.length.toString(),  color: 'text-blue-700' },
-          { label: 'Total Revenue Billed',   value: fmtAmt(totalRevenue, currency), color: 'text-green-700' },
+          { label: 'Total Jobs',           value: totalJobs.toString(),           color: 'text-slate-700' },
+          { label: 'Jobs Completed',       value: totalCompleted.toString(),       color: 'text-emerald-700' },
+          { label: 'Active Technicians',   value: techRows.filter(t => t.name !== 'Unassigned').length.toString(), color: 'text-blue-700' },
+          { label: 'Total Revenue Billed', value: fmtAmt(totalRevenue, currency), color: 'text-green-700' },
         ].map(s => (
           <div key={s.label} className="card p-4">
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -110,7 +123,7 @@ export default async function TechPerformancePage() {
           <h3 className="text-sm font-semibold text-slate-800">Performance by Technician</h3>
         </div>
         {techRows.length === 0 ? (
-          <div className="px-5 py-10 text-center text-slate-400 text-sm">No maintenance jobs assigned yet.</div>
+          <div className="px-5 py-10 text-center text-slate-400 text-sm">No maintenance jobs found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -131,9 +144,7 @@ export default async function TechPerformancePage() {
                     <td className="px-4 py-3 font-medium text-slate-800">{t.name}</td>
                     <td className="px-4 py-3 text-slate-600">{t.total}</td>
                     <td className="px-4 py-3">
-                      <span className="flex items-center gap-1 text-emerald-700">
-                        <CheckCircle size={12} /> {t.completed}
-                      </span>
+                      <span className="flex items-center gap-1 text-emerald-700"><CheckCircle size={12} /> {t.completed}</span>
                     </td>
                     <td className="px-4 py-3 text-amber-600">{t.open}</td>
                     <td className="px-4 py-3">
@@ -149,9 +160,7 @@ export default async function TechPerformancePage() {
                       {t.avgResolutionHours != null ? (
                         <span className="flex items-center gap-1">
                           <Clock size={12} className="text-slate-400" />
-                          {t.avgResolutionHours >= 24
-                            ? `${Math.round(t.avgResolutionHours / 24)}d`
-                            : `${t.avgResolutionHours}h`}
+                          {t.avgResolutionHours >= 24 ? `${Math.round(t.avgResolutionHours / 24)}d` : `${t.avgResolutionHours}h`}
                         </span>
                       ) : '—'}
                     </td>

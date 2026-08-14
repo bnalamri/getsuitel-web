@@ -2,11 +2,13 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Users, TrendingUp, TrendingDown } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import TenantRetentionExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Tenant Retention Report' }
 export const dynamic = 'force-dynamic'
 
-export default async function TenantRetentionPage() {
+export default async function TenantRetentionPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -19,6 +21,8 @@ export default async function TenantRetentionPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
   const [contractsRes, propertiesRes, orgRes] = await Promise.all([
     admin.from('contracts')
@@ -36,8 +40,11 @@ export default async function TenantRetentionPage() {
     units: { property_id: string; unit_number: string; properties: { id: string; name: string } | null } | null;
     tenants: { full_name: string; email: string } | null;
   }
-  const contracts = (contractsRes.data ?? []) as Contract[]
+  const allContracts = (contractsRes.data ?? []) as Contract[]
   const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
+
+  // Apply property filter
+  const contracts = propertyId ? allContracts.filter(c => (c.units as any)?.property_id === propertyId) : allContracts
 
   // Find tenants with expired contracts
   const expiredContracts = contracts.filter(c => c.status === 'expired' || (c.status === 'active' && new Date(c.end_date) < today))
@@ -78,7 +85,18 @@ export default async function TenantRetentionPage() {
           <h2 className="text-2xl font-bold text-slate-900">Tenant Retention Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Percentage of tenants who renewed vs vacated per property</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <TenantRetentionExcelButton
+            propRetention={propRetention}
+            vacatedTenants={vacatedTenants}
+            renewedCount={renewedCount}
+            vacatedCount={vacatedCount}
+            retentionRate={retentionRate}
+            expiredTotal={expiredTenantIds.size}
+          />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Tenant Retention Report" orgName={orgName} userName={userName} printDate={printDate} />
 

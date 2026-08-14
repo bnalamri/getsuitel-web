@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, Clock, AlertTriangle, TrendingDown } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import VacancyExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Vacancy Duration Report' }
 export const dynamic = 'force-dynamic'
@@ -14,7 +16,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function VacancyReportPage() {
+export default async function VacancyReportPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -27,21 +29,24 @@ export default async function VacancyReportPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [unitsRes, contractsRes, orgRes] = await Promise.all([
+  const [unitsRes, contractsRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('units').select('id, unit_number, status, property_id, properties(id, name)').eq('organization_id', orgId),
     admin.from('contracts').select('unit_id, end_date, rent_amount, currency, status').eq('organization_id', orgId).order('end_date', { ascending: false }),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
-  const units = (unitsRes.data ?? []) as {id:string,unit_number:string,status:string,property_id:string,properties:{name:string}|null}[]
+  const units = (unitsRes.data ?? []) as {id:string,unit_number:string,status:string,property_id:string,properties:{id:string,name:string}|null}[]
   const contracts = (contractsRes.data ?? []) as {unit_id:string,end_date:string,rent_amount:number,currency:string,status:string}[]
 
-  // For each vacant unit, find last contract end_date to estimate vacancy start
-  const vacantUnits = units.filter(u => u.status === 'vacant')
+  const vacantUnits = units.filter(u => u.status === 'vacant' && (!propertyId || u.property_id === propertyId))
 
   const rows = vacantUnits.map(unit => {
     const unitContracts = contracts.filter(c => c.unit_id === unit.id)
@@ -73,11 +78,14 @@ export default async function VacancyReportPage() {
           <h2 className="text-2xl font-bold text-slate-900">Vacancy Duration Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">Days each unit has been vacant and estimated revenue lost</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <VacancyExcelButton rows={rows} currency={currency} totalLost={totalLost} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Vacancy Duration Report" orgName={orgName} userName={userName} printDate={printDate} />
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Vacant Units',        value: vacantUnits.length.toString(), color: 'text-slate-700', icon: Building2 },
@@ -95,7 +103,6 @@ export default async function VacancyReportPage() {
         ))}
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
           <Building2 size={15} className="text-slate-500" />
@@ -120,7 +127,7 @@ export default async function VacancyReportPage() {
                 {rows.map((r, i) => (
                   <tr key={r.unit.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                     <td className="px-4 py-3 font-medium text-slate-800">{r.unit.unit_number}</td>
-                    <td className="px-4 py-3 text-slate-600">{(r.unit.properties as {name:string}|null)?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{r.unit.properties?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-500">{r.vacantSince ? r.vacantSince.toLocaleDateString('en-GB') : '—'}</td>
                     <td className="px-4 py-3">{urgencyBadge(r.daysVacant)}</td>
                     <td className="px-4 py-3 text-slate-600">{r.monthlyRent > 0 ? fmtAmt(r.monthlyRent, r.currency) : '—'}</td>

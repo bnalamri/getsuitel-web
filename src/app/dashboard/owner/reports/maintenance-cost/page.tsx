@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Wrench, Building2, User } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import MaintenanceCostExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Maintenance Cost Analysis' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function MaintenanceCostPage() {
+export default async function MaintenanceCostPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,30 +25,37 @@ export default async function MaintenanceCostPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [maintRes, orgRes] = await Promise.all([
+  const [maintRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('maintenance_requests')
       .select('id, category, charge_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, property_id, properties(id, name))')
       .eq('organization_id', orgId)
       .not('charge_amount', 'is', null),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
   type MaintRow = {
     id: string; category: string; charge_amount: number; charge_payer: string;
     status: string; completed_at: string; assigned_to_name: string;
     units: { unit_number: string; properties: { id: string; name: string } | null } | null;
   }
-  const maint = (maintRes.data ?? []) as MaintRow[]
+  const allMaint = (maintRes.data ?? []) as MaintRow[]
+  const maint = propertyId
+    ? allMaint.filter(m => (m.units as any)?.property_id === propertyId)
+    : allMaint
+
   const total = maint.reduce((s, m) => s + (m.charge_amount ?? 0), 0)
 
-  // By property
   const byProp: Record<string, { name: string; total: number; count: number }> = {}
   for (const m of maint) {
-    const prop = (m.units as {unit_number:string;properties:{id:string;name:string}|null}|null)?.properties
+    const prop = (m.units as any)?.properties
     const key = prop?.id ?? 'unknown'
     const name = prop?.name ?? 'Unknown'
     if (!byProp[key]) byProp[key] = { name, total: 0, count: 0 }
@@ -55,7 +64,6 @@ export default async function MaintenanceCostPage() {
   }
   const propRows = Object.values(byProp).sort((a, b) => b.total - a.total)
 
-  // By category
   const byCat: Record<string, { total: number; count: number }> = {}
   for (const m of maint) {
     const cat = m.category ?? 'Other'
@@ -65,7 +73,6 @@ export default async function MaintenanceCostPage() {
   }
   const catRows = Object.entries(byCat).map(([cat, v]) => ({ cat, ...v })).sort((a, b) => b.total - a.total)
 
-  // By technician
   const byTech: Record<string, { total: number; count: number }> = {}
   for (const m of maint) {
     const tech = m.assigned_to_name ?? 'Unassigned'
@@ -84,7 +91,11 @@ export default async function MaintenanceCostPage() {
           <h2 className="text-2xl font-bold text-slate-900">Maintenance Cost Analysis</h2>
           <p className="text-slate-500 text-sm mt-0.5">Spending breakdown by property, category and technician</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <MaintenanceCostExcelButton propRows={propRows} catRows={catRows} techRows={techRows} total={total} currency={currency} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Maintenance Cost Analysis" orgName={orgName} userName={userName} printDate={printDate} />
 
@@ -102,12 +113,8 @@ export default async function MaintenanceCostPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* By Property */}
         <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 size={15} className="text-slate-500" />
-            <h3 className="text-sm font-semibold text-slate-800">By Property</h3>
-          </div>
+          <div className="flex items-center gap-2 mb-4"><Building2 size={15} className="text-slate-500" /><h3 className="text-sm font-semibold text-slate-800">By Property</h3></div>
           <div className="space-y-3">
             {propRows.map(p => (
               <div key={p.name}>
@@ -127,12 +134,8 @@ export default async function MaintenanceCostPage() {
           </div>
         </div>
 
-        {/* By Category */}
         <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Wrench size={15} className="text-slate-500" />
-            <h3 className="text-sm font-semibold text-slate-800">By Category</h3>
-          </div>
+          <div className="flex items-center gap-2 mb-4"><Wrench size={15} className="text-slate-500" /><h3 className="text-sm font-semibold text-slate-800">By Category</h3></div>
           <div className="space-y-3">
             {catRows.map(c => (
               <div key={c.cat}>
@@ -153,12 +156,8 @@ export default async function MaintenanceCostPage() {
         </div>
       </div>
 
-      {/* By Technician */}
       <div className="card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <User size={15} className="text-slate-500" />
-          <h3 className="text-sm font-semibold text-slate-800">By Technician</h3>
-        </div>
+        <div className="flex items-center gap-2 mb-4"><User size={15} className="text-slate-500" /><h3 className="text-sm font-semibold text-slate-800">By Technician</h3></div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

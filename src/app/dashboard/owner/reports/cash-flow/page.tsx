@@ -2,6 +2,8 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import PropertySelectClient from '@/components/PropertySelectClient'
+import CashFlowExcelButton from './ExcelExportButton'
 
 export const metadata = { title: 'Cash Flow Forecast' }
 export const dynamic = 'force-dynamic'
@@ -10,7 +12,7 @@ function fmtAmt(n: number, currency = 'OMR') {
   return n.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' ' + currency
 }
 
-export default async function CashFlowForecastPage() {
+export default async function CashFlowForecastPage({ searchParams }: { searchParams: Promise<{ property_id?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -23,43 +25,43 @@ export default async function CashFlowForecastPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const sp = await searchParams
+  const propertyId = sp?.property_id ?? ''
 
-  const [contractsRes, expensesRes, orgRes] = await Promise.all([
+  const [contractsRes, expensesRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('contracts')
-      .select('id, rent_amount, currency, status, end_date, units(unit_number, properties(name))')
+      .select('id, rent_amount, currency, status, end_date, units(unit_number, property_id, properties(name))')
       .eq('organization_id', orgId)
       .eq('status', 'active'),
     admin.from('expenses')
-      .select('id, amount, currency, date, category')
+      .select('id, amount, currency, date, category, property_id')
       .eq('organization_id', orgId)
       .gte('date', new Date(today.getFullYear(), today.getMonth() - 3, 1).toISOString().split('T')[0]),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
+    admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
 
   const currency = (orgRes.data?.default_currency as string) ?? 'OMR'
   const orgName = (orgRes.data?.name as string) ?? ''
+  const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
-  const contracts = (contractsRes.data ?? []) as {
+  const allContracts = (contractsRes.data ?? []) as {
     id: string; rent_amount: number; currency: string; end_date: string;
-    units: { unit_number: string; properties: { name: string } | null } | null;
+    units: { unit_number: string; property_id: string; properties: { name: string } | null } | null;
   }[]
-  const expenses = (expensesRes.data ?? []) as { id: string; amount: number; currency: string; date: string; category: string }[]
+  const allExpenses = (expensesRes.data ?? []) as { id: string; amount: number; currency: string; date: string; category: string; property_id: string | null }[]
 
-  // Monthly expected income from active contracts (sum of all rent amounts)
-  const monthlyIncome = contracts.reduce((s, c) => s + (c.rent_amount ?? 0), 0)
+  const contracts = propertyId ? allContracts.filter(c => (c.units as any)?.property_id === propertyId) : allContracts
+  const expenses = propertyId ? allExpenses.filter(e => e.property_id === propertyId) : allExpenses
 
-  // Avg monthly expenses (last 3 months)
   const expTotal = expenses.reduce((s, e) => s + (e.amount ?? 0), 0)
   const avgMonthlyExpenses = expTotal / 3
 
-  // Build 6-month forecast
   const months: { label: string; key: string; income: number; expenses: number; net: number; contractsActive: number }[] = []
   for (let i = 0; i < 6; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() + i, 1)
     const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-    // Only count contracts still active in this month
     const active = contracts.filter(c => new Date(c.end_date) >= d).length
     const inc = contracts.filter(c => new Date(c.end_date) >= d).reduce((s, c) => s + (c.rent_amount ?? 0), 0)
     months.push({ label, key, income: inc, expenses: avgMonthlyExpenses, net: inc - avgMonthlyExpenses, contractsActive: active })
@@ -79,15 +81,19 @@ export default async function CashFlowForecastPage() {
           <h2 className="text-2xl font-bold text-slate-900">Cash Flow Forecast</h2>
           <p className="text-slate-500 text-sm mt-0.5">Projected income vs expenses for the next 6 months based on active contracts</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <PropertySelectClient properties={properties} selectedId={propertyId} />
+          <CashFlowExcelButton months={months} currency={currency} totalForecastIncome={totalForecastIncome} totalForecastExpenses={totalForecastExpenses} totalNet={totalNet} />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Cash Flow Forecast" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Projected 6-Month Income',   value: fmtAmt(totalForecastIncome, currency),   color: 'text-emerald-700', icon: TrendingUp },
+          { label: 'Projected 6-Month Income',    value: fmtAmt(totalForecastIncome, currency),   color: 'text-emerald-700', icon: TrendingUp },
           { label: 'Projected 6-Month Expenses',  value: fmtAmt(totalForecastExpenses, currency), color: 'text-red-600',     icon: TrendingDown },
-          { label: 'Projected Net Cash Flow',     value: fmtAmt(totalNet, currency),             color: totalNet >= 0 ? 'text-emerald-700' : 'text-red-700', icon: DollarSign },
+          { label: 'Projected Net Cash Flow',     value: fmtAmt(totalNet, currency),              color: totalNet >= 0 ? 'text-emerald-700' : 'text-red-700', icon: DollarSign },
         ].map(s => (
           <div key={s.label} className="card p-4 flex items-center gap-3">
             <s.icon size={20} className={s.color} />
@@ -99,7 +105,6 @@ export default async function CashFlowForecastPage() {
         ))}
       </div>
 
-      {/* Month-by-month forecast */}
       <div className="card p-5">
         <h3 className="text-sm font-semibold text-slate-800 mb-4">6-Month Projection</h3>
         <div className="overflow-x-auto">
@@ -139,7 +144,6 @@ export default async function CashFlowForecastPage() {
         </div>
       </div>
 
-      {/* Bar chart visual */}
       <div className="card p-5">
         <h3 className="text-sm font-semibold text-slate-800 mb-4">Income vs Expenses — Visual</h3>
         <div className="flex items-end gap-3 h-40">
