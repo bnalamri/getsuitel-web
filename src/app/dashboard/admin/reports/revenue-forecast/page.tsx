@@ -1,12 +1,13 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { DollarSign, AlertTriangle, TrendingUp, RefreshCw } from 'lucide-react'
+import { AlertTriangle, TrendingUp, RefreshCw, Coins } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import ExcelExportButton from './ExcelExportButton'
 
 export const metadata = { title: 'Subscription Revenue Forecast' }
 export const dynamic = 'force-dynamic'
 
-// Subscription plan prices (USD)
+// Subscription plan prices
 const PLAN_PRICES: Record<string, number> = {
   basic:      49,
   pro:        99,
@@ -14,8 +15,8 @@ const PLAN_PRICES: Record<string, number> = {
   free:       0,
 }
 
-function fmtUSD(n: number) {
-  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+function fmtCurrency(n: number, currency: string) {
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${currency}`
 }
 
 export default async function RevenueForecastPage() {
@@ -28,6 +29,14 @@ export default async function RevenueForecastPage() {
   const admin = createAdminClient()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+
+  // Fetch admin org's currency setting
+  const { data: adminOrg } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+  let adminCurrency = 'OMR'
+  if (adminOrg?.organization_id) {
+    const { data: orgData } = await supabase.from('organizations').select('default_currency').eq('id', adminOrg.organization_id).single()
+    adminCurrency = (orgData as any)?.default_currency ?? 'OMR'
+  }
 
   const { data: orgs } = await admin
     .from('organizations')
@@ -95,16 +104,24 @@ export default async function RevenueForecastPage() {
           <h2 className="text-2xl font-bold text-slate-900">Subscription Revenue Forecast</h2>
           <p className="text-slate-500 text-sm mt-0.5">Projected MRR from renewals and upcoming expiry dates — next 12 months</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <ExcelExportButton
+            mrr={mrr} arr={mrr * 12} totalExpected12m={totalExpected12m}
+            expiring30Count={expiring30.length}
+            byPlan={byPlan} months={months} expiring30={expiring30}
+            currency={adminCurrency}
+          />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Subscription Revenue Forecast" orgName="GetSuitel" userName={printerName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Current MRR',         value: fmtUSD(mrr),              color: 'text-emerald-700', icon: DollarSign },
-          { label: 'ARR (×12)',            value: fmtUSD(mrr * 12),         color: 'text-blue-700',    icon: TrendingUp },
+          { label: 'Current MRR',         value: fmtCurrency(mrr, adminCurrency),              color: 'text-emerald-700', icon: Coins },
+          { label: 'ARR (×12)',            value: fmtCurrency(mrr * 12, adminCurrency),         color: 'text-blue-700',    icon: TrendingUp },
           { label: 'Expiring in 30 days', value: expiring30.length.toString(), color: 'text-amber-600', icon: AlertTriangle },
-          { label: '12-Month Forecast',   value: fmtUSD(totalExpected12m), color: 'text-purple-700',  icon: RefreshCw },
+          { label: '12-Month Forecast',   value: fmtCurrency(totalExpected12m, adminCurrency), color: 'text-purple-700',  icon: RefreshCw },
         ].map(s => (
           <div key={s.label} className="card p-4 flex items-center gap-3">
             <s.icon size={20} className={s.color} />
@@ -124,7 +141,7 @@ export default async function RevenueForecastPage() {
             <div key={plan}>
               <div className="flex justify-between text-sm mb-1">
                 <span className="capitalize font-medium text-slate-700">{plan} × {data.count} orgs</span>
-                <span className="font-bold text-emerald-700">{fmtUSD(data.mrr)}/mo</span>
+                <span className="font-bold text-emerald-700">{fmtCurrency(data.mrr, adminCurrency)}/mo</span>
               </div>
               <div className="bg-slate-100 rounded-full h-2">
                 <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Math.min(100, (data.mrr / (mrr || 1)) * 100)}%` }} />
@@ -161,14 +178,14 @@ export default async function RevenueForecastPage() {
                       <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">⚠ {m.atRisk}</span>
                     ) : '—'}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-emerald-700">{m.expectedMRR > 0 ? fmtUSD(m.expectedMRR) : '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-emerald-700">{m.expectedMRR > 0 ? fmtCurrency(m.expectedMRR, adminCurrency) : '—'}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="bg-slate-100 font-bold">
                 <td colSpan={3} className="px-4 py-3 text-slate-700">12-Month Expected Revenue</td>
-                <td className="px-4 py-3 text-emerald-700">{fmtUSD(totalExpected12m)}</td>
+                <td className="px-4 py-3 text-emerald-700">{fmtCurrency(totalExpected12m, adminCurrency)}</td>
               </tr>
             </tfoot>
           </table>
@@ -210,7 +227,7 @@ export default async function RevenueForecastPage() {
                           {new Date(o.subscription_expires_at!).toLocaleDateString('en-GB')} ({daysLeft}d)
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700">{fmtUSD(PLAN_PRICES[o.subscription_plan] ?? 0)}/mo</td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{fmtCurrency(PLAN_PRICES[o.subscription_plan] ?? 0, adminCurrency)}/mo</td>
                     </tr>
                   )
                 })}

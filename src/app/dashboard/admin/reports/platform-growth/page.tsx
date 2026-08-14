@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { TrendingUp, Building2, UserCheck, XCircle } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
+import ExcelExportButton from './ExcelExportButton'
 
 export const metadata = { title: 'Platform Growth Report' }
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,14 @@ export default async function PlatformGrowthPage() {
           <h2 className="text-2xl font-bold text-slate-900">Platform Growth Report</h2>
           <p className="text-slate-500 text-sm mt-0.5">New org registrations, activations, and churn per month</p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <ExcelExportButton
+            totalOrgs={totalOrgs} activeOrgs={activeOrgs} trialingOrgs={trialingOrgs} churnedOrgs={churnedOrgs}
+            growthPct={growthPct} newThisMonth={newThisMonth} newLastMonth={newLastMonth}
+            months={months}
+          />
+          <PrintButton />
+        </div>
       </div>
       <PrintHeader reportTitle="Platform Growth Report" orgName="GetSuitel" userName={printerName} printDate={printDate} />
 
