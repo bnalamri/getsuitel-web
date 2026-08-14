@@ -103,9 +103,10 @@ export default async function ReportsPage() {
   const orgId = profile?.organization_id
   if (!orgId) return <div className="text-slate-400 text-center py-20">No organization found</div>
 
-  const { data: orgData } = await supabase.from('organizations').select('default_currency, date_format').eq('id', orgId).single()
+  const { data: orgData } = await supabase.from('organizations').select('default_currency, date_format, name').eq('id', orgId).single()
   const orgCurrency = (orgData?.default_currency as string) ?? 'OMR'
   const orgDateFmt  = (orgData?.date_format as string) ?? 'DD/MM/YYYY'
+  const orgName     = (orgData?.name as string) ?? ''
   const fmtDate     = makeFmtDate(orgDateFmt)
 
   const today = new Date()

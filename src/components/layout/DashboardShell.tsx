@@ -293,6 +293,11 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
     staff:        {en:'Staff Management',ar:'إدارة الموظفين'},
     users:        {en:'Users',ar:'المستخدمون'},
     invitations:  {en:'Invitations',ar:'الدعوات'},
+    closing:      {en:'Month-End Closing',ar:'إقفال نهاية الشهر'},
+    monthly:      {en:'Monthly Statement',ar:'الكشف الشهري'},
+    income:       {en:'Income Report',ar:'تقرير الإيرادات'},
+    pnl:          {en:'P&L Report',ar:'تقرير الأرباح والخسائر'},
+    expenses:     {en:'Expenses',ar:'المصروفات'},
   }
   const title = labels[segment]?.[lang] ?? segment
 
