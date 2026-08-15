@@ -88,20 +88,34 @@ export default async function VacancyReportPage({ searchParams }: { searchParams
       <PrintHeader reportTitle="Vacancy Duration Report" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Vacant Units',        value: vacantUnits.length.toString(), color: 'text-slate-700', icon: Building2 },
-          { label: 'Critical (90+ days)', value: critical.toString(),            color: 'text-red-600',   icon: AlertTriangle },
-          { label: 'Warning (30-90d)',    value: warning.toString(),             color: 'text-amber-600', icon: Clock },
-          { label: 'Est. Revenue Lost',   value: fmtAmt(totalLost, currency),   color: 'text-red-700',   icon: TrendingDown },
-        ].map(s => (
-          <div key={s.label} className="card p-4 flex items-center gap-3">
-            <s.icon size={20} className={s.color} />
-            <div>
-              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-xs text-slate-500">{s.label}</div>
-            </div>
+        <div className="card p-4 flex items-center gap-3">
+          <Building2 size={20} className="text-slate-700" />
+          <div>
+            <div className="text-xl font-bold text-slate-700">{vacantUnits.length}</div>
+            <div className="text-xs text-slate-500">Vacant Units</div>
           </div>
-        ))}
+        </div>
+        <div className="card p-4 flex items-center gap-3">
+          <AlertTriangle size={20} className="text-red-600" />
+          <div>
+            <div className="text-xl font-bold text-red-600">{critical}</div>
+            <div className="text-xs text-slate-500">Critical (90+ days)</div>
+          </div>
+        </div>
+        <div className="card p-4 flex items-center gap-3">
+          <Clock size={20} className="text-amber-600" />
+          <div>
+            <div className="text-xl font-bold text-amber-600">{warning}</div>
+            <div className="text-xs text-slate-500">Warning (30-90d)</div>
+          </div>
+        </div>
+        <div className="card p-4 flex items-center gap-3">
+          <TrendingDown size={20} className="text-red-700" />
+          <div>
+            <div className="text-xl font-bold text-red-700"><OmrAmount value={totalLost} /></div>
+            <div className="text-xs text-slate-500">Est. Revenue Lost</div>
+          </div>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -131,8 +145,8 @@ export default async function VacancyReportPage({ searchParams }: { searchParams
                     <td className="px-4 py-3 text-slate-600">{r.unit.properties?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-500">{r.vacantSince ? r.vacantSince.toLocaleDateString('en-GB') : '—'}</td>
                     <td className="px-4 py-3">{urgencyBadge(r.daysVacant)}</td>
-                    <td className="px-4 py-3 text-slate-600">{r.monthlyRent > 0 ? fmtAmt(r.monthlyRent, r.currency) : '—'}</td>
-                    <td className="px-4 py-3 font-semibold text-red-600">{r.lostRent > 0 ? fmtAmt(r.lostRent, r.currency) : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{r.monthlyRent > 0 ? <OmrAmount value={r.monthlyRent} /> : '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-red-600">{r.lostRent > 0 ? <OmrAmount value={r.lostRent} /> : '—'}</td>
                   </tr>
                 ))}
               </tbody>

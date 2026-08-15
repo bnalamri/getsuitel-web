@@ -87,17 +87,22 @@ export default async function UnitYieldPage({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Units',        value: units.length.toString(),       color: 'text-slate-700' },
-          { label: 'Occupied',           value: occupied.toString(),            color: 'text-emerald-700' },
-          { label: 'Annual Rent Income', value: fmtAmt(totalAnnual, currency), color: 'text-blue-700' },
-          { label: 'YTD Collected',      value: fmtAmt(totalYTD, currency),    color: 'text-emerald-700' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
-          </div>
-        ))}
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-slate-700">{units.length}</div>
+          <div className="text-xs text-slate-500 mt-1">Total Units</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-emerald-700">{occupied}</div>
+          <div className="text-xs text-slate-500 mt-1">Occupied</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-blue-700"><OmrAmount value={totalAnnual} /></div>
+          <div className="text-xs text-slate-500 mt-1">Annual Rent Income</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-emerald-700"><OmrAmount value={totalYTD} /></div>
+          <div className="text-xs text-slate-500 mt-1">YTD Collected</div>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -130,9 +135,9 @@ export default async function UnitYieldPage({ searchParams }: { searchParams: Pr
                         {r.unit.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{r.monthlyRent > 0 ? fmtAmt(r.monthlyRent, currency) : '—'}</td>
-                    <td className="px-4 py-3 font-semibold text-blue-700">{r.annualRent > 0 ? fmtAmt(r.annualRent, currency) : '—'}</td>
-                    <td className="px-4 py-3 text-emerald-700">{r.ytdCollected > 0 ? fmtAmt(r.ytdCollected, currency) : '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{r.monthlyRent > 0 ? <OmrAmount value={r.monthlyRent} /> : '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-blue-700">{r.annualRent > 0 ? <OmrAmount value={r.annualRent} /> : '—'}</td>
+                    <td className="px-4 py-3 text-emerald-700">{r.ytdCollected > 0 ? <OmrAmount value={r.ytdCollected} /> : '—'}</td>
                     <td className="px-4 py-3">
                       {r.annualRent > 0 ? (
                         <div className="flex items-center gap-2">

@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import TechExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Technician Performance Report' }
 export const dynamic = 'force-dynamic'
@@ -104,17 +105,22 @@ export default async function TechPerformancePage({ searchParams }: { searchPara
       <PrintHeader reportTitle="Technician Performance Report" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Jobs',           value: totalJobs.toString(),           color: 'text-slate-700' },
-          { label: 'Jobs Completed',       value: totalCompleted.toString(),       color: 'text-emerald-700' },
-          { label: 'Active Technicians',   value: techRows.filter(t => t.name !== 'Unassigned').length.toString(), color: 'text-blue-700' },
-          { label: 'Total Revenue Billed', value: fmtAmt(totalRevenue, currency), color: 'text-green-700' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
-          </div>
-        ))}
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-slate-700">{totalJobs}</div>
+          <div className="text-xs text-slate-500 mt-1">Total Jobs</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-emerald-700">{totalCompleted}</div>
+          <div className="text-xs text-slate-500 mt-1">Jobs Completed</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-blue-700">{techRows.filter(t => t.name !== 'Unassigned').length}</div>
+          <div className="text-xs text-slate-500 mt-1">Active Technicians</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-green-700"><OmrAmount value={totalRevenue} /></div>
+          <div className="text-xs text-slate-500 mt-1">Total Revenue Billed</div>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -164,7 +170,7 @@ export default async function TechPerformancePage({ searchParams }: { searchPara
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-green-700">{t.totalRevenue > 0 ? fmtAmt(t.totalRevenue, currency) : '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-green-700">{t.totalRevenue > 0 ? <OmrAmount value={t.totalRevenue} /> : '—'}</td>
                   </tr>
                 ))}
               </tbody>

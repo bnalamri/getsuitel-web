@@ -91,19 +91,27 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
       <PrintHeader reportTitle="Cash Flow Forecast" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Projected 6-Month Income',    value: fmtAmt(totalForecastIncome, currency),   color: 'text-emerald-700', icon: TrendingUp },
-          { label: 'Projected 6-Month Expenses',  value: fmtAmt(totalForecastExpenses, currency), color: 'text-red-600',     icon: TrendingDown },
-          { label: 'Projected Net Cash Flow',     value: fmtAmt(totalNet, currency),              color: totalNet >= 0 ? 'text-emerald-700' : 'text-red-700', icon: DollarSign },
-        ].map(s => (
-          <div key={s.label} className="card p-4 flex items-center gap-3">
-            <s.icon size={20} className={s.color} />
-            <div>
-              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-xs text-slate-500">{s.label}</div>
-            </div>
+        <div className="card p-4 flex items-center gap-3">
+          <TrendingUp size={20} className="text-emerald-700" />
+          <div>
+            <div className="text-xl font-bold text-emerald-700"><OmrAmount value={totalForecastIncome} /></div>
+            <div className="text-xs text-slate-500">Projected 6-Month Income</div>
           </div>
-        ))}
+        </div>
+        <div className="card p-4 flex items-center gap-3">
+          <TrendingDown size={20} className="text-red-600" />
+          <div>
+            <div className="text-xl font-bold text-red-600"><OmrAmount value={totalForecastExpenses} /></div>
+            <div className="text-xs text-slate-500">Projected 6-Month Expenses</div>
+          </div>
+        </div>
+        <div className="card p-4 flex items-center gap-3">
+          <DollarSign size={20} className={totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'} />
+          <div>
+            <div className={`text-xl font-bold ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}><OmrAmount value={totalNet} /></div>
+            <div className="text-xs text-slate-500">Projected Net Cash Flow</div>
+          </div>
+        </div>
       </div>
 
       <div className="card p-5">
@@ -127,7 +135,10 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
                   <td className="px-4 py-3 text-emerald-700 font-semibold"><OmrAmount value={m.income} /></td>
                   <td className="px-4 py-3 text-red-600"><OmrAmount value={m.expenses} /></td>
                   <td className={`px-4 py-3 font-bold ${m.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {m.net >= 0 ? '+' : ''}{fmtAmt(m.net, currency)}
+                    <span className="inline-flex items-center gap-0.5">
+                      {m.net >= 0 ? '+' : ''}
+                      <OmrAmount value={m.net} />
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -138,7 +149,12 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
                 <td className="px-4 py-3 text-slate-500">—</td>
                 <td className="px-4 py-3 text-emerald-700"><OmrAmount value={totalForecastIncome} /></td>
                 <td className="px-4 py-3 text-red-600"><OmrAmount value={totalForecastExpenses} /></td>
-                <td className={`px-4 py-3 ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{totalNet >= 0 ? '+' : ''}{fmtAmt(totalNet, currency)}</td>
+                <td className={`px-4 py-3 ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                  <span className="inline-flex items-center gap-0.5">
+                    {totalNet >= 0 ? '+' : ''}
+                    <OmrAmount value={totalNet} />
+                  </span>
+                </td>
               </tr>
             </tfoot>
           </table>

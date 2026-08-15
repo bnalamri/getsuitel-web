@@ -112,7 +112,7 @@ export default async function PaymentAgingPage({ searchParams }: { searchParams:
       <div className="card p-4 flex items-center gap-3 border border-red-200 bg-red-50">
         <AlertTriangle size={18} className="text-red-600 flex-shrink-0" />
         <div>
-          <span className="font-semibold text-red-800">Total Outstanding: {fmtAmt(grandTotal, currency)}</span>
+          <span className="font-semibold text-red-800">Total Outstanding: <OmrAmount value={grandTotal} /></span>
           <span className="text-red-600 text-sm ml-2">across {rows.length} overdue invoice{rows.length !== 1 ? 's' : ''}</span>
         </div>
       </div>

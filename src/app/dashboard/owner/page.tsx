@@ -4,6 +4,8 @@ import Link from 'next/link'
 import WelcomeModal from '@/components/WelcomeModal'
 import StaffWelcomeModal from '@/components/StaffWelcomeModal'
 import OnboardingChecklist, { type OnboardingStep } from '@/components/OnboardingChecklist'
+import OmrAmount from '@/components/OmrAmount'
+import type { ReactNode } from 'react'
 
 export const metadata = { title: 'Owner Dashboard' }
 
@@ -140,11 +142,11 @@ export default async function OwnerDashboard() {
   const overdueCount = overdueInvoices.length
   const overdueTotal = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0)
 
-  const stats = [
+  const stats: { label: string; value: ReactNode; sub?: string; icon: typeof Building2; color: string; href: string }[] = [
     { label: 'Properties', value: props.count ?? 0, icon: Building2, color: 'bg-navy-50 text-navy-700', href: '/dashboard/owner/properties' },
     { label: 'Total Units', value: totalUnits, sub: `${vacant} vacant`, icon: DoorOpen, color: 'bg-blue-50 text-blue-700', href: '/dashboard/owner/units' },
     { label: 'Tenants', value: tenants.count ?? 0, icon: Users, color: 'bg-purple-50 text-purple-700', href: '/dashboard/owner/tenants' },
-    { label: 'Revenue (This Month)', value: `${paidRevenue.toLocaleString()} ${(org.default_currency as string) ?? 'OMR'}`, sub: `${ytdRevenue.toLocaleString()} YTD · ${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
+    { label: 'Revenue (This Month)', value: <OmrAmount value={paidRevenue} />, sub: `${ytdRevenue.toLocaleString()} YTD · ${pendingRevenue.toLocaleString()} pending`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700', href: '/dashboard/owner/invoices' },
     { label: 'Open Maintenance', value: maintenance.count ?? maintenance.data?.length ?? 0, icon: Wrench, color: 'bg-orange-50 text-orange-700', href: '/dashboard/owner/maintenance' },
   ]
 
@@ -210,7 +212,7 @@ export default async function OwnerDashboard() {
           </div>
           <div className="flex-1">
             <div className="font-semibold text-sm">
-              {arrearsCount} carry-forward invoice{arrearsCount !== 1 ? 's' : ''} unpaid — {arrearsTotal.toLocaleString()} {(org.default_currency as string) ?? 'OMR'} outstanding
+              {arrearsCount} carry-forward invoice{arrearsCount !== 1 ? 's' : ''} unpaid — <OmrAmount value={arrearsTotal} light /> outstanding
             </div>
             <div className="text-xs text-white/70">Prior-month arrears — open closing report to review and follow up</div>
           </div>
@@ -229,7 +231,7 @@ export default async function OwnerDashboard() {
           </div>
           <div className="flex-1">
             <div className="font-semibold text-sm">
-              {overdueCount} overdue invoice{overdueCount !== 1 ? 's' : ''} — {overdueTotal.toLocaleString()} {(org.default_currency as string) ?? 'OMR'} unpaid
+              {overdueCount} overdue invoice{overdueCount !== 1 ? 's' : ''} — <OmrAmount value={overdueTotal} light /> unpaid
             </div>
             <div className="text-xs text-white/70">These are past-due and need immediate attention</div>
           </div>
@@ -325,7 +327,7 @@ export default async function OwnerDashboard() {
               {recentInvoices.map(inv => (
                 <div key={inv.id} className="p-3 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900">{Number(inv.amount).toLocaleString()} {(inv as Record<string, unknown>).currency as string ?? (org.default_currency as string) ?? 'OMR'}</div>
+                    <div className="text-sm font-medium text-slate-900"><OmrAmount value={Number(inv.amount)} /></div>
                   </div>
                   <span className={`badge ${inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                     {inv.status}

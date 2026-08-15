@@ -123,17 +123,22 @@ export default async function AnnualPortfolioPage({ searchParams }: { searchPara
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Gross Rental Income',      value: fmtAmt(totalIncome, currency),                     color: 'text-emerald-700' },
-          { label: 'Pending / Outstanding',    value: fmtAmt(totalPending, currency),                    color: 'text-amber-600' },
-          { label: 'Total Operating Expenses', value: fmtAmt(totalExpenses + totalMaintCost, currency),  color: 'text-red-600' },
-          { label: 'Net Operating Income',     value: fmtAmt(noi, currency),                             color: noi >= 0 ? 'text-emerald-700' : 'text-red-700' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
-          </div>
-        ))}
+        <div className="card p-4">
+          <div className="text-xl font-bold text-emerald-700"><OmrAmount value={totalIncome} /></div>
+          <div className="text-xs text-slate-500 mt-1">Gross Rental Income</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xl font-bold text-amber-600"><OmrAmount value={totalPending} /></div>
+          <div className="text-xs text-slate-500 mt-1">Pending / Outstanding</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-xl font-bold text-red-600"><OmrAmount value={totalExpenses + totalMaintCost} /></div>
+          <div className="text-xs text-slate-500 mt-1">Total Operating Expenses</div>
+        </div>
+        <div className="card p-4">
+          <div className={`text-xl font-bold ${noi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}><OmrAmount value={noi} /></div>
+          <div className="text-xs text-slate-500 mt-1">Net Operating Income</div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -164,13 +169,13 @@ export default async function AnnualPortfolioPage({ searchParams }: { searchPara
           ].map(r => (
             <div key={r.label} className="flex justify-between items-center py-2 border-b border-slate-100">
               <span className="text-sm text-slate-700">{r.label}</span>
-              <span className={`text-sm font-semibold ${r.color}`}>{r.sign} {fmtAmt(Math.abs(r.value), currency)}</span>
+              <span className={`text-sm font-semibold ${r.color}`}>{r.sign} <OmrAmount value={Math.abs(r.value)} /></span>
             </div>
           ))}
           <div className="flex justify-between items-center py-2 bg-slate-50 rounded-lg px-3">
             <span className="font-bold text-slate-800">Net Operating Income (NOI)</span>
             <span className={`font-bold text-lg ${noi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-              {noi >= 0 ? '+ ' : '− '}{fmtAmt(Math.abs(noi), currency)}
+              {noi >= 0 ? '+ ' : '− '}<OmrAmount value={Math.abs(noi)} />
             </span>
           </div>
         </div>

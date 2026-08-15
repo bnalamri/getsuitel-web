@@ -89,17 +89,22 @@ export default async function NOIReportPage({ searchParams }: { searchParams: Pr
       <PrintHeader reportTitle={`NOI Report ${year}`} orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Gross Income',         value: fmtAmt(totalIncome, currency),    color: 'text-emerald-700' },
-          { label: 'Total Expenses',        value: fmtAmt(totalExpenses, currency),  color: 'text-red-600' },
-          { label: 'Net Operating Income',  value: fmtAmt(totalNOI, currency),       color: totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700' },
-          { label: 'NOI Margin',            value: `${noiMargin}%`,                  color: 'text-blue-700' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
-          </div>
-        ))}
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-emerald-700"><OmrAmount value={totalIncome} /></div>
+          <div className="text-xs text-slate-500 mt-1">Gross Income</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-red-600"><OmrAmount value={totalExpenses} /></div>
+          <div className="text-xs text-slate-500 mt-1">Total Expenses</div>
+        </div>
+        <div className="card p-4">
+          <div className={`text-2xl font-bold ${totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700'}`}><OmrAmount value={totalNOI} /></div>
+          <div className="text-xs text-slate-500 mt-1">Net Operating Income</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-blue-700">{noiMargin}%</div>
+          <div className="text-xs text-slate-500 mt-1">NOI Margin</div>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -131,7 +136,10 @@ export default async function NOIReportPage({ searchParams }: { searchParams: Pr
                     <td className="px-4 py-3 text-orange-600"><OmrAmount value={p.maintCost} /></td>
                     <td className="px-4 py-3 text-red-700 font-semibold"><OmrAmount value={p.totalExpenses} /></td>
                     <td className={`px-4 py-3 font-bold ${p.noi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                      {p.noi >= 0 ? '+' : ''}{fmtAmt(p.noi, currency)}
+                      <span className="inline-flex items-center gap-0.5">
+                        {p.noi >= 0 ? '+' : ''}
+                        <OmrAmount value={p.noi} />
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{margin !== '—' ? `${margin}%` : '—'}</td>
                   </tr>
@@ -146,9 +154,12 @@ export default async function NOIReportPage({ searchParams }: { searchParams: Pr
                 <tr className="bg-slate-100 font-bold">
                   <td className="px-4 py-3 text-slate-700">Total</td>
                   <td className="px-4 py-3 text-emerald-700"><OmrAmount value={totalIncome} /></td>
-                  <td colSpan={3} className="px-4 py-3 text-red-700">{fmtAmt(totalExpenses, currency)} total</td>
+                  <td colSpan={3} className="px-4 py-3 text-red-700"><OmrAmount value={totalExpenses} /> total</td>
                   <td className={`px-4 py-3 ${totalNOI >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {totalNOI >= 0 ? '+' : ''}{fmtAmt(totalNOI, currency)}
+                    <span className="inline-flex items-center gap-0.5">
+                      {totalNOI >= 0 ? '+' : ''}
+                      <OmrAmount value={totalNOI} />
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{noiMargin}%</td>
                 </tr>

@@ -101,16 +101,20 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
       <PrintHeader reportTitle="Maintenance Cost Analysis" orgName={orgName} userName={userName} printDate={printDate} />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Total Maintenance Spend', value: fmtAmt(total, currency), color: 'text-red-700' },
-          { label: 'Jobs with Charges',        value: maint.length.toString(),  color: 'text-slate-700' },
-          { label: 'Avg Cost per Job',          value: maint.length ? fmtAmt(total / maint.length, currency) : '—', color: 'text-amber-700' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-red-700"><OmrAmount value={total} /></div>
+          <div className="text-xs text-slate-500 mt-1">Total Maintenance Spend</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-slate-700">{maint.length}</div>
+          <div className="text-xs text-slate-500 mt-1">Jobs with Charges</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-amber-700">
+            {maint.length ? <OmrAmount value={total / maint.length} /> : '—'}
           </div>
-        ))}
+          <div className="text-xs text-slate-500 mt-1">Avg Cost per Job</div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

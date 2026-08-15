@@ -4,6 +4,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
 import LeasePipelineExcelButton from './ExcelExportButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Lease Renewal Pipeline' }
 export const dynamic = 'force-dynamic'
@@ -139,7 +140,7 @@ export default async function LeasePipelinePage({ searchParams }: { searchParams
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.bucket.badge}`}>{r.daysLeft}d</span>
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-700">
-                      {r.rent_amount.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} {r.currency}
+                      <OmrAmount value={r.rent_amount} />
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{r.tenants?.phone ?? r.tenants?.email ?? '—'}</td>
                   </tr>
