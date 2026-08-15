@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Receipt, Search } from 'lucide-react'
+import OmrAmount from '@/components/OmrAmount'
 import UpdateChequeButton from './UpdateChequeButton'
 import DeleteChequeButton from './DeleteChequeButton'
 
@@ -146,7 +147,7 @@ export default function ChequeTable({ cheques, units, properties = [] }: { chequ
                     <td className="px-4 py-3">{(c.tenants as { full_name: string } | null)?.full_name}</td>
                     <td className="px-4 py-3 text-slate-500">{(c.units as { unit_number: string } | null)?.unit_number}</td>
                     <td className="px-4 py-3 text-slate-500">{c.bank_name}</td>
-                    <td className="px-4 py-3 font-bold">{Number(c.amount).toLocaleString()} OMR</td>
+                    <td className="px-4 py-3 font-bold"><OmrAmount value={Number(c.amount)} /></td>
                     <td className={`px-4 py-3 ${isPast ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>{c.due_date}</td>
                     <td className="px-4 py-3 text-slate-400 text-center">
                       {c.sequence_number && c.total_cheques ? `${c.sequence_number}/${c.total_cheques}` : '—'}

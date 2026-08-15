@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Receipt, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import OmrAmount from '@/components/OmrAmount'
 import PaymentPanel from './PaymentPanel'
 
 const statusIcon = {
@@ -115,7 +116,7 @@ export default function InvoiceList({
                   )}
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="font-bold text-slate-900">{Number(invoice.amount).toLocaleString()} {invoice.currency}</div>
+                  <div className="font-bold text-slate-900"><OmrAmount value={Number(invoice.amount)} /></div>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor[invoice.status] ?? 'bg-slate-100 text-slate-500'}`}>
                     {invoice.status}
                   </span>

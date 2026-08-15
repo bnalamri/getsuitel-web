@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Paperclip, XCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import OmrAmount from '@/components/OmrAmount'
 import EditInvoiceForm from './EditInvoiceForm'
 import MarkPaidModal from './MarkPaidModal'
 
@@ -119,7 +120,7 @@ export default function InvoicesTable({
                       <div className="text-slate-400">Unit {unit?.unit_number}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-600 capitalize">{inv.type}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{Number(inv.amount).toLocaleString()} {inv.currency}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900"><OmrAmount value={Number(inv.amount)} /></td>
                     <td className="px-4 py-3 text-slate-600">{inv.due_date}</td>
                     <td className="px-4 py-3">
                       {inv.paid_date

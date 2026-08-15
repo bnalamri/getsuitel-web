@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import OmrAmount from '@/components/OmrAmount'
 import InvoiceList from './InvoiceList'
 
 export const metadata = { title: 'My Invoices' }
@@ -40,12 +41,12 @@ export default async function TenantInvoicesPage() {
         <div className="card p-4">
           <div className="text-sm text-slate-500">Amount Due</div>
           <div className={`text-2xl font-bold mt-1 ${totalDue > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-            {totalDue.toLocaleString()} OMR
+            <OmrAmount value={totalDue} />
           </div>
         </div>
         <div className="card p-4">
           <div className="text-sm text-slate-500">Total Paid</div>
-          <div className="text-2xl font-bold text-emerald-700 mt-1">{totalPaid.toLocaleString()} OMR</div>
+          <div className="text-2xl font-bold text-emerald-700 mt-1"><OmrAmount value={totalPaid} /></div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import {
   Smartphone, Building2, Receipt, ChevronDown,
 } from 'lucide-react'
 import Link from 'next/link'
+import OmrAmount from '@/components/OmrAmount'
 import ConfirmReceiptButton from './ConfirmReceiptButton'
 import MarkPaidModal from '../invoices/MarkPaidModal'
 
@@ -119,7 +120,7 @@ export default function PaymentsClient({
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="font-bold text-slate-900 mb-2">
-                      {Number(inv?.amount ?? r.amount).toLocaleString()} {inv?.currency ?? 'OMR'}
+                      <OmrAmount value={Number(inv?.amount ?? r.amount)} />
                     </div>
                     <div className="flex gap-2 justify-end items-center">
                       {receipt_url && (
@@ -165,7 +166,7 @@ export default function PaymentsClient({
                     <tr key={invId} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-medium">{(inv.tenants as { full_name: string })?.full_name}</td>
                       <td className="px-4 py-3 text-slate-500">{unit?.unit_number}</td>
-                      <td className="px-4 py-3 font-bold">{Number(inv.amount).toLocaleString()} {inv.currency as string}</td>
+                      <td className="px-4 py-3 font-bold"><OmrAmount value={Number(inv.amount)} /></td>
                       <td className="px-4 py-3 text-slate-500">{inv.due_date as string}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${inv.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -205,7 +206,7 @@ export default function PaymentsClient({
                   <tr key={inv.id as string}>
                     <td className="px-4 py-3 font-medium">{(inv.tenants as { full_name: string })?.full_name}</td>
                     <td className="px-4 py-3 text-slate-500">{methodLabel[inv.payment_method as string] ?? inv.payment_method as string}</td>
-                    <td className="px-4 py-3 font-bold">{Number(inv.amount).toLocaleString()} {inv.currency as string}</td>
+                    <td className="px-4 py-3 font-bold"><OmrAmount value={Number(inv.amount)} /></td>
                     <td className="px-4 py-3 text-slate-500">{(inv.paid_date as string) ?? '—'}</td>
                   </tr>
                 ))}

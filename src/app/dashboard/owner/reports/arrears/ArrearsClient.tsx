@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, Download, Printer, Loader2 } from 'lucide-react'
 import PrintHeader from '@/components/PrintHeader'
+import OmrAmount from '@/components/OmrAmount'
 
 type Invoice = {
   id: string; amount: number | string; currency: string; status: string
@@ -229,7 +230,7 @@ export default function ArrearsClient({
         {Object.entries(totals).map(([cur, total]) => (
           <div key={cur} className="card p-4">
             <p className="text-xs text-slate-500 mb-1">Total at Risk</p>
-            <p className="text-xl font-bold text-red-600">{fmtAmt(total, cur)}</p>
+            <p className="text-xl font-bold text-red-600"><OmrAmount value={total} /></p>
           </div>
         ))}
         <div className="card p-4">
@@ -277,7 +278,7 @@ export default function ArrearsClient({
                     <td className="px-4 py-3 text-slate-600">{unit?.unit_number ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{unit?.properties?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-right font-semibold text-red-700">
-                      {fmtAmt(Number(inv.amount), inv.currency)}
+                      <OmrAmount value={Number(inv.amount)} />
                     </td>
                     <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                       {fmtDate(inv.due_date, dateFormat)}

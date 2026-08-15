@@ -1,5 +1,6 @@
 'use client'
 import { TrendingUp, Download, BarChart2, CreditCard, Receipt, Layers, FileSpreadsheet } from 'lucide-react'
+import OmrAmount from '@/components/OmrAmount'
 
 type Org        = { id: string; name: string; subscription_plan: string; subscription_status: string; subscription_expires_at?: string; default_currency?: string }
 type Invoice    = { organization_id: string; amount: number; currency: string; status: string; type: string; created_at: string; due_date: string }
@@ -526,7 +527,7 @@ export default function FinancialReportPDF({
               <div key={m.key}>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-slate-600">{m.label}</span>
-                  <span className="font-semibold text-emerald-700 tabular-nums">{fmt(m.collected)} OMR</span>
+                  <span className="font-semibold text-emerald-700 tabular-nums"><OmrAmount value={m.collected} /></span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full">
                   <div
@@ -557,7 +558,7 @@ export default function FinancialReportPDF({
                 <div key={method}>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-600">{METHOD_LABELS[method] ?? method}</span>
-                    <span className="font-semibold tabular-nums">{fmt(amt)} OMR</span>
+                    <span className="font-semibold tabular-nums"><OmrAmount value={amt} /></span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full">
                     <div
@@ -599,7 +600,7 @@ export default function FinancialReportPDF({
           {totalOverdue > 0 && (
             <div className="mt-4 p-3 bg-red-50 rounded-xl">
               <div className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Overdue</div>
-              <div className="text-lg font-black text-red-600 tabular-nums">{fmt(totalOverdue)} OMR</div>
+              <div className="text-lg font-black text-red-600 tabular-nums"><OmrAmount value={totalOverdue} /></div>
               <div className="text-xs text-red-500">{invoices.filter(i => i.status === 'overdue').length} invoice{invoices.filter(i => i.status === 'overdue').length !== 1 ? 's' : ''}</div>
             </div>
           )}
@@ -667,15 +668,15 @@ export default function FinancialReportPDF({
                     <td className="px-4 py-3">
                       <span className={`badge capitalize ${PLAN_COLOR[p.plan] ?? 'bg-slate-100 text-slate-600'}`}>{p.plan}</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-500 tabular-nums">{p.price} OMR</td>
+                    <td className="px-4 py-3 text-right text-slate-500 tabular-nums"><OmrAmount value={p.price} /></td>
                     <td className="px-4 py-3 text-right text-slate-700">{p.total}</td>
                     <td className="px-4 py-3 text-right text-emerald-700 font-semibold">{p.active}</td>
-                    <td className="px-4 py-3 text-right font-bold text-navy-700 tabular-nums">{p.mrr.toLocaleString()} OMR</td>
+                    <td className="px-4 py-3 text-right font-bold text-navy-700 tabular-nums"><OmrAmount value={p.mrr} /></td>
                   </tr>
                 ))}
                 <tr className="bg-slate-50 font-semibold">
                   <td className="px-4 py-3 text-slate-700" colSpan={4}>Total MRR</td>
-                  <td className="px-4 py-3 text-right font-black text-navy-700 tabular-nums">{mrr.toLocaleString()} OMR</td>
+                  <td className="px-4 py-3 text-right font-black text-navy-700 tabular-nums"><OmrAmount value={mrr} /></td>
                 </tr>
               </tbody>
             </table>
@@ -703,7 +704,7 @@ export default function FinancialReportPDF({
                     <td className="px-4 py-3 text-right text-slate-500">{m.submitted || '—'}</td>
                     <td className="px-4 py-3 text-right text-emerald-700 font-semibold">{m.reviewed || '—'}</td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
-                      {m.revenue > 0 ? `${m.revenue.toLocaleString()} OMR` : '—'}
+                      {m.revenue > 0 ? <OmrAmount value={m.revenue} /> : '—'}
                     </td>
                   </tr>
                 ))}

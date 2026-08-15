@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { DoorOpen, ArrowRight } from 'lucide-react'
+import OmrAmount from '@/components/OmrAmount'
 import AddUnitForm from './AddUnitForm'
 import EditUnitForm from './EditUnitForm'
 import DeleteUnitButton from './DeleteUnitButton'
@@ -107,7 +108,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: { prop
                       {u.area_sqm ? ` · ${u.area_sqm}m²` : ''}
                       {u.floor != null ? ` · Floor ${u.floor}` : ''}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{Number(u.rent_amount).toLocaleString()} {u.currency}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900"><OmrAmount value={Number(u.rent_amount)} /></td>
                     <td className="px-4 py-3"><span className={`badge ${statusColor[u.status]}`}>{u.status}</span></td>
                     <td className="px-4 py-3">
                       <FloorPlanUploadButton

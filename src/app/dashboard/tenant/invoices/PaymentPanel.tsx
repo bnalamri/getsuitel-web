@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Smartphone, Receipt, Copy, Check, Loader2, Send, ChevronDown, ChevronUp, Banknote, Info, Paperclip, X } from 'lucide-react'
+import OmrAmount from '@/components/OmrAmount'
 
 interface OrgPayment {
   bank_account_name?: string | null
@@ -181,7 +182,7 @@ export default function PaymentPanel({
                 </div>
               )}
               <div>
-                <label className="label">Transfer amount: <strong>{Number(amount).toLocaleString()} {currency}</strong></label>
+                <label className="label">Transfer amount: <strong><OmrAmount value={Number(amount)} /></strong></label>
                 <textarea className="input mt-1" rows={2} placeholder="Add transaction reference or note (optional)"
                   value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
@@ -205,7 +206,7 @@ export default function PaymentPanel({
                 </div>
               )}
               <div>
-                <label className="label">Send: <strong>{Number(amount).toLocaleString()} {currency}</strong></label>
+                <label className="label">Send: <strong><OmrAmount value={Number(amount)} /></strong></label>
                 <textarea className="input mt-1" rows={2} placeholder="Add transaction ID or note (optional)"
                   value={notes} onChange={e => setNotes(e.target.value)} />
               </div>

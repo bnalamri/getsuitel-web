@@ -6,6 +6,7 @@ import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import TenantDirectoryPDF from './TenantDirectoryPDF'
 import ReportsExcelButton from './ReportsExcelButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const metadata = { title: 'Reports' }
 export const dynamic = 'force-dynamic'
@@ -469,9 +470,9 @@ export default async function ReportsPage() {
                 return (
                   <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                     <Td className="font-medium">{monthLabel(key)}</Td>
-                    <Td>{invoiced > 0 ? fmtAmt(invoiced, orgCurrency) : <span className="text-slate-300">{dash}</span>}</Td>
-                    <Td className="text-emerald-700 font-medium">{collected > 0 ? fmtAmt(collected, orgCurrency) : <span className="text-slate-300">{dash}</span>}</Td>
-                    <Td className={outstanding > 0 ? 'text-orange-600' : 'text-slate-400'}>{outstanding > 0 ? fmtAmt(outstanding, orgCurrency) : dash}</Td>
+                    <Td>{invoiced > 0 ? <OmrAmount value={invoiced} /> : <span className="text-slate-300">{dash}</span>}</Td>
+                    <Td className="text-emerald-700 font-medium">{collected > 0 ? <OmrAmount value={collected} /> : <span className="text-slate-300">{dash}</span>}</Td>
+                    <Td className={outstanding > 0 ? 'text-orange-600' : 'text-slate-400'}>{outstanding > 0 ? <OmrAmount value={outstanding} /> : dash}</Td>
                     <Td>
                       {pct !== null ? (
                         <div className="flex items-center gap-2">
@@ -487,9 +488,9 @@ export default async function ReportsPage() {
               })}
               <tr className="bg-slate-100">
                 <Td className="font-bold text-slate-900">Total</Td>
-                <Td className="font-bold">{fmtAmt(totalInvoiced, orgCurrency)}</Td>
-                <Td className="font-bold text-emerald-700">{fmtAmt(totalCollected, orgCurrency)}</Td>
-                <Td className="font-bold text-orange-600">{fmtAmt(totalOutstanding, orgCurrency)}</Td>
+                <Td className="font-bold"><OmrAmount value={totalInvoiced} /></Td>
+                <Td className="font-bold text-emerald-700"><OmrAmount value={totalCollected} /></Td>
+                <Td className="font-bold text-orange-600"><OmrAmount value={totalOutstanding} /></Td>
                 <Td className="font-bold">{totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) + '%' : dash}</Td>
               </tr>
             </tbody>
@@ -520,9 +521,9 @@ export default async function ReportsPage() {
                       <span>{p.occupancy}%</span>
                     </div>
                   </Td>
-                  <Td>{fmtAmt(p.rentPotential, orgCurrency)}</Td>
-                  <Td className="text-blue-700 font-medium">{fmtAmt(p.actualRent, orgCurrency)}</Td>
-                  <Td className="text-emerald-700 font-medium">{fmtAmt(p.collected, orgCurrency)}</Td>
+                  <Td><OmrAmount value={p.rentPotential} /></Td>
+                  <Td className="text-blue-700 font-medium"><OmrAmount value={p.actualRent} /></Td>
+                  <Td className="text-emerald-700 font-medium"><OmrAmount value={p.collected} /></Td>
                 </tr>
               ))}
             </tbody>
@@ -551,7 +552,7 @@ export default async function ReportsPage() {
                   <Td>{o.unit}</Td>
                   <Td>{o.property}</Td>
                   <Td className="capitalize">{o.type}</Td>
-                  <Td className="font-medium text-red-700">{fmtAmt(o.amount, orgCurrency)}</Td>
+                  <Td className="font-medium text-red-700"><OmrAmount value={o.amount} /></Td>
                   <Td>{o.dueDate ? fmtDate(o.dueDate) : dash}</Td>
                   <Td>
                     <span className={'font-semibold ' + (o.daysOverdue > 30 ? 'text-red-700' : o.daysOverdue > 7 ? 'text-orange-600' : 'text-amber-600')}>
@@ -577,7 +578,7 @@ export default async function ReportsPage() {
                 <div key={type}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="capitalize text-slate-700">{type}</span>
-                    <span className="font-medium text-slate-900">{fmtAmt(Number(amount), orgCurrency)}</span>
+                    <span className="font-medium text-slate-900"><OmrAmount value={Number(amount)} /></span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full">
                     <div className="h-full bg-navy-700 rounded-full" style={{ width: Math.min((Number(amount) / (totalInvAmt || 1)) * 100, 100) + '%' }} />
@@ -634,10 +635,10 @@ export default async function ReportsPage() {
                   return (
                     <tr key={key} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                       <Td className="font-medium">{monthLabel(key)}</Td>
-                      <Td className={row.owner > 0 ? 'text-red-600' : 'text-slate-300'}>{row.owner > 0 ? fmtAmt(row.owner, orgCurrency) : dash}</Td>
-                      <Td className={row.tenant > 0 ? 'text-orange-600' : 'text-slate-300'}>{row.tenant > 0 ? fmtAmt(row.tenant, orgCurrency) : dash}</Td>
-                      <Td className="text-slate-400">{row.none > 0 ? fmtAmt(row.none, orgCurrency) : dash}</Td>
-                      <Td className="font-semibold">{fmtAmt(total, orgCurrency)}</Td>
+                      <Td className={row.owner > 0 ? 'text-red-600' : 'text-slate-300'}>{row.owner > 0 ? <OmrAmount value={row.owner} /> : dash}</Td>
+                      <Td className={row.tenant > 0 ? 'text-orange-600' : 'text-slate-300'}>{row.tenant > 0 ? <OmrAmount value={row.tenant} /> : dash}</Td>
+                      <Td className="text-slate-400">{row.none > 0 ? <OmrAmount value={row.none} /> : dash}</Td>
+                      <Td className="font-semibold"><OmrAmount value={total} /></Td>
                     </tr>
                   )
                 })}
@@ -678,7 +679,7 @@ export default async function ReportsPage() {
                             {daysLeft} days
                           </span>
                         </Td>
-                        <Td>{fmtAmt(Number(c.rent_amount), orgCurrency)}</Td>
+                        <Td><OmrAmount value={Number(c.rent_amount)} /></Td>
                       </tr>
                     )
                   })}
@@ -707,7 +708,7 @@ export default async function ReportsPage() {
                       <Td>{c.units?.properties?.name ?? dash}</Td>
                       <Td>{fmtDate(c.end_date)}</Td>
                       <Td><StatusBadge status={c.status} /></Td>
-                      <Td>{fmtAmt(Number(c.rent_amount), orgCurrency)}</Td>
+                      <Td><OmrAmount value={Number(c.rent_amount)} /></Td>
                     </tr>
                   ))}
                 </tbody>
@@ -752,7 +753,7 @@ export default async function ReportsPage() {
                         <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
                         <Td>{c.units?.unit_number ?? dash}</Td>
                         <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
-                        <Td className="text-red-700 font-medium">{fmtAmt(Number(c.amount), orgCurrency)}</Td>
+                        <Td className="text-red-700 font-medium"><OmrAmount value={Number(c.amount)} /></Td>
                         <Td>{c.due_date ? fmtDate(c.due_date) : dash}</Td>
                         <Td><span className="font-semibold text-red-700">{days} days</span></Td>
                       </tr>
@@ -779,7 +780,7 @@ export default async function ReportsPage() {
                     <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
                     <Td>{c.units?.unit_number ?? dash}</Td>
                     <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
-                    <Td className="font-medium">{fmtAmt(Number(c.amount), orgCurrency)}</Td>
+                    <Td className="font-medium"><OmrAmount value={Number(c.amount)} /></Td>
                     <Td>{c.due_date ? fmtDate(c.due_date) : dash}</Td>
                   </tr>
                 ))}
@@ -804,7 +805,7 @@ export default async function ReportsPage() {
                       <Td className="font-medium">{c.tenants?.full_name ?? dash}</Td>
                       <Td>{c.units?.unit_number ?? dash}</Td>
                       <Td className="font-mono text-xs">{c.cheque_number ?? dash}</Td>
-                      <Td className="text-red-700 font-medium">{fmtAmt(Number(c.amount), orgCurrency)}</Td>
+                      <Td className="text-red-700 font-medium"><OmrAmount value={Number(c.amount)} /></Td>
                       <Td>{c.due_date ? fmtDate(c.due_date) : dash}</Td>
                     </tr>
                   ))}

@@ -6,6 +6,7 @@ import PrintHeader from '@/components/PrintHeader'
 import MonthPicker from './MonthPicker'
 import PropertyFilter from './PropertyFilter'
 import MonthlyExcelButton from './MonthlyExcelButton'
+import OmrAmount from '@/components/OmrAmount'
 
 export const dynamic = 'force-dynamic'
 
@@ -329,7 +330,7 @@ export default async function MonthlyRentStatement({
           </div>
           <p className="text-2xl font-bold text-slate-900">{counts.paid}</p>
           <p className="text-sm font-medium text-slate-700">Paid</p>
-          {totalPaid > 0 && <p className="text-xs text-emerald-600 mt-0.5">{fmtAmt(totalPaid, orgCurrency)}</p>}
+          {totalPaid > 0 && <p className="text-xs text-emerald-600 mt-0.5"><OmrAmount value={totalPaid} /></p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 text-red-600 mb-3">
@@ -337,7 +338,7 @@ export default async function MonthlyRentStatement({
           </div>
           <p className="text-2xl font-bold text-slate-900">{counts.overdue}</p>
           <p className="text-sm font-medium text-slate-700">Overdue</p>
-          {totalOverdue > 0 && <p className="text-xs text-red-600 mt-0.5">{fmtAmt(totalOverdue, orgCurrency)}</p>}
+          {totalOverdue > 0 && <p className="text-xs text-red-600 mt-0.5"><OmrAmount value={totalOverdue} /></p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-100 text-teal-600 mb-3">
@@ -345,7 +346,7 @@ export default async function MonthlyRentStatement({
           </div>
           <p className="text-2xl font-bold text-slate-900">{counts.deposited}</p>
           <p className="text-sm font-medium text-slate-700">Deposited</p>
-          {totalDeposited > 0 && <p className="text-xs text-teal-600 mt-0.5">{fmtAmt(totalDeposited, orgCurrency)}</p>}
+          {totalDeposited > 0 && <p className="text-xs text-teal-600 mt-0.5"><OmrAmount value={totalDeposited} /></p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-600 mb-3">
@@ -353,7 +354,7 @@ export default async function MonthlyRentStatement({
           </div>
           <p className="text-2xl font-bold text-slate-900">{counts.pendingInv}</p>
           <p className="text-sm font-medium text-slate-700">Pending</p>
-          {totalPendingInv > 0 && <p className="text-xs text-amber-600 mt-0.5">{fmtAmt(totalPendingInv, orgCurrency)}</p>}
+          {totalPendingInv > 0 && <p className="text-xs text-amber-600 mt-0.5"><OmrAmount value={totalPendingInv} /></p>}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-500 mb-3">
@@ -399,28 +400,28 @@ export default async function MonthlyRentStatement({
                       <CheckCircle2 size={13} />
                       <span className="font-semibold">{pPaid.length}</span>
                       {pPaid.length > 0 && (
-                        <span className="text-emerald-300 hidden sm:inline">· {fmtAmt(pPaidAmt, orgCurrency)}</span>
+                        <span className="text-emerald-300 hidden sm:inline">· <OmrAmount value={pPaidAmt} /></span>
                       )}
                     </span>
                     {pOverdue.length > 0 && (
                       <span className="flex items-center gap-1.5 text-red-400">
                         <AlertCircle size={13} />
                         <span className="font-semibold">{pOverdue.length}</span>
-                        <span className="text-red-300 hidden sm:inline">· {fmtAmt(pOverdueAmt, orgCurrency)}</span>
+                        <span className="text-red-300 hidden sm:inline">· <OmrAmount value={pOverdueAmt} /></span>
                       </span>
                     )}
                     {pDeposited.length > 0 && (
                       <span className="flex items-center gap-1.5 text-teal-300">
                         <ArrowDownToLine size={13} />
                         <span className="font-semibold">{pDeposited.length}</span>
-                        <span className="hidden sm:inline">· {fmtAmt(pDepositedAmt, orgCurrency)}</span>
+                        <span className="hidden sm:inline">· <OmrAmount value={pDepositedAmt} /></span>
                       </span>
                     )}
                     {pPendingInv.length > 0 && (
                       <span className="flex items-center gap-1.5 text-amber-400">
                         <Clock size={13} />
                         <span className="font-semibold">{pPendingInv.length}</span>
-                        <span className="text-amber-300 hidden sm:inline">· {fmtAmt(pPendingInvAmt, orgCurrency)}</span>
+                        <span className="text-amber-300 hidden sm:inline">· <OmrAmount value={pPendingInvAmt} /></span>
                       </span>
                     )}
                     {pNoInvoice.length > 0 && (
@@ -430,7 +431,7 @@ export default async function MonthlyRentStatement({
                       </span>
                     )}
                     <span className="font-bold text-white border-l border-slate-600 pl-4">
-                      {fmtAmt(pTotal, orgCurrency)}
+                      <OmrAmount value={pTotal} />
                     </span>
                   </div>
                 </div>
@@ -461,7 +462,7 @@ export default async function MonthlyRentStatement({
                             }
                           </td>
                           <td className="px-5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                            {fmtAmt(row.rentAmount, row.currency)}
+                            <OmrAmount value={row.rentAmount} />
                           </td>
                           <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
                             {applyDateFmt(row.dueDate, orgDateFmt)}
@@ -491,7 +492,7 @@ export default async function MonthlyRentStatement({
                           Property Total
                         </td>
                         <td className="px-5 py-3 font-bold text-slate-900 font-mono whitespace-nowrap">
-                          {fmtAmt(pTotal, orgCurrency)}
+                          <OmrAmount value={pTotal} />
                         </td>
                         <td colSpan={3} className="px-5 py-3 text-xs text-slate-500">
                           {pPaid.length > 0 && (
@@ -527,27 +528,27 @@ export default async function MonthlyRentStatement({
             <p className="text-sm font-medium text-slate-300">
               Grand Total &mdash; {visibleRows.length} contract{visibleRows.length !== 1 ? 's' : ''} &bull; {visibleGroups.length} {propGroups.length === 1 ? 'property' : 'properties'}
             </p>
-            <p className="text-2xl font-bold mt-0.5">{fmtAmt(grandTotal, orgCurrency)}</p>
+            <p className="text-2xl font-bold mt-0.5"><OmrAmount value={grandTotal} /></p>
           </div>
           <div className="flex gap-6 text-sm">
             <div>
               <p className="text-slate-400 text-xs">Collected</p>
-              <p className="font-semibold text-emerald-400">{fmtAmt(totalPaid, orgCurrency)}</p>
+              <p className="font-semibold text-emerald-400"><OmrAmount value={totalPaid} /></p>
             </div>
             <div>
               <p className="text-slate-400 text-xs">Overdue</p>
-              <p className="font-semibold text-red-400">{fmtAmt(totalOverdue, orgCurrency)}</p>
+              <p className="font-semibold text-red-400"><OmrAmount value={totalOverdue} /></p>
             </div>
             {totalDeposited > 0 && (
               <div>
                 <p className="text-slate-400 text-xs">Deposited</p>
-                <p className="font-semibold text-teal-400">{fmtAmt(totalDeposited, orgCurrency)}</p>
+                <p className="font-semibold text-teal-400"><OmrAmount value={totalDeposited} /></p>
               </div>
             )}
             {totalPendingInv > 0 && (
               <div>
                 <p className="text-slate-400 text-xs">Pending</p>
-                <p className="font-semibold text-amber-400">{fmtAmt(totalPendingInv, orgCurrency)}</p>
+                <p className="font-semibold text-amber-400"><OmrAmount value={totalPendingInv} /></p>
               </div>
             )}
           </div>
@@ -561,13 +562,13 @@ export default async function MonthlyRentStatement({
             <span className="font-bold text-slate-900">
               Grand Total ({visibleRows.length} contract{visibleRows.length !== 1 ? 's' : ''})
             </span>
-            <span className="font-bold text-slate-900 font-mono text-lg">{fmtAmt(grandTotal, orgCurrency)}</span>
+            <span className="font-bold text-slate-900 font-mono text-lg"><OmrAmount value={grandTotal} /></span>
           </div>
           <div className="flex gap-6 text-sm text-slate-600 mt-2">
-            <span className="text-emerald-700">Collected: {fmtAmt(totalPaid, orgCurrency)}</span>
-            <span className="text-red-700">Overdue: {fmtAmt(totalOverdue, orgCurrency)}</span>
-            {totalDeposited > 0 && <span className="text-teal-700">Deposited: {fmtAmt(totalDeposited, orgCurrency)}</span>}
-            {totalPendingInv > 0 && <span className="text-amber-700">Pending: {fmtAmt(totalPendingInv, orgCurrency)}</span>}
+            <span className="text-emerald-700">Collected: <OmrAmount value={totalPaid} /></span>
+            <span className="text-red-700">Overdue: <OmrAmount value={totalOverdue} /></span>
+            {totalDeposited > 0 && <span className="text-teal-700">Deposited: <OmrAmount value={totalDeposited} /></span>}
+            {totalPendingInv > 0 && <span className="text-amber-700">Pending: <OmrAmount value={totalPendingInv} /></span>}
           </div>
         </div>
       )}
