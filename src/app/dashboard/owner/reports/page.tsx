@@ -324,17 +324,22 @@ export default async function ReportsPage() {
 
       {/* 1. KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Collected (This Month)', value: fmtAmt(totalRevenue, orgCurrency), color: 'text-emerald-700' },
-          { label: 'Pending / Overdue (This Month)', value: fmtAmt(pendingRevenue, orgCurrency), color: 'text-orange-600' },
-          { label: 'Occupancy Rate', value: occupancyRate + '%', color: 'text-navy-700' },
-          { label: 'Open Maintenance', value: openMaint.toString(), color: 'text-red-600' },
-        ].map(s => (
-          <div key={s.label} className="card p-4">
-            <div className={'text-2xl font-bold ' + s.color}>{s.value}</div>
-            <div className="text-sm text-slate-500 mt-1">{s.label}</div>
-          </div>
-        ))}
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-emerald-700"><OmrAmount value={totalRevenue} /></div>
+          <div className="text-sm text-slate-500 mt-1">Collected (This Month)</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-orange-600"><OmrAmount value={pendingRevenue} /></div>
+          <div className="text-sm text-slate-500 mt-1">Pending / Overdue (This Month)</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-navy-700">{occupancyRate}%</div>
+          <div className="text-sm text-slate-500 mt-1">Occupancy Rate</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-2xl font-bold text-red-600">{openMaint}</div>
+          <div className="text-sm text-slate-500 mt-1">Open Maintenance</div>
+        </div>
       </div>
 
       {/* 1b. Revenue by Property (This Month) */}
@@ -354,19 +359,19 @@ export default async function ReportsPage() {
                   <div className="px-3 py-2 text-center">
                     <p className="text-xs text-slate-400 mb-0.5">Paid</p>
                     <p className="text-sm font-semibold text-emerald-600">
-                      {pg.paid > 0 ? pg.paid.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                      {pg.paid > 0 ? <OmrAmount value={pg.paid} /> : '—'}
                     </p>
                   </div>
                   <div className="px-3 py-2 text-center">
                     <p className="text-xs text-slate-400 mb-0.5">Overdue</p>
                     <p className="text-sm font-semibold text-red-600">
-                      {pg.overdue > 0 ? pg.overdue.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                      {pg.overdue > 0 ? <OmrAmount value={pg.overdue} /> : '—'}
                     </p>
                   </div>
                   <div className="px-3 py-2 text-center">
                     <p className="text-xs text-slate-400 mb-0.5">Pending</p>
                     <p className="text-sm font-semibold text-amber-600">
-                      {pg.pending > 0 ? pg.pending.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : '—'}
+                      {pg.pending > 0 ? <OmrAmount value={pg.pending} /> : '—'}
                     </p>
                   </div>
                 </div>
