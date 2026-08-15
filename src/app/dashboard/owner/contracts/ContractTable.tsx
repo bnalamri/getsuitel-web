@@ -4,6 +4,7 @@ import { Calendar, FileText } from 'lucide-react'
 import EditContractForm from './EditContractForm'
 import DeleteContractButton from './DeleteContractButton'
 import ActivateContractButton from './ActivateContractButton'
+import OmrAmount from '@/components/OmrAmount'
 
 const statusColor: Record<string, string> = {
   draft:      'bg-slate-100 text-slate-600',
@@ -121,7 +122,7 @@ export default function ContractTable({
                         <div className="text-xs text-orange-600 mt-0.5">Expires in {days} days</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{Number(c.rent_amount).toLocaleString()} {c.currency}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900"><OmrAmount value={Number(c.rent_amount)} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`badge ${statusColor[c.status]}`}>{c.status}</span>
