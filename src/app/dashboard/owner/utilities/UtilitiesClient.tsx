@@ -66,8 +66,16 @@ export default function UtilitiesClient({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // Derive unique properties from units list
+  const properties = Array.from(
+    new Map(units.map(u => [u.properties?.id, u.properties]).filter(([id]) => id)).values()
+  ) as { id: string; name: string }[]
+  const firstPropId = properties[0]?.id ?? ''
+
   // Form state
-  const [unitId, setUnitId] = useState(units[0]?.id ?? '')
+  const [propertyId, setPropertyId] = useState(firstPropId)
+  const filteredUnits = units.filter(u => u.properties?.id === propertyId)
+  const [unitId, setUnitId] = useState(filteredUnits[0]?.id ?? units[0]?.id ?? '')
   const [utilType, setUtilType] = useState<'water' | 'electricity' | 'internet'>('water')
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0])
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0])
@@ -99,7 +107,10 @@ export default function UtilitiesClient({
   const toOwner     = bills.filter(b => b.billed_to === 'owner').reduce((s, b) => s + b.amount, 0)
 
   function resetForm() {
-    setUnitId(units[0]?.id ?? '')
+    const pid = firstPropId
+    setPropertyId(pid)
+    const firstUnit = units.find(u => u.properties?.id === pid)
+    setUnitId(firstUnit?.id ?? units[0]?.id ?? '')
     setUtilType('water')
     setBillDate(new Date().toISOString().split('T')[0])
     setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0])
@@ -263,23 +274,38 @@ export default function UtilitiesClient({
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
 
-              {/* Unit */}
-              <div>
-                <label className="label">Unit</label>
-                <select className="input" value={unitId} onChange={e => setUnitId(e.target.value)} required>
-                  {units.map(u => (
-                    <option key={u.id} value={u.id}>{u.properties?.name} — Unit {u.unit_number}</option>
-                  ))}
-                </select>
-                {activeContract && (
-                  <p className="text-xs text-slate-400 mt-1">
-                    Tenant: {activeContract.tenants?.full_name ?? '—'}
-                  </p>
-                )}
-                {!activeContract && unitId && (
-                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={11}/> No active contract on this unit</p>
-                )}
+              {/* Property → Unit cascade */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Property</label>
+                  <select className="input" value={propertyId} onChange={e => {
+                    const pid = e.target.value
+                    setPropertyId(pid)
+                    const first = units.find(u => u.properties?.id === pid)
+                    if (first) setUnitId(first.id)
+                  }}>
+                    {properties.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Unit</label>
+                  <select className="input" value={unitId} onChange={e => setUnitId(e.target.value)} required>
+                    {filteredUnits.map(u => (
+                      <option key={u.id} value={u.id}>Unit {u.unit_number}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              {activeContract && (
+                <p className="text-xs text-slate-400 -mt-2">
+                  Tenant: {activeContract.tenants?.full_name ?? '—'}
+                </p>
+              )}
+              {!activeContract && unitId && (
+                <p className="text-xs text-amber-600 -mt-2 flex items-center gap-1"><AlertCircle size={11}/> No active contract on this unit</p>
+              )}
 
               {/* Utility type */}
               <div>
