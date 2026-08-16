@@ -21,6 +21,7 @@ type Contract = {
   status: string
   municipality_agreement_url?: string | null
   national_id_copy_url?: string | null
+  utilities_config?: { water_electricity?: string; internet?: string } | null
 }
 
 export default function EditContractForm({
@@ -60,6 +61,8 @@ export default function EditContractForm({
     payment_day:    String(contract.payment_day ?? 1),
     payment_method: contract.payment_method ?? 'cash',
     status:         contract.status,
+    util_water_electricity: contract.utilities_config?.water_electricity ?? 'owner',
+    util_internet:          contract.utilities_config?.internet ?? 'owner',
   })
 
   function handleClose() {
@@ -105,18 +108,19 @@ export default function EditContractForm({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenant_id:      form.tenant_id,
-        unit_id:        form.unit_id,
-        start_date:     form.start_date,
-        end_date:       form.end_date,
-        rent_amount:    Number(form.rent_amount),
-        currency:       form.currency,
-        deposit_amount: Number(form.deposit_amount),
-        payment_day:    Number(form.payment_day),
-        payment_method: form.payment_method,
-        status:         form.status,
-        prev_unit_id:   contract.unit_id,
-        prev_status:    contract.status,
+        tenant_id:       form.tenant_id,
+        unit_id:         form.unit_id,
+        start_date:      form.start_date,
+        end_date:        form.end_date,
+        rent_amount:     Number(form.rent_amount),
+        currency:        form.currency,
+        deposit_amount:  Number(form.deposit_amount),
+        payment_day:     Number(form.payment_day),
+        payment_method:  form.payment_method,
+        status:          form.status,
+        prev_unit_id:    contract.unit_id,
+        prev_status:     contract.status,
+        utilities_config: { water_electricity: form.util_water_electricity, internet: form.util_internet },
       }),
     })
     const json = await res.json()
@@ -229,6 +233,27 @@ export default function EditContractForm({
                 <option value="expired">Expired</option>
                 <option value="terminated">Terminated</option>
               </select>
+            </div>
+          </div>
+
+          {/* Utilities Responsibility */}
+          <div className="pt-1 border-t border-slate-100">
+            <p className="text-sm font-semibold text-slate-700 mb-3">Utilities — Who Pays?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Water &amp; Electricity</label>
+                <select className="input" value={form.util_water_electricity} onChange={e => setForm(f => ({ ...f, util_water_electricity: e.target.value }))}>
+                  <option value="owner">Owner</option>
+                  <option value="tenant">Tenant</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Internet</label>
+                <select className="input" value={form.util_internet} onChange={e => setForm(f => ({ ...f, util_internet: e.target.value }))}>
+                  <option value="owner">Owner</option>
+                  <option value="tenant">Tenant</option>
+                </select>
+              </div>
             </div>
           </div>
 

@@ -10,7 +10,7 @@ import {
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
   ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
-  UserCheck, DollarSign,
+  UserCheck, DollarSign, Zap,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -56,6 +56,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
+      { href:'/dashboard/owner/utilities', icon:Zap, en:'Utility Bills', ar:'فواتير المرافق' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -155,6 +156,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
       { href:'/dashboard/owner/invoices', icon:Receipt, en:'Invoices', ar:'الفواتير' },
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
+      { href:'/dashboard/owner/utilities', icon:Zap, en:'Utility Bills', ar:'فواتير المرافق' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
