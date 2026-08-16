@@ -28,16 +28,18 @@ type Expense = {
   id: string; date: string; category: string; description: string
   amount: number; currency: string; notes?: string | null
   property_id?: string | null; properties?: { name: string } | null
+  unit_id?: string | null; units?: { unit_number: string } | null
 }
 type Property = { id: string; name: string }
+type Unit = { id: string; unit_number: string; properties: { id: string; name: string } | null }
 
 const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function ExpensesClient({
-  expenses, properties, defaultCurrency, orgName, userName,
+  expenses, properties, units, defaultCurrency, orgName, userName,
 }: {
-  expenses: Expense[]; properties: Property[]; defaultCurrency: string
+  expenses: Expense[]; properties: Property[]; units: Unit[]; defaultCurrency: string
   orgName: string; userName: string
 }) {
   const router = useRouter()
@@ -55,12 +57,12 @@ export default function ExpensesClient({
   const [filterProperty, setFilterProperty] = useState('')
   const [filterCat,      setFilterCat]      = useState('')
 
-  const initialForm = { date: now.toISOString().split('T')[0], category: 'other', description: '', amount: '', currency: defaultCurrency, property_id: '', notes: '' }
+  const initialForm = { date: now.toISOString().split('T')[0], category: 'other', description: '', amount: '', currency: defaultCurrency, property_id: '', unit_id: '', notes: '' }
   const [form, setForm] = useState(initialForm)
 
   function openAdd() { setForm(initialForm); setEditing(null); setError(''); setShowForm(true) }
   function openEdit(e: Expense) {
-    setForm({ date: e.date, category: e.category, description: e.description, amount: String(e.amount), currency: e.currency, property_id: e.property_id ?? '', notes: e.notes ?? '' })
+    setForm({ date: e.date, category: e.category, description: e.description, amount: String(e.amount), currency: e.currency, property_id: e.property_id ?? '', unit_id: e.unit_id ?? '', notes: e.notes ?? '' })
     setEditing(e); setError(''); setShowForm(true)
   }
   function closeForm() { setShowForm(false); setEditing(null); setError('') }
@@ -68,7 +70,7 @@ export default function ExpensesClient({
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
     setLoading(true); setError('')
-    const payload = { date: form.date, category: form.category, description: form.description, amount: Number(form.amount), currency: form.currency, notes: form.notes || null, property_id: form.property_id || null }
+    const payload = { date: form.date, category: form.category, description: form.description, amount: Number(form.amount), currency: form.currency, notes: form.notes || null, property_id: form.property_id || null, unit_id: form.unit_id || null }
     const res = editing
       ? await fetch(`/api/expenses/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       : await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -222,7 +224,11 @@ export default function ExpensesClient({
                     <div className="font-medium text-slate-900">{e.description}</div>
                     {e.notes && <div className="text-xs text-slate-400 mt-0.5">{e.notes}</div>}
                   </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{(e.properties as { name: string } | null)?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">
+                    {(e.properties as { name: string } | null)?.name
+                      ? <>{(e.properties as { name: string }).name}{e.units?.unit_number ? <span className="ml-1 text-slate-400">· Unit {e.units.unit_number}</span> : null}</>
+                      : '—'}
+                  </td>
                   <td className="px-4 py-3 text-right font-semibold text-red-700">
                     {Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 3 })} {e.currency}
                   </td>
@@ -281,12 +287,24 @@ export default function ExpensesClient({
               {properties.length > 0 && (
                 <div>
                   <label className="label">Property <span className="text-slate-400 font-normal">(optional)</span></label>
-                  <select className="input" value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}>
+                  <select className="input" value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value, unit_id: '' }))}>
                     <option value="">Not property-specific</option>
                     {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
               )}
+              {(() => {
+                const propUnits = units.filter(u => u.properties?.id === form.property_id)
+                return form.property_id && propUnits.length > 0 ? (
+                  <div>
+                    <label className="label">Unit <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <select className="input" value={form.unit_id} onChange={e => setForm(f => ({ ...f, unit_id: e.target.value }))}>
+                      <option value="">No specific unit</option>
+                      {propUnits.map(u => <option key={u.id} value={u.id}>Unit {u.unit_number}</option>)}
+                    </select>
+                  </div>
+                ) : null
+              })()}
               <div>
                 <label className="label">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
                 <textarea className="input" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Additional details..." />

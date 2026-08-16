@@ -16,9 +16,10 @@ export default async function ExpensesPage() {
   if (!orgId) return null
 
   const admin = createAdminClient()
-  const [expensesRes, propertiesRes, orgRes] = await Promise.all([
-    admin.from('expenses').select('*, properties(name)').eq('organization_id', orgId).order('date', { ascending: false }),
+  const [expensesRes, propertiesRes, unitsRes, orgRes] = await Promise.all([
+    admin.from('expenses').select('*, properties(name), units(unit_number)').eq('organization_id', orgId).order('date', { ascending: false }),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
+    admin.from('units').select('id, unit_number, properties(id, name)').eq('organization_id', orgId).order('unit_number'),
     admin.from('organizations').select('default_currency, name').eq('id', orgId).single(),
   ])
 
@@ -36,6 +37,7 @@ export default async function ExpensesPage() {
       <ExpensesClient
         expenses={expensesRes.data ?? []}
         properties={propertiesRes.data ?? []}
+        units={unitsRes.data ?? []}
         defaultCurrency={(orgRes.data?.default_currency as string) ?? 'OMR'}
         orgName={(orgRes.data?.name as string) ?? ''}
         userName={userName}
