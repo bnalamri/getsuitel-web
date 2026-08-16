@@ -6,7 +6,7 @@ import OmrAmount from '@/components/OmrAmount'
 
 type UtilBill = {
   id: string
-  utility_type: 'water_electricity' | 'internet'
+  utility_type: 'water' | 'electricity' | 'internet'
   bill_date: string
   due_date: string
   amount: number
@@ -24,7 +24,7 @@ type Contract = {
   id: string
   tenant_id: string
   status: string
-  utilities_config: { water_electricity?: string; internet?: string } | null
+  utilities_config: { water?: string; electricity?: string; internet?: string } | null
   tenants: { id: string; full_name: string } | null
 }
 
@@ -36,8 +36,9 @@ type Unit = {
 }
 
 const UTIL_LABELS: Record<string, string> = {
-  water_electricity: 'Water & Electricity',
-  internet: 'Internet',
+  water:       'Water',
+  electricity: 'Electricity',
+  internet:    'Internet',
 }
 
 const STATUS_CHIP: Record<string, { label: string; cls: string }> = {
@@ -67,7 +68,7 @@ export default function UtilitiesClient({
 
   // Form state
   const [unitId, setUnitId] = useState(units[0]?.id ?? '')
-  const [utilType, setUtilType] = useState<'water_electricity' | 'internet'>('water_electricity')
+  const [utilType, setUtilType] = useState<'water' | 'electricity' | 'internet'>('water')
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0])
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0])
   const [amount, setAmount] = useState('')
@@ -86,7 +87,7 @@ export default function UtilitiesClient({
     if (!activeContract) return
     const cfg = activeContract.utilities_config
     if (!cfg) return
-    const who = utilType === 'water_electricity' ? cfg.water_electricity : cfg.internet
+    const who = utilType === 'water' ? cfg.water : utilType === 'electricity' ? cfg.electricity : cfg.internet
     if (who === 'tenant' || who === 'owner') setBilledTo(who)
   }, [unitId, utilType, activeContract])
 
@@ -99,7 +100,7 @@ export default function UtilitiesClient({
 
   function resetForm() {
     setUnitId(units[0]?.id ?? '')
-    setUtilType('water_electricity')
+    setUtilType('water')
     setBillDate(new Date().toISOString().split('T')[0])
     setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0])
     setAmount('')
@@ -212,7 +213,8 @@ export default function UtilitiesClient({
               )}
               {bills.map(b => {
                 const chip = STATUS_CHIP[b.status] ?? { label: b.status, cls: 'bg-slate-50 text-slate-500 border-slate-200' }
-                const isWater = b.utility_type === 'water_electricity'
+                const isElec = b.utility_type === 'electricity'
+                const isWifi = b.utility_type === 'internet'
                 return (
                   <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3">
@@ -220,8 +222,8 @@ export default function UtilitiesClient({
                       <div className="text-xs text-slate-400">Unit {b.units?.unit_number}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${isWater ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-violet-50 text-violet-700 border-violet-200'}`}>
-                        {isWater ? <Zap size={11}/> : <Wifi size={11}/>}
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${isWifi ? 'bg-violet-50 text-violet-700 border-violet-200' : isElec ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                        {isWifi ? <Wifi size={11}/> : <Zap size={11}/>}
                         {UTIL_LABELS[b.utility_type]}
                       </span>
                     </td>
@@ -282,8 +284,8 @@ export default function UtilitiesClient({
               {/* Utility type */}
               <div>
                 <label className="label">Utility Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['water_electricity', 'internet'] as const).map(t => (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['water', 'electricity', 'internet'] as const).map(t => (
                     <button
                       key={t}
                       type="button"
@@ -291,7 +293,7 @@ export default function UtilitiesClient({
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors
                         ${utilType === t ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
                     >
-                      {t === 'water_electricity' ? <Zap size={14}/> : <Wifi size={14}/>}
+                      {t === 'internet' ? <Wifi size={14}/> : <Zap size={14}/>}
                       {UTIL_LABELS[t]}
                     </button>
                   ))}
@@ -326,7 +328,7 @@ export default function UtilitiesClient({
               </div>
 
               {/* Meter readings (water/electricity only) */}
-              {utilType === 'water_electricity' && (
+              {(utilType === 'water' || utilType === 'electricity') && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="label">Meter From <span className="text-slate-400 font-normal">(optional)</span></label>

@@ -1,6 +1,6 @@
 -- Add utilities responsibility config to contracts
 ALTER TABLE contracts
-  ADD COLUMN IF NOT EXISTS utilities_config JSONB DEFAULT '{"water_electricity":"owner","internet":"owner"}'::jsonb;
+  ADD COLUMN IF NOT EXISTS utilities_config JSONB DEFAULT '{"water":"owner","electricity":"owner","internet":"owner"}'::jsonb;
 
 -- Create utility_bills table
 CREATE TABLE IF NOT EXISTS utility_bills (
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS utility_bills (
   unit_id         UUID NOT NULL REFERENCES units(id) ON DELETE CASCADE,
   contract_id     UUID REFERENCES contracts(id) ON DELETE SET NULL,
   tenant_id       UUID REFERENCES tenants(id) ON DELETE SET NULL,
-  utility_type    TEXT NOT NULL CHECK (utility_type IN ('water_electricity', 'internet')),
+  utility_type    TEXT NOT NULL CHECK (utility_type IN ('water', 'electricity', 'internet')),
   bill_date       DATE NOT NULL,
   due_date        DATE NOT NULL,
   amount          NUMERIC(12,3) NOT NULL,

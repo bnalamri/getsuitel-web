@@ -22,7 +22,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
     unit_id: units[0]?.id ?? '', tenant_id: tenants[0]?.id ?? '',
     start_date: today, end_date: nextYear,
     rent_amount: '', currency: defaultCurrency, deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
-    util_water_electricity: 'owner', util_internet: 'owner',
+    util_water: 'owner', util_electricity: 'owner', util_internet: 'owner',
   }
   const [form, setForm] = useState(initialForm)
 
@@ -32,7 +32,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
       rent_amount: '', currency: defaultCurrency, deposit_amount: '0', payment_day: '1', payment_method: 'cash', status: 'draft',
-      util_water_electricity: 'owner', util_internet: 'owner',
+      util_water: 'owner', util_electricity: 'owner', util_internet: 'owner',
     }
   }
 
@@ -59,7 +59,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
         payment_day: Number(form.payment_day),
         payment_method: form.payment_method,
         status: form.status,
-        utilities_config: { water_electricity: form.util_water_electricity, internet: form.util_internet },
+        utilities_config: { water: form.util_water, electricity: form.util_electricity, internet: form.util_internet },
       }),
     })
     const json = await res.json()
@@ -173,10 +173,17 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
           {/* Utilities Responsibility */}
           <div className="pt-1 border-t border-slate-100">
             <p className="text-sm font-semibold text-slate-700 mb-3">Utilities — Who Pays?</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="label">Water &amp; Electricity</label>
-                <select className="input" value={form.util_water_electricity} onChange={e => setForm(f => ({ ...f, util_water_electricity: e.target.value }))}>
+                <label className="label">Water</label>
+                <select className="input" value={form.util_water} onChange={e => setForm(f => ({ ...f, util_water: e.target.value }))}>
+                  <option value="owner">Owner</option>
+                  <option value="tenant">Tenant</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Electricity</label>
+                <select className="input" value={form.util_electricity} onChange={e => setForm(f => ({ ...f, util_electricity: e.target.value }))}>
                   <option value="owner">Owner</option>
                   <option value="tenant">Tenant</option>
                 </select>
