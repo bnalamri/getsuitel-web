@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Pencil, Trash2, Download, Printer } from 'lucide-react'
+import { Plus, X, Loader2, Pencil, Trash2, Download, Printer, Paperclip } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 import PrintHeader from '@/components/PrintHeader'
 import { exportExpensesToExcel } from './exportExpensesExcel'
@@ -29,6 +29,7 @@ type Expense = {
   amount: number; currency: string; notes?: string | null
   property_id?: string | null; properties?: { name: string } | null
   unit_id?: string | null; units?: { unit_number: string } | null
+  attachment_url?: string | null
 }
 type Property = { id: string; name: string }
 type Unit = { id: string; unit_number: string; properties: { id: string; name: string } | null }
@@ -49,6 +50,8 @@ export default function ExpensesClient({
   const [error, setError] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const attachFileRef = useRef<HTMLInputElement>(null)
 
   // Filters
   const now = new Date()
@@ -60,12 +63,12 @@ export default function ExpensesClient({
   const initialForm = { date: now.toISOString().split('T')[0], category: 'other', description: '', amount: '', currency: defaultCurrency, property_id: '', unit_id: '', notes: '' }
   const [form, setForm] = useState(initialForm)
 
-  function openAdd() { setForm(initialForm); setEditing(null); setError(''); setShowForm(true) }
+  function openAdd() { setForm(initialForm); setEditing(null); setError(''); setAttachmentFile(null); if (attachFileRef.current) attachFileRef.current.value = ''; setShowForm(true) }
   function openEdit(e: Expense) {
     setForm({ date: e.date, category: e.category, description: e.description, amount: String(e.amount), currency: e.currency, property_id: e.property_id ?? '', unit_id: e.unit_id ?? '', notes: e.notes ?? '' })
-    setEditing(e); setError(''); setShowForm(true)
+    setEditing(e); setError(''); setAttachmentFile(null); if (attachFileRef.current) attachFileRef.current.value = ''; setShowForm(true)
   }
-  function closeForm() { setShowForm(false); setEditing(null); setError('') }
+  function closeForm() { setShowForm(false); setEditing(null); setError(''); setAttachmentFile(null) }
 
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
@@ -76,6 +79,13 @@ export default function ExpensesClient({
       : await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     const json = await res.json()
     if (!res.ok) { setError(json.error ?? 'Failed'); setLoading(false); return }
+    // Upload attachment if selected
+    if (attachmentFile) {
+      const fd = new FormData()
+      fd.append('expenseId', editing?.id ?? json.id)
+      fd.append('file', attachmentFile)
+      await fetch('/api/expenses/upload', { method: 'POST', body: fd })
+    }
     closeForm(); router.refresh(); setLoading(false)
   }
 
@@ -208,6 +218,7 @@ export default function ExpensesClient({
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Description</th>
                 <th className="text-left px-4 py-3 text-slate-600 font-semibold">Property</th>
                 <th className="text-right px-4 py-3 text-slate-600 font-semibold">Amount</th>
+                <th className="px-4 py-3 print:hidden w-8"></th>
                 <th className="px-4 py-3 print:hidden"></th>
               </tr>
             </thead>
@@ -231,6 +242,14 @@ export default function ExpensesClient({
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-red-700">
                     {Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 3 })} {e.currency}
+                  </td>
+                  <td className="px-4 py-3 print:hidden text-center">
+                    {e.attachment_url && (
+                      <a href={e.attachment_url} target="_blank" rel="noopener noreferrer" title="View attachment"
+                        className="text-slate-400 hover:text-navy-700 transition-colors inline-flex">
+                        <Paperclip size={14} />
+                      </a>
+                    )}
                   </td>
                   <td className="px-4 py-3 print:hidden">
                     <div className="flex items-center gap-2 justify-end">
@@ -308,6 +327,24 @@ export default function ExpensesClient({
               <div>
                 <label className="label">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
                 <textarea className="input" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Additional details..." />
+              </div>
+              {/* Attachment */}
+              <div>
+                <label className="label">Attachment <span className="text-slate-400 font-normal">(optional — PDF or image)</span></label>
+                <input ref={attachFileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden"
+                  onChange={e => setAttachmentFile(e.target.files?.[0] ?? null)} />
+                <div className="flex items-center gap-2 mt-1">
+                  <button type="button"
+                    onClick={() => attachFileRef.current?.click()}
+                    className="btn-secondary flex items-center gap-2 text-sm px-3 py-2">
+                    <Paperclip size={14} /> {attachmentFile ? 'Change File' : 'Attach File'}
+                  </button>
+                  {attachmentFile
+                    ? <span className="text-sm text-slate-600 truncate max-w-[180px]">{attachmentFile.name}</span>
+                    : editing?.attachment_url
+                      ? <a href={editing.attachment_url} target="_blank" rel="noopener noreferrer" className="text-sm text-navy-700 underline flex items-center gap-1"><Paperclip size={12} /> View existing</a>
+                      : <span className="text-xs text-slate-400">No file chosen</span>}
+                </div>
               </div>
               {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
               <div className="flex gap-3 pt-2">
