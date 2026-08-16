@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, X, Loader2, Zap, Wifi, AlertCircle, CheckCircle2, Clock, Receipt, TrendingDown } from 'lucide-react'
 import OmrAmount from '@/components/OmrAmount'
+import DateInput from '@/components/DateInput'
 
 type UtilBill = {
   id: string
@@ -69,12 +70,13 @@ export default function UtilitiesClient({
   // Derive unique properties from units list
   const properties = Array.from(
     new Map(units.map(u => [u.properties?.id, u.properties]).filter(([id]) => id)).values()
-  ) as { id: string; name: string }[]
+  ).sort((a: any, b: any) => a.name.localeCompare(b.name)) as { id: string; name: string }[]
   const firstPropId = properties[0]?.id ?? ''
 
   // Form state
   const [propertyId, setPropertyId] = useState(firstPropId)
-  const filteredUnits = units.filter(u => u.properties?.id === propertyId)
+  const filteredUnits = (propertyId === '__all__' ? units : units.filter(u => u.properties?.id === propertyId))
+    .sort((a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true }))
   const [unitId, setUnitId] = useState(filteredUnits[0]?.id ?? units[0]?.id ?? '')
   const [utilType, setUtilType] = useState<'water' | 'electricity' | 'internet'>('water')
   const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0])
@@ -281,9 +283,12 @@ export default function UtilitiesClient({
                   <select className="input" value={propertyId} onChange={e => {
                     const pid = e.target.value
                     setPropertyId(pid)
-                    const first = units.find(u => u.properties?.id === pid)
+                    const first = pid === '__all__'
+                      ? units[0]
+                      : units.find(u => u.properties?.id === pid)
                     if (first) setUnitId(first.id)
                   }}>
+                    <option value="__all__">All Properties</option>
                     {properties.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -293,7 +298,9 @@ export default function UtilitiesClient({
                   <label className="label">Unit</label>
                   <select className="input" value={unitId} onChange={e => setUnitId(e.target.value)} required>
                     {filteredUnits.map(u => (
-                      <option key={u.id} value={u.id}>Unit {u.unit_number}</option>
+                      <option key={u.id} value={u.id}>
+                        {propertyId === '__all__' ? `${u.properties?.name} — ` : ''}Unit {u.unit_number}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -330,11 +337,11 @@ export default function UtilitiesClient({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Bill Date</label>
-                  <input className="input" type="date" value={billDate} onChange={e => setBillDate(e.target.value)} required />
+                  <DateInput value={billDate} onChange={setBillDate} required />
                 </div>
                 <div>
                   <label className="label">Due Date</label>
-                  <input className="input" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
+                  <DateInput value={dueDate} onChange={setDueDate} required />
                 </div>
               </div>
 
