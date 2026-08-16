@@ -86,7 +86,7 @@ export async function POST(req: Request) {
 
   if (billErr) return NextResponse.json({ error: billErr.message }, { status: 500 })
 
-  const utilityLabel = utility_type === 'water_electricity' ? 'Water & Electricity' : 'Internet'
+  const utilityLabel = utility_type === 'water' ? 'Water' : utility_type === 'electricity' ? 'Electricity' : 'Internet'
 
   if (billed_to === 'tenant' && tenant_id) {
     // Create tenant invoice
@@ -116,30 +116,56 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, id: bill.id, invoice_id: inv?.id ?? null, action: 'invoiced' })
   }
 
-  if (billed_to === 'owner') {
-    // Create expense entry
-    const { data: exp, error: expErr } = await admin
+  // Owner bill — stays pending until owner marks it paid
+  return NextResponse.json({ ok: true, id: bill.id, action: 'pending' })
+}
+
+// PATCH /api/utilities  — mark bill as paid (creates expense for owner bills)
+export async function PATCH(req: Request) {
+  const profile = await getOrgAndRole()
+  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id, action } = await req.json()
+  if (!id || action !== 'mark_paid') return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+  const admin = createAdminClient()
+
+  const { data: bill } = await admin
+    .from('utility_bills')
+    .select('id, organization_id, billed_to, utility_type, amount, currency, bill_date, unit_id, expense_id, notes')
+    .eq('id', id)
+    .single()
+
+  if (!bill || bill.organization_id !== profile.organization_id) {
+    return NextResponse.json({ error: 'Bill not found' }, { status: 404 })
+  }
+
+  const utilityLabel = bill.utility_type === 'water' ? 'Water' : bill.utility_type === 'electricity' ? 'Electricity' : 'Internet'
+  let expenseId = bill.expense_id ?? null
+
+  if (bill.billed_to === 'owner' && !expenseId) {
+    const today = new Date().toISOString().split('T')[0]
+    const { data: exp } = await admin
       .from('expenses')
       .insert({
         organization_id: profile.organization_id,
         category:        'utilities',
-        description:     `${utilityLabel} bill — Unit ${unit_id}${notes ? `: ${notes}` : ''}`,
-        amount:          Number(amount),
-        currency:        currency ?? 'OMR',
-        date:            bill_date,
+        description:     `${utilityLabel} bill${bill.notes ? ` — ${bill.notes}` : ''}`,
+        amount:          Number(bill.amount),
+        currency:        bill.currency ?? 'OMR',
+        date:            today,
       })
       .select('id')
       .single()
-
-    if (!expErr && exp) {
-      await admin
-        .from('utility_bills')
-        .update({ status: 'expense_recorded', expense_id: exp.id })
-        .eq('id', bill.id)
-    }
-
-    return NextResponse.json({ ok: true, id: bill.id, expense_id: exp?.id ?? null, action: 'expense_recorded' })
+    expenseId = exp?.id ?? null
   }
 
-  return NextResponse.json({ ok: true, id: bill.id, action: 'pending' })
+  const { error: updateErr } = await admin
+    .from('utility_bills')
+    .update({ status: 'paid', expense_id: expenseId })
+    .eq('id', id)
+
+  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
 }

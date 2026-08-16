@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Loader2, Zap, Wifi, AlertCircle, CheckCircle2, Clock, Receipt, TrendingDown } from 'lucide-react'
+import { Plus, X, Loader2, Zap, Wifi, AlertCircle, CheckCircle2, Clock, Receipt, TrendingDown, Paperclip } from 'lucide-react'
 import OmrAmount from '@/components/OmrAmount'
 import DateInput from '@/components/DateInput'
 
@@ -17,6 +17,7 @@ type UtilBill = {
   meter_from?: number | null
   meter_to?: number | null
   notes?: string | null
+  attachment_url?: string | null
   units: { unit_number: string; properties: { name: string } | null } | null
   tenants: { full_name: string } | null
 }
@@ -66,6 +67,8 @@ export default function UtilitiesClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const attachFileRef = useRef<HTMLInputElement>(null)
 
   // Derive unique properties from units list
   const properties = Array.from(
@@ -122,6 +125,8 @@ export default function UtilitiesClient({
     setMeterFrom('')
     setMeterTo('')
     setNotes('')
+    setAttachmentFile(null)
+    if (attachFileRef.current) attachFileRef.current.value = ''
     setError('')
   }
 
@@ -152,21 +157,41 @@ export default function UtilitiesClient({
     })
 
     const json = await res.json()
-    setLoading(false)
 
-    if (!res.ok) { setError(json.error ?? 'Failed to save'); return }
+    if (!res.ok) { setLoading(false); setError(json.error ?? 'Failed to save'); return }
+
+    // Upload attachment if provided
+    if (attachmentFile && json.id) {
+      const fd = new FormData()
+      fd.append('billId', json.id)
+      fd.append('file', attachmentFile)
+      await fetch('/api/utility-bills/upload', { method: 'POST', body: fd })
+    }
+
+    setLoading(false)
 
     const actionMsg = json.action === 'invoiced'
       ? '✓ Bill saved — tenant invoice created'
-      : json.action === 'expense_recorded'
-      ? '✓ Bill saved — recorded as owner expense'
-      : '✓ Bill saved'
+      : '✓ Bill saved — click "Mark Paid" when you settle it'
 
     setSuccess(actionMsg)
     setShowForm(false)
     resetForm()
     router.refresh()
     setTimeout(() => setSuccess(''), 4000)
+  }
+
+  async function markPaid(billId: string) {
+    const res = await fetch('/api/utilities', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: billId, action: 'mark_paid' }),
+    })
+    if (res.ok) {
+      setSuccess('✓ Bill marked as paid — expense recorded')
+      router.refresh()
+      setTimeout(() => setSuccess(''), 4000)
+    }
   }
 
   return (
@@ -216,6 +241,7 @@ export default function UtilitiesClient({
                 <th className="text-right px-4 py-3 font-semibold text-slate-600">Amount</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Billed To</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -257,6 +283,24 @@ export default function UtilitiesClient({
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${chip.cls}`}>{chip.label}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {b.attachment_url && (
+                          <a href={b.attachment_url} target="_blank" rel="noopener noreferrer"
+                            className="text-slate-400 hover:text-navy-600 transition-colors" title="View attachment">
+                            <Paperclip size={14} />
+                          </a>
+                        )}
+                        {(b.status === 'pending' || b.status === 'expense_recorded') && (
+                          <button
+                            onClick={() => markPaid(b.id)}
+                            className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -410,6 +454,36 @@ export default function UtilitiesClient({
               <div>
                 <label className="label">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
                 <textarea className="input resize-none" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. June billing period" />
+              </div>
+
+              {/* Attachment */}
+              <div>
+                <label className="label">Attachment <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  ref={attachFileRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="sr-only"
+                  onChange={e => setAttachmentFile(e.target.files?.[0] ?? null)}
+                />
+                {attachmentFile ? (
+                  <div className="flex items-center gap-2 text-sm bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
+                    <span className="text-emerald-800 truncate flex-1">{attachmentFile.name}</span>
+                    <button type="button" onClick={() => { setAttachmentFile(null); if (attachFileRef.current) attachFileRef.current.value = '' }}
+                      className="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => attachFileRef.current?.click()}
+                    className="flex items-center gap-2 text-sm text-navy-700 hover:text-navy-900 border border-dashed border-slate-300 hover:border-navy-400 rounded-lg px-4 py-2.5 w-full transition-colors"
+                  >
+                    <Paperclip size={14} /> Attach Bill Document (PDF / Image)
+                  </button>
+                )}
               </div>
 
               {error && (
