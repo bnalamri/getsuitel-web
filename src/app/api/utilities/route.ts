@@ -29,8 +29,9 @@ export async function GET(req: Request) {
     .from('utility_bills')
     .select(`
       *,
-      units(unit_number, properties(name)),
-      tenants(full_name)
+      units(unit_number, properties(id, name)),
+      tenants(full_name),
+      properties(name)
     `)
     .eq('organization_id', profile.organization_id)
     .order('bill_date', { ascending: false })
@@ -51,13 +52,22 @@ export async function POST(req: Request) {
 
   const body = await req.json()
   const {
+    utility_scope, property_id,
     unit_id, contract_id, tenant_id, utility_type,
     bill_date, due_date, amount, currency,
     billed_to, meter_from, meter_to, notes,
+    consumer_no, meter_number, service_type, recharge_code, tariff_type,
   } = body
 
-  if (!unit_id || !utility_type || !bill_date || !due_date || !amount || !billed_to) {
+  const isGeneral = utility_scope === 'general'
+  if (!utility_type || !bill_date || !due_date || !amount || !billed_to) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  if (isGeneral && !property_id) {
+    return NextResponse.json({ error: 'property_id required for general bills' }, { status: 400 })
+  }
+  if (!isGeneral && !unit_id) {
+    return NextResponse.json({ error: 'unit_id required for unit-related bills' }, { status: 400 })
   }
 
   const admin = createAdminClient()
@@ -67,19 +77,26 @@ export async function POST(req: Request) {
     .from('utility_bills')
     .insert({
       organization_id: profile.organization_id,
-      unit_id,
-      contract_id:  contract_id  ?? null,
-      tenant_id:    tenant_id    ?? null,
+      utility_scope:   utility_scope ?? 'unit',
+      property_id:     isGeneral ? (property_id ?? null) : null,
+      unit_id:         isGeneral ? null : (unit_id ?? null),
+      contract_id:     isGeneral ? null : (contract_id  ?? null),
+      tenant_id:       isGeneral ? null : (tenant_id    ?? null),
       utility_type,
       bill_date,
       due_date,
-      amount:       Number(amount),
-      currency:     currency ?? 'OMR',
-      billed_to,
-      meter_from:   meter_from ?? null,
-      meter_to:     meter_to   ?? null,
-      notes:        notes      ?? null,
-      status:       'pending',
+      amount:          Number(amount),
+      currency:        currency ?? 'OMR',
+      billed_to:       isGeneral ? 'owner' : billed_to,
+      meter_from:      meter_from ?? null,
+      meter_to:        meter_to   ?? null,
+      notes:           notes      ?? null,
+      consumer_no:     consumer_no     ?? null,
+      meter_number:    meter_number    ?? null,
+      service_type:    service_type    ?? null,
+      recharge_code:   (service_type === 'prepaid' && recharge_code) ? recharge_code : null,
+      tariff_type:     (utility_type !== 'internet' && tariff_type) ? tariff_type : null,
+      status:          'pending',
     })
     .select('id')
     .single()
@@ -88,7 +105,7 @@ export async function POST(req: Request) {
 
   const utilityLabel = utility_type === 'water' ? 'Water' : utility_type === 'electricity' ? 'Electricity' : 'Internet'
 
-  if (billed_to === 'tenant' && tenant_id) {
+  if (!isGeneral && billed_to === 'tenant' && tenant_id) {
     // Create tenant invoice
     const { data: inv, error: invErr } = await admin
       .from('invoices')

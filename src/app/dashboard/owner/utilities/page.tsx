@@ -19,10 +19,10 @@ export default async function UtilitiesPage() {
 
   const admin = createAdminClient()
 
-  const [billsRes, unitsRes] = await Promise.all([
+  const [billsRes, unitsRes, propertiesRes] = await Promise.all([
     admin
       .from('utility_bills')
-      .select(`*, units(unit_number, properties(name)), tenants(full_name)`)
+      .select(`*, units(unit_number, properties(id, name)), tenants(full_name), properties(name)`)
       .eq('organization_id', profile.organization_id)
       .order('bill_date', { ascending: false })
       .limit(200),
@@ -31,6 +31,11 @@ export default async function UtilitiesPage() {
       .select(`id, unit_number, organization_id, properties(id, name), contracts(id, tenant_id, status, utilities_config, tenants(id, full_name))`)
       .eq('organization_id', profile.organization_id)
       .order('unit_number'),
+    admin
+      .from('properties')
+      .select('id, name')
+      .eq('organization_id', profile.organization_id)
+      .order('name'),
   ])
 
   const { data: org } = await admin
@@ -43,6 +48,7 @@ export default async function UtilitiesPage() {
     <UtilitiesClient
       bills={billsRes.data ?? []}
       units={unitsRes.data ?? []}
+      properties={propertiesRes.data ?? []}
       orgId={profile.organization_id}
       defaultCurrency={org?.default_currency ?? 'OMR'}
     />

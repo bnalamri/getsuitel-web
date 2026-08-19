@@ -18,8 +18,16 @@ type UtilBill = {
   meter_to?: number | null
   notes?: string | null
   attachment_url?: string | null
+  utility_scope?: string | null
+  consumer_no?: string | null
+  meter_number?: string | null
+  service_type?: string | null
+  recharge_code?: string | null
+  tariff_type?: string | null
+  property_id?: string | null
   units: { unit_number: string; properties: { name: string } | null } | null
   tenants: { full_name: string } | null
+  properties?: { name: string } | null
 }
 
 type Contract = {
@@ -53,11 +61,13 @@ const STATUS_CHIP: Record<string, { label: string; cls: string }> = {
 export default function UtilitiesClient({
   bills: initialBills,
   units,
+  properties,
   orgId,
   defaultCurrency,
 }: {
   bills: UtilBill[]
   units: Unit[]
+  properties: { id: string; name: string }[]
   orgId: string
   defaultCurrency: string
 }) {
@@ -70,15 +80,12 @@ export default function UtilitiesClient({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const attachFileRef = useRef<HTMLInputElement>(null)
 
-  // Derive unique properties from units list
-  const properties = Array.from(
-    new Map(units.map(u => [u.properties?.id, u.properties]).filter(([id]) => id)).values()
-  ).sort((a: any, b: any) => a.name.localeCompare(b.name)) as { id: string; name: string }[]
   const firstPropId = properties[0]?.id ?? ''
 
   // Form state
   const [propertyId, setPropertyId] = useState(firstPropId)
-  const filteredUnits = (propertyId === '__all__' ? units : units.filter(u => u.properties?.id === propertyId))
+  const filteredUnits = units
+    .filter(u => !propertyId || u.properties?.id === propertyId)
     .sort((a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true }))
   const [unitId, setUnitId] = useState(filteredUnits[0]?.id ?? units[0]?.id ?? '')
   const [utilType, setUtilType] = useState<'water' | 'electricity' | 'internet'>('water')
@@ -90,6 +97,13 @@ export default function UtilitiesClient({
   const [meterFrom, setMeterFrom] = useState('')
   const [meterTo, setMeterTo] = useState('')
   const [notes, setNotes] = useState('')
+  // New fields (Fix #5 + #6)
+  const [utilScope, setUtilScope]       = useState<'unit' | 'general'>('unit')
+  const [consumerNo, setConsumerNo]     = useState('')
+  const [meterNumber, setMeterNumber]   = useState('')
+  const [serviceType, setServiceType]   = useState('postpaid')
+  const [rechargeCode, setRechargeCode] = useState('')
+  const [tariffType, setTariffType]     = useState('')
 
   // Derive active contract for selected unit
   const selectedUnit = units.find(u => u.id === unitId)
@@ -125,6 +139,12 @@ export default function UtilitiesClient({
     setMeterFrom('')
     setMeterTo('')
     setNotes('')
+    setUtilScope('unit')
+    setConsumerNo('')
+    setMeterNumber('')
+    setServiceType('postpaid')
+    setRechargeCode('')
+    setTariffType('')
     setAttachmentFile(null)
     if (attachFileRef.current) attachFileRef.current.value = ''
     setError('')
@@ -137,22 +157,30 @@ export default function UtilitiesClient({
     setLoading(true)
     setError('')
 
+    const effectiveBilledTo = utilScope === 'general' ? 'owner' : billedTo
     const res = await fetch('/api/utilities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        unit_id:      unitId,
-        contract_id:  activeContract?.id ?? null,
-        tenant_id:    billedTo === 'tenant' ? tenantId : null,
+        utility_scope: utilScope,
+        property_id:  utilScope === 'general' ? propertyId : null,
+        unit_id:      utilScope === 'general' ? null : unitId,
+        contract_id:  utilScope === 'general' ? null : (activeContract?.id ?? null),
+        tenant_id:    effectiveBilledTo === 'tenant' ? tenantId : null,
         utility_type: utilType,
         bill_date:    billDate,
         due_date:     dueDate,
         amount:       Number(amount),
         currency,
-        billed_to:    billedTo,
+        billed_to:    effectiveBilledTo,
         meter_from:   meterFrom ? Number(meterFrom) : null,
         meter_to:     meterTo   ? Number(meterTo)   : null,
         notes:        notes || null,
+        consumer_no:  consumerNo || null,
+        meter_number: meterNumber || null,
+        service_type: serviceType || null,
+        recharge_code: (serviceType === 'prepaid' && rechargeCode) ? rechargeCode : null,
+        tariff_type:  (utilType !== 'internet' && tariffType) ? tariffType : null,
       }),
     })
 
@@ -257,14 +285,35 @@ export default function UtilitiesClient({
                 return (
                   <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{b.units?.properties?.name ?? '—'}</div>
-                      <div className="text-xs text-slate-400">Unit {b.units?.unit_number}</div>
+                      {b.utility_scope === 'general' ? (
+                        <>
+                          <div className="font-medium text-slate-800">{b.properties?.name ?? b.units?.properties?.name ?? '—'}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-xs bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded-md">General</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-medium text-slate-800">{b.units?.properties?.name ?? '—'}</div>
+                          <div className="text-xs text-slate-400">Unit {b.units?.unit_number}</div>
+                        </>
+                      )}
+                      {(b.consumer_no || b.meter_number) && (
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {b.consumer_no && <span>C# {b.consumer_no}</span>}
+                          {b.consumer_no && b.meter_number && ' · '}
+                          {b.meter_number && <span>M# {b.meter_number}</span>}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${isWifi ? 'bg-violet-50 text-violet-700 border-violet-200' : isElec ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                         {isWifi ? <Wifi size={11}/> : <Zap size={11}/>}
                         {UTIL_LABELS[b.utility_type]}
                       </span>
+                      {b.service_type && b.service_type !== 'postpaid' && (
+                        <div className="text-xs text-slate-400 mt-0.5 capitalize">{b.service_type}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{b.bill_date}</td>
                     <td className="px-4 py-3 text-slate-600">{b.due_date}</td>
@@ -292,7 +341,7 @@ export default function UtilitiesClient({
                             <Paperclip size={14} />
                           </a>
                         )}
-                        {(b.status === 'pending' || b.status === 'expense_recorded') && (
+                        {b.status === 'pending' && (
                           <button
                             onClick={() => markPaid(b.id)}
                             className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
@@ -320,42 +369,57 @@ export default function UtilitiesClient({
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
 
-              {/* Property → Unit cascade */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Property</label>
-                  <select className="input" value={propertyId} onChange={e => {
-                    const pid = e.target.value
-                    setPropertyId(pid)
-                    const first = pid === '__all__'
-                      ? units[0]
-                      : units.find(u => u.properties?.id === pid)
-                    if (first) setUnitId(first.id)
-                  }}>
-                    <option value="__all__">All Properties</option>
-                    {properties.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+              {/* Billing Scope toggle (Fix #6) */}
+              <div>
+                <label className="label">Billing Scope</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['unit', 'general'] as const).map(s => (
+                    <button key={s} type="button"
+                      onClick={() => { setUtilScope(s); if (s === 'general') setBilledTo('owner') }}
+                      className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors
+                        ${utilScope === s ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                      {s === 'unit' ? 'Unit-Related' : 'General (Property)'}
+                    </button>
+                  ))}
                 </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  {utilScope === 'general' ? 'Property-level bill — always billed to Owner' : 'Per-unit bill — billed per contract config'}
+                </p>
+              </div>
+
+              {/* Property selector */}
+              <div>
+                <label className="label">Property</label>
+                <select className="input" value={propertyId} onChange={e => {
+                  const pid = e.target.value
+                  setPropertyId(pid)
+                  if (utilScope === 'unit') {
+                    const first = units.find(u => u.properties?.id === pid)
+                    if (first) setUnitId(first.id)
+                  }
+                }}>
+                  {properties.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Unit selector — only for unit-related scope */}
+              {utilScope === 'unit' && (
                 <div>
                   <label className="label">Unit</label>
                   <select className="input" value={unitId} onChange={e => setUnitId(e.target.value)} required>
                     {filteredUnits.map(u => (
-                      <option key={u.id} value={u.id}>
-                        {propertyId === '__all__' ? `${u.properties?.name} — ` : ''}Unit {u.unit_number}
-                      </option>
+                      <option key={u.id} value={u.id}>Unit {u.unit_number}</option>
                     ))}
                   </select>
+                  {activeContract && (
+                    <p className="text-xs text-slate-400 mt-1">Tenant: {activeContract.tenants?.full_name ?? '—'}</p>
+                  )}
+                  {!activeContract && unitId && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={11}/> No active contract on this unit</p>
+                  )}
                 </div>
-              </div>
-              {activeContract && (
-                <p className="text-xs text-slate-400 -mt-2">
-                  Tenant: {activeContract.tenants?.full_name ?? '—'}
-                </p>
-              )}
-              {!activeContract && unitId && (
-                <p className="text-xs text-amber-600 -mt-2 flex items-center gap-1"><AlertCircle size={11}/> No active contract on this unit</p>
               )}
 
               {/* Utility type */}
@@ -418,37 +482,106 @@ export default function UtilitiesClient({
                 </div>
               )}
 
-              {/* Billed to */}
-              <div>
-                <label className="label">Billed To</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['tenant', 'owner'] as const).map(who => (
-                    <button
-                      key={who}
-                      type="button"
-                      onClick={() => setBilledTo(who)}
-                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors
-                        ${billedTo === who ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                    >
-                      {who === 'tenant' ? <Receipt size={14}/> : <TrendingDown size={14}/>}
-                      {who.charAt(0).toUpperCase() + who.slice(1)}
-                    </button>
-                  ))}
+              {/* Billed to — hidden for general scope */}
+              {utilScope === 'unit' ? (
+                <div>
+                  <label className="label">Billed To</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['tenant', 'owner'] as const).map(who => (
+                      <button
+                        key={who}
+                        type="button"
+                        onClick={() => setBilledTo(who)}
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors
+                          ${billedTo === who ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                      >
+                        {who === 'tenant' ? <Receipt size={14}/> : <TrendingDown size={14}/>}
+                        {who.charAt(0).toUpperCase() + who.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                  {billedTo === 'tenant' && activeContract && (
+                    <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1">
+                      <CheckCircle2 size={11}/> Will generate an invoice for {activeContract.tenants?.full_name ?? 'tenant'}
+                    </p>
+                  )}
+                  {billedTo === 'owner' && (
+                    <p className="text-xs text-orange-600 mt-1.5 flex items-center gap-1">
+                      <TrendingDown size={11}/> Will record as owner expense
+                    </p>
+                  )}
+                  {billedTo === 'tenant' && !activeContract && (
+                    <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1"><AlertCircle size={11}/> No active contract — cannot invoice tenant</p>
+                  )}
                 </div>
-                {billedTo === 'tenant' && activeContract && (
-                  <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1">
-                    <CheckCircle2 size={11}/> Will generate an invoice for {activeContract.tenants?.full_name ?? 'tenant'}
-                  </p>
-                )}
-                {billedTo === 'owner' && (
-                  <p className="text-xs text-orange-600 mt-1.5 flex items-center gap-1">
-                    <TrendingDown size={11}/> Will record as owner expense
-                  </p>
-                )}
-                {billedTo === 'tenant' && !activeContract && (
-                  <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1"><AlertCircle size={11}/> No active contract — cannot invoice tenant</p>
-                )}
+              ) : (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-sm text-amber-800">
+                  <TrendingDown size={14} className="text-amber-600 flex-shrink-0" />
+                  General bills are always billed to Owner
+                </div>
+              )}
+
+              {/* Meter details (Fix #5) */}
+              <div>
+                <label className="label">Meter Details <span className="text-slate-400 font-normal">(optional)</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <input className="input" type="text" value={consumerNo} onChange={e => setConsumerNo(e.target.value)} placeholder="Consumer No." />
+                  </div>
+                  <div>
+                    <input className="input" type="text" value={meterNumber} onChange={e => setMeterNumber(e.target.value)} placeholder="Meter Number" />
+                  </div>
+                </div>
               </div>
+
+              {/* Service Type (Fix #5) */}
+              <div>
+                <label className="label">Service Type</label>
+                <div className={`grid gap-2 ${utilType === 'internet' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {utilType !== 'internet' ? (
+                    <>
+                      {(['postpaid', 'prepaid'] as const).map(st => (
+                        <button key={st} type="button" onClick={() => setServiceType(st)}
+                          className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
+                            ${serviceType === st ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                          {st.charAt(0).toUpperCase() + st.slice(1)}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => setServiceType('metered')}
+                        className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
+                          ${serviceType === 'metered' ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                        Metered
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {(['postpaid', 'fiber'] as const).map(st => (
+                        <button key={st} type="button" onClick={() => setServiceType(st)}
+                          className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
+                            ${serviceType === st ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                          {st.charAt(0).toUpperCase() + st.slice(1)}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Recharge Code — only if prepaid */}
+              {serviceType === 'prepaid' && (
+                <div>
+                  <label className="label">Recharge Code <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <input className="input" type="text" value={rechargeCode} onChange={e => setRechargeCode(e.target.value)} placeholder="e.g. 1234-5678" />
+                </div>
+              )}
+
+              {/* Tariff Type — water/electricity only */}
+              {(utilType === 'water' || utilType === 'electricity') && (
+                <div>
+                  <label className="label">Tariff Type <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <input className="input" type="text" value={tariffType} onChange={e => setTariffType(e.target.value)} placeholder="e.g. Residential, Commercial" />
+                </div>
+              )}
 
               {/* Notes */}
               <div>

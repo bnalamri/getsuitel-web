@@ -31,7 +31,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
 
   const [maintRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('maintenance_requests')
-      .select('id, category, charge_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, property_id, properties(id, name))')
+      .select('id, category, charge_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
       .eq('organization_id', orgId)
       .not('charge_amount', 'is', null),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
@@ -49,7 +49,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
   }
   const allMaint = (maintRes.data ?? []) as MaintRow[]
   const maint = propertyId
-    ? allMaint.filter(m => (m.units as any)?.property_id === propertyId)
+    ? allMaint.filter(m => (m.units as any)?.properties?.id === propertyId)
     : allMaint
 
   const total = maint.reduce((s, m) => s + (m.charge_amount ?? 0), 0)
