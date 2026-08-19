@@ -33,7 +33,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
     admin.from('maintenance_requests')
       .select('id, category, charge_amount, final_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
       .eq('organization_id', orgId)
-      .not('status', 'eq', 'canceled'),
+      .neq('status', 'canceled'),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
