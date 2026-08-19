@@ -89,3 +89,23 @@ export async function POST(req: Request) {
 
   return NextResponse.json(result)
 }
+
+// DELETE /api/utility-accounts?id=...
+export async function DELETE(req: Request) {
+  const profile = await getOrgAndRole()
+  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('utility_accounts')
+    .delete()
+    .eq('id', id)
+    .eq('organization_id', profile.organization_id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
