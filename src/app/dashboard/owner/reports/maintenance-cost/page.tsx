@@ -31,9 +31,9 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
 
   const [maintRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('maintenance_requests')
-      .select('id, category, charge_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
+      .select('id, category, charge_amount, final_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
       .eq('organization_id', orgId)
-      .not('charge_amount', 'is', null),
+      .or('charge_amount.not.is.null,final_amount.not.is.null'),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
@@ -43,7 +43,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
   const properties = (propertiesRes.data ?? []) as { id: string; name: string }[]
 
   type MaintRow = {
-    id: string; category: string; charge_amount: number; charge_payer: string;
+    id: string; category: string; charge_amount: number | null; final_amount: number | null; charge_payer: string;
     status: string; completed_at: string; assigned_to_name: string;
     units: { unit_number: string; properties: { id: string; name: string } | null } | null;
   }
@@ -52,7 +52,9 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
     ? allMaint.filter(m => (m.units as any)?.properties?.id === propertyId)
     : allMaint
 
-  const total = maint.reduce((s, m) => s + (m.charge_amount ?? 0), 0)
+  // Use final_amount (actual invoice) if available, else fall back to charge_amount (estimate)
+  const getAmt = (m: MaintRow) => m.final_amount ?? m.charge_amount ?? 0
+  const total = maint.reduce((s, m) => s + getAmt(m), 0)
 
   const byProp: Record<string, { name: string; total: number; count: number }> = {}
   for (const m of maint) {
@@ -60,7 +62,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
     const key = prop?.id ?? 'unknown'
     const name = prop?.name ?? 'Unknown'
     if (!byProp[key]) byProp[key] = { name, total: 0, count: 0 }
-    byProp[key].total += m.charge_amount ?? 0
+    byProp[key].total += getAmt(m)
     byProp[key].count++
   }
   const propRows = Object.values(byProp).sort((a, b) => b.total - a.total)
@@ -69,7 +71,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
   for (const m of maint) {
     const cat = m.category ?? 'Other'
     if (!byCat[cat]) byCat[cat] = { total: 0, count: 0 }
-    byCat[cat].total += m.charge_amount ?? 0
+    byCat[cat].total += getAmt(m)
     byCat[cat].count++
   }
   const catRows = Object.entries(byCat).map(([cat, v]) => ({ cat, ...v })).sort((a, b) => b.total - a.total)
@@ -78,7 +80,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
   for (const m of maint) {
     const tech = m.assigned_to_name ?? 'Unassigned'
     if (!byTech[tech]) byTech[tech] = { total: 0, count: 0 }
-    byTech[tech].total += m.charge_amount ?? 0
+    byTech[tech].total += getAmt(m)
     byTech[tech].count++
   }
   const techRows = Object.entries(byTech).map(([tech, v]) => ({ tech, ...v })).sort((a, b) => b.total - a.total)
