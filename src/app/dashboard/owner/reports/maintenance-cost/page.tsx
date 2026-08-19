@@ -33,7 +33,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
     admin.from('maintenance_requests')
       .select('id, category, charge_amount, final_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
       .eq('organization_id', orgId)
-      .or('charge_amount.not.is.null,final_amount.not.is.null'),
+      .not('status', 'eq', 'canceled'),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
     admin.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
   ])
@@ -109,7 +109,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-slate-700">{maint.length}</div>
-          <div className="text-xs text-slate-500 mt-1">Jobs with Charges</div>
+          <div className="text-xs text-slate-500 mt-1">Total Jobs</div>
         </div>
         <div className="card p-4">
           <div className="text-2xl font-bold text-amber-700">
