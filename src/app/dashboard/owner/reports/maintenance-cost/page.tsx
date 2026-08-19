@@ -90,11 +90,6 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
     <div className="space-y-6 p-6">
       <style>{`@media print { aside,header{display:none!important} .no-print{display:none!important} }`}</style>
 
-      {/* DEBUG — remove after fix */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-xs text-yellow-800 no-print">
-        orgId: {orgId} | records: {allMaint.length} | error: {maintRes.error?.message ?? 'none'}
-      </div>
-
       <div className="flex items-start justify-between no-print">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Maintenance Cost Analysis</h2>
