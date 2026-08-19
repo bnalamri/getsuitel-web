@@ -31,7 +31,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
 
   const [maintRes, orgRes, propertiesRes] = await Promise.all([
     admin.from('maintenance_requests')
-      .select('id, category, charge_amount, final_amount, charge_payer, status, completed_at, assigned_to_name, unit_id, units(unit_number, properties(id, name))')
+      .select('id, category, charge_amount, final_amount, charge_payer, status, completed_at, unit_id, profiles(full_name), units(unit_number, properties(id, name))')
       .eq('organization_id', orgId)
       .neq('status', 'canceled'),
     admin.from('organizations').select('name, default_currency').eq('id', orgId).single(),
@@ -44,7 +44,8 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
 
   type MaintRow = {
     id: string; category: string; charge_amount: number | null; final_amount: number | null; charge_payer: string;
-    status: string; completed_at: string; assigned_to_name: string;
+    status: string; completed_at: string;
+    profiles: { full_name: string } | null;
     units: { unit_number: string; properties: { id: string; name: string } | null } | null;
   }
   const allMaint = (maintRes.data ?? []) as MaintRow[]
@@ -78,7 +79,7 @@ export default async function MaintenanceCostPage({ searchParams }: { searchPara
 
   const byTech: Record<string, { total: number; count: number }> = {}
   for (const m of maint) {
-    const tech = m.assigned_to_name ?? 'Unassigned'
+    const tech = (m.profiles as any)?.full_name ?? 'Unassigned'
     if (!byTech[tech]) byTech[tech] = { total: 0, count: 0 }
     byTech[tech].total += getAmt(m)
     byTech[tech].count++
