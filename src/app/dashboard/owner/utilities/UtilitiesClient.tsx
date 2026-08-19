@@ -105,6 +105,11 @@ export default function UtilitiesClient({
   const [rechargeCode, setRechargeCode] = useState('')
   const [tariffType, setTariffType]     = useState('')
 
+  // Utility account auto-fill
+  const [accountAutoFilled,  setAccountAutoFilled]  = useState(false)
+  const [loadedAccountId,    setLoadedAccountId]    = useState<string | null>(null)
+  const [saveAccountDetails, setSaveAccountDetails] = useState(false)
+
   // Derive active contract for selected unit
   const selectedUnit = units.find(u => u.id === unitId)
   const activeContract = selectedUnit?.contracts?.find(c => c.status === 'active') ?? null
@@ -117,6 +122,34 @@ export default function UtilitiesClient({
     const who = utilType === 'water' ? cfg.water : utilType === 'electricity' ? cfg.electricity : cfg.internet
     if (who === 'tenant' || who === 'owner') setBilledTo(who)
   }, [unitId, utilType, activeContract])
+
+  // Auto-fill Consumer No., Meter Number etc. from utility_accounts when selection changes
+  useEffect(() => {
+    setAccountAutoFilled(false)
+    setLoadedAccountId(null)
+    const params = new URLSearchParams({ utility_type: utilType })
+    if (utilScope === 'general' && propertyId) {
+      params.set('property_id', propertyId)
+      params.set('general', 'true')
+    } else if (utilScope === 'unit' && unitId) {
+      params.set('unit_id', unitId)
+    } else {
+      return
+    }
+    fetch(`/api/utility-accounts?${params.toString()}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.id) return
+        setLoadedAccountId(data.id)
+        setConsumerNo(data.consumer_no   ?? '')
+        setMeterNumber(data.meter_number  ?? '')
+        setRechargeCode(data.recharge_code ?? '')
+        setTariffType(data.tariff_type   ?? '')
+        if (data.service_type) setServiceType(data.service_type)
+        setAccountAutoFilled(true)
+      })
+      .catch(() => {})
+  }, [unitId, propertyId, utilType, utilScope])
 
   const tenantId = activeContract?.tenants?.id ?? null
 
@@ -145,6 +178,9 @@ export default function UtilitiesClient({
     setServiceType('postpaid')
     setRechargeCode('')
     setTariffType('')
+    setAccountAutoFilled(false)
+    setLoadedAccountId(null)
+    setSaveAccountDetails(false)
     setAttachmentFile(null)
     if (attachFileRef.current) attachFileRef.current.value = ''
     setError('')
@@ -187,6 +223,27 @@ export default function UtilitiesClient({
     const json = await res.json()
 
     if (!res.ok) { setLoading(false); setError(json.error ?? 'Failed to save'); return }
+
+    // Save account details if requested (non-fatal)
+    if (saveAccountDetails && (consumerNo || meterNumber)) {
+      try {
+        await fetch('/api/utility-accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id:            loadedAccountId,
+            property_id:   propertyId,
+            unit_id:       utilScope === 'unit' ? unitId : null,
+            utility_type:  utilType,
+            consumer_no:   consumerNo   || null,
+            meter_number:  meterNumber  || null,
+            recharge_code: rechargeCode || null,
+            tariff_type:   tariffType   || null,
+            service_type:  serviceType,
+          }),
+        })
+      } catch { /* non-fatal */ }
+    }
 
     // Upload attachment if provided
     if (attachmentFile && json.id) {
@@ -521,9 +578,16 @@ export default function UtilitiesClient({
                 </div>
               )}
 
-              {/* Meter details (Fix #5) */}
+              {/* Meter details (Fix #5) — auto-filled from utility_accounts */}
               <div>
-                <label className="label">Meter Details <span className="text-slate-400 font-normal">(optional)</span></label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="label mb-0">Account Details <span className="text-slate-400 font-normal">(optional)</span></label>
+                  {accountAutoFilled && (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                      ✦ Auto-filled
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <input className="input" type="text" value={consumerNo} onChange={e => setConsumerNo(e.target.value)} placeholder="Consumer No." />
@@ -532,6 +596,16 @@ export default function UtilitiesClient({
                     <input className="input" type="text" value={meterNumber} onChange={e => setMeterNumber(e.target.value)} placeholder="Meter Number" />
                   </div>
                 </div>
+                {(consumerNo || meterNumber) && (
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer text-sm text-slate-600">
+                    <input type="checkbox" className="rounded" checked={saveAccountDetails}
+                      onChange={e => setSaveAccountDetails(e.target.checked)} />
+                    {loadedAccountId
+                      ? `Update saved account for this ${utilScope === 'unit' ? 'unit' : 'property'}`
+                      : `Save account details for future bills on this ${utilScope === 'unit' ? 'unit' : 'property'}`
+                    }
+                  </label>
+                )}
               </div>
 
               {/* Service Type (Fix #5) */}
