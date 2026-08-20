@@ -367,8 +367,9 @@ export default function UtilitiesClient({
                       <div className="flex items-center gap-2">
                         {b.attachment_url && (
                           <a href={b.attachment_url} target="_blank" rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-navy-600 transition-colors" title="View attachment">
-                            <Paperclip size={14} />
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                            <Paperclip size={12} />
+                            View Attachment
                           </a>
                         )}
                         {b.status === 'pending' && (
