@@ -124,7 +124,6 @@ export default function UtilitiesClient({
   // Auto-fill Consumer No., Meter Number etc. from utility_accounts when selection changes
   useEffect(() => {
     setAccountAutoFilled(false)
-    setLoadedAccountId(null)
     const params = new URLSearchParams({ utility_type: utilType })
     if (utilScope === 'general' && propertyId) {
       params.set('property_id', propertyId)
