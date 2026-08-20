@@ -70,12 +70,22 @@ export default function UtilityAccountsClient({
     .filter(u => u.property_id === form.property_id)
     .sort((a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true }))
 
-  // Display list after filters
-  const visible = accounts.filter(a => {
-    if (filterProp && a.property_id !== filterProp) return false
-    if (filterType && a.utility_type !== filterType) return false
-    return true
-  })
+  // Display list after filters, sorted by property name then unit number
+  const visible = accounts
+    .filter(a => {
+      if (filterProp && a.property_id !== filterProp) return false
+      if (filterType && a.utility_type !== filterType) return false
+      return true
+    })
+    .sort((a, b) => {
+      const pA = (a.properties as { name: string } | null)?.name ?? ''
+      const pB = (b.properties as { name: string } | null)?.name ?? ''
+      const pc = pA.localeCompare(pB)
+      if (pc !== 0) return pc
+      const uA = (a.units as { unit_number: string } | null)?.unit_number ?? ''
+      const uB = (b.units as { unit_number: string } | null)?.unit_number ?? ''
+      return uA.localeCompare(uB, undefined, { numeric: true })
+    })
 
   function openAdd() {
     setForm(emptyForm())
