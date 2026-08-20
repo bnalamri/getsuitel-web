@@ -30,16 +30,28 @@ function emailHtml(headerColor: string, label: string, body: string) {
 // Called by mobile after it creates a utility invoice directly in Supabase.
 // Body: { tenant_id, unit_id, amount, currency, due_date, utility_type }
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Auth: accept Bearer token (mobile) or cookie session (web)
+  const authHeader = req.headers.get('authorization') ?? ''
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  if (bearerToken) {
+    // Verify Bearer token via Supabase admin
+    const admin = createAdminClient()
+    const { data: { user }, error } = await admin.auth.getUser(bearerToken)
+    if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  } else {
+    // Fall back to cookie session (web calls)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { tenant_id, unit_id, amount, currency, due_date, utility_type } = await req.json()
   if (!tenant_id || !unit_id || !amount || !due_date || !utility_type) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
+  const admin = createAdminClient()  // admin client for DB queries (separate from auth check above)
 
   const { data: tenant } = await admin
     .from('tenants')
