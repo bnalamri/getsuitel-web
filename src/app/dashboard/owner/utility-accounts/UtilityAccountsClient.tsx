@@ -65,8 +65,10 @@ export default function UtilityAccountsClient({
   const [saving, setSaving]             = useState(false)
   const [error, setError]               = useState('')
 
-  // Units filtered to selected property in form
-  const formUnits = units.filter(u => u.property_id === form.property_id)
+  // Units filtered to selected property in form, sorted numerically
+  const formUnits = units
+    .filter(u => u.property_id === form.property_id)
+    .sort((a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true }))
 
   // Display list after filters
   const visible = accounts.filter(a => {
