@@ -76,6 +76,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/cash-flow', icon:Activity, en:'Cash Flow Forecast', ar:'توقعات التدفق النقدي' },
       { href:'/dashboard/owner/reports/unit-yield', icon:BarChart2, en:'Unit Yield', ar:'عائد الوحدة' },
       { href:'/dashboard/owner/reports/maintenance-cost', icon:Wrench, en:'Maintenance Cost', ar:'تكلفة الصيانة' },
+      { href:'/dashboard/owner/reports/utility-trends', icon:Zap, en:'Utility Trends', ar:'اتجاهات المرافق' },
       { href:'/dashboard/owner/reports/tech-performance', icon:Users, en:'Technician Performance', ar:'أداء الفنيين' },
       { href:'/dashboard/owner/reports/tenant-retention', icon:UserCheck, en:'Tenant Retention', ar:'الاحتفاظ بالمستأجرين' },
       { href:'/dashboard/owner/reports/annual-portfolio', icon:FileText, en:'Annual Portfolio', ar:'ملخص المحفظة السنوي' },
