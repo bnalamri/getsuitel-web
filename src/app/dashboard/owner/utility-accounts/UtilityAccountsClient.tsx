@@ -14,6 +14,7 @@ type Account = {
   tariff_type: string | null
   service_type: string | null
   notes: string | null
+  tank_number: string | null
   units?: { unit_number: string } | null
   properties?: { name: string } | null
 }
@@ -21,7 +22,7 @@ type Account = {
 type Property = { id: string; name: string }
 type Unit = { id: string; unit_number: string; property_id: string; properties?: { id: string; name: string } | null }
 
-const UTILITY_TYPES = ['water', 'electricity', 'internet']
+const UTILITY_TYPES = ['electricity', 'internet', 'water']
 const SERVICE_TYPES = ['postpaid', 'prepaid', 'fiber']
 
 const typeLabel = (t: string) =>
@@ -39,7 +40,7 @@ function emptyForm() {
   return {
     id: '', property_id: '', unit_id: '', utility_type: 'electricity',
     consumer_no: '', meter_number: '', recharge_code: '',
-    tariff_type: '', service_type: 'postpaid', notes: '',
+    tariff_type: '', service_type: 'postpaid', notes: '', tank_number: '',
   }
 }
 
@@ -92,6 +93,7 @@ export default function UtilityAccountsClient({
       tariff_type: a.tariff_type ?? '',
       service_type: a.service_type ?? 'postpaid',
       notes: a.notes ?? '',
+      tank_number: a.tank_number ?? '',
     })
     setError('')
     setShowModal(true)
@@ -119,6 +121,7 @@ export default function UtilityAccountsClient({
           tariff_type:   form.tariff_type  || null,
           service_type:  form.service_type || 'postpaid',
           notes:         form.notes        || null,
+          tank_number:   form.tank_number  || null,
         }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Save failed'); }
@@ -153,10 +156,11 @@ export default function UtilityAccountsClient({
       'Meter No.':    a.meter_number ?? '',
       'Recharge Code':a.recharge_code ?? '',
       'Tariff Type':  a.tariff_type ?? '',
+      'Tank No.':     a.utility_type === 'water' ? (a.tank_number ?? '') : '',
       'Notes':        a.notes ?? '',
     }))
     const ws = XLSX.utils.json_to_sheet(rows)
-    ws['!cols'] = [20,12,14,14,16,16,16,14,20].map(w => ({ wch: w }))
+    ws['!cols'] = [20,12,14,14,16,16,16,14,12,20].map(w => ({ wch: w }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Utility Accounts')
     XLSX.writeFile(wb, `Utility_Accounts_${orgName.replace(/\s+/g,'_')}.xlsx`)
@@ -185,7 +189,7 @@ export default function UtilityAccountsClient({
         <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
           className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 min-w-[160px]">
           <option value="">All Properties</option>
-          {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {[...properties].sort((a,b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <select value={filterType} onChange={e => setFilterType(e.target.value)}
           className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
@@ -221,14 +225,14 @@ export default function UtilityAccountsClient({
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Property','Unit','Type','Service','Consumer No.','Meter No.','Recharge Code','Tariff','Notes',''].map(h => (
+                {['Property','Unit','Type','Service','Consumer No.','Meter No.','Recharge Code','Tariff','Tank No.','Notes',''].map(h => (
                   <th key={h} className={`px-3 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide whitespace-nowrap${h === '' ? ' no-print' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visible.length === 0 && (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-slate-400">No utility accounts found. Click "Add Account" to create one.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-slate-400">No utility accounts found. Click "Add Account" to create one.</td></tr>
               )}
               {visible.map(a => (
                 <tr key={a.id} className="hover:bg-slate-50 transition-colors">
@@ -250,6 +254,7 @@ export default function UtilityAccountsClient({
                   <td className="px-3 py-3 text-slate-700 font-mono text-xs">{a.meter_number ?? '—'}</td>
                   <td className="px-3 py-3 text-slate-700 font-mono text-xs">{a.recharge_code ?? '—'}</td>
                   <td className="px-3 py-3 text-slate-600 text-xs">{a.tariff_type ?? '—'}</td>
+                  <td className="px-3 py-3 text-slate-700 font-mono text-xs">{a.utility_type === 'water' ? (a.tank_number ?? '—') : ''}</td>
                   <td className="px-3 py-3 text-slate-500 text-xs max-w-[160px] truncate">{a.notes ?? ''}</td>
                   <td className="px-3 py-3 no-print">
                     <div className="flex gap-2">
@@ -350,6 +355,15 @@ export default function UtilityAccountsClient({
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Tariff Type</label>
                   <input value={form.tariff_type} onChange={e => setForm(f => ({ ...f, tariff_type: e.target.value }))}
                     placeholder="e.g. Residential, Commercial" className={input}/>
+                </div>
+              )}
+
+              {/* Tank Number (water only) */}
+              {form.utility_type === 'water' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Water Tank No.</label>
+                  <input value={form.tank_number} onChange={e => setForm(f => ({ ...f, tank_number: e.target.value }))}
+                    placeholder="e.g. T-01, Tank 3" className={input}/>
                 </div>
               )}
 

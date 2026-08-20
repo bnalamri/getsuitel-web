@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     .from('utility_accounts')
     .select(`
       id, utility_type, consumer_no, meter_number, recharge_code,
-      tariff_type, service_type, notes, unit_id, property_id,
+      tariff_type, service_type, notes, tank_number, unit_id, property_id,
       units(unit_number),
       properties(name)
     `)

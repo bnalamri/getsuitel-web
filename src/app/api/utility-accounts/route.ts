@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { id, property_id, unit_id, utility_type, consumer_no, meter_number, recharge_code, tariff_type, service_type } = body
+  const { id, property_id, unit_id, utility_type, consumer_no, meter_number, recharge_code, tariff_type, service_type, notes, tank_number } = body
 
   if (!property_id || !utility_type) {
     return NextResponse.json({ error: 'property_id and utility_type are required' }, { status: 400 })
@@ -74,6 +74,8 @@ export async function POST(req: Request) {
     recharge_code: recharge_code || null,
     tariff_type:   tariff_type   || null,
     service_type:  service_type  || 'postpaid',
+    notes:         notes         || null,
+    tank_number:   tank_number   || null,
   }
 
   let result
