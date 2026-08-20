@@ -105,10 +105,8 @@ export default function UtilitiesClient({
   const [rechargeCode, setRechargeCode] = useState('')
   const [tariffType, setTariffType]     = useState('')
 
-  // Utility account auto-fill
-  const [accountAutoFilled,  setAccountAutoFilled]  = useState(false)
-  const [loadedAccountId,    setLoadedAccountId]    = useState<string | null>(null)
-  const [saveAccountDetails, setSaveAccountDetails] = useState(false)
+  // Utility account auto-fill (read-only — manage accounts in Utility Accounts page)
+  const [accountAutoFilled, setAccountAutoFilled] = useState(false)
 
   // Derive active contract for selected unit
   const selectedUnit = units.find(u => u.id === unitId)
@@ -140,7 +138,6 @@ export default function UtilitiesClient({
       .then(r => r.json())
       .then(data => {
         if (!data || !data.id) return
-        setLoadedAccountId(data.id)
         setConsumerNo(data.consumer_no   ?? '')
         setMeterNumber(data.meter_number  ?? '')
         setRechargeCode(data.recharge_code ?? '')
@@ -179,8 +176,6 @@ export default function UtilitiesClient({
     setRechargeCode('')
     setTariffType('')
     setAccountAutoFilled(false)
-    setLoadedAccountId(null)
-    setSaveAccountDetails(false)
     setAttachmentFile(null)
     if (attachFileRef.current) attachFileRef.current.value = ''
     setError('')
@@ -223,27 +218,6 @@ export default function UtilitiesClient({
     const json = await res.json()
 
     if (!res.ok) { setLoading(false); setError(json.error ?? 'Failed to save'); return }
-
-    // Save account details if requested (non-fatal)
-    if (saveAccountDetails && (consumerNo || meterNumber)) {
-      try {
-        await fetch('/api/utility-accounts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id:            loadedAccountId,
-            property_id:   propertyId,
-            unit_id:       utilScope === 'unit' ? unitId : null,
-            utility_type:  utilType,
-            consumer_no:   consumerNo   || null,
-            meter_number:  meterNumber  || null,
-            recharge_code: rechargeCode || null,
-            tariff_type:   tariffType   || null,
-            service_type:  serviceType,
-          }),
-        })
-      } catch { /* non-fatal */ }
-    }
 
     // Upload attachment if provided
     if (attachmentFile && json.id) {
@@ -578,82 +552,27 @@ export default function UtilitiesClient({
                 </div>
               )}
 
-              {/* Meter details (Fix #5) — auto-filled from utility_accounts */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="label mb-0">Account Details <span className="text-slate-400 font-normal">(optional)</span></label>
-                  {accountAutoFilled && (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+              {/* Account Details — read-only, auto-filled from Utility Accounts */}
+              {accountAutoFilled ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-emerald-800">Account Details</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-white border border-emerald-200 rounded-full px-2 py-0.5">
                       ✦ Auto-filled
                     </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <input className="input" type="text" value={consumerNo} onChange={e => setConsumerNo(e.target.value)} placeholder="Consumer No." />
                   </div>
-                  <div>
-                    <input className="input" type="text" value={meterNumber} onChange={e => setMeterNumber(e.target.value)} placeholder="Meter Number" />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-700">
+                    {consumerNo   && <div><span className="text-slate-400">Consumer No. </span>{consumerNo}</div>}
+                    {meterNumber  && <div><span className="text-slate-400">Meter No. </span>{meterNumber}</div>}
+                    {serviceType  && <div><span className="text-slate-400">Service </span>{serviceType.charAt(0).toUpperCase()+serviceType.slice(1)}</div>}
+                    {tariffType   && <div><span className="text-slate-400">Tariff </span>{tariffType}</div>}
+                    {rechargeCode && <div><span className="text-slate-400">Recharge </span>{rechargeCode}</div>}
                   </div>
+                  <p className="text-xs text-emerald-600 mt-1">To edit these details, go to <strong>Utility Accounts</strong>.</p>
                 </div>
-                {(consumerNo || meterNumber) && (
-                  <label className="flex items-center gap-2 mt-2 cursor-pointer text-sm text-slate-600">
-                    <input type="checkbox" className="rounded" checked={saveAccountDetails}
-                      onChange={e => setSaveAccountDetails(e.target.checked)} />
-                    {loadedAccountId
-                      ? `Update saved account for this ${utilScope === 'unit' ? 'unit' : 'property'}`
-                      : `Save account details for future bills on this ${utilScope === 'unit' ? 'unit' : 'property'}`
-                    }
-                  </label>
-                )}
-              </div>
-
-              {/* Service Type (Fix #5) */}
-              <div>
-                <label className="label">Service Type</label>
-                <div className={`grid gap-2 ${utilType === 'internet' ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                  {utilType !== 'internet' ? (
-                    <>
-                      {(['postpaid', 'prepaid'] as const).map(st => (
-                        <button key={st} type="button" onClick={() => setServiceType(st)}
-                          className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
-                            ${serviceType === st ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                          {st.charAt(0).toUpperCase() + st.slice(1)}
-                        </button>
-                      ))}
-                      <button type="button" onClick={() => setServiceType('metered')}
-                        className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
-                          ${serviceType === 'metered' ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                        Metered
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {(['postpaid', 'fiber'] as const).map(st => (
-                        <button key={st} type="button" onClick={() => setServiceType(st)}
-                          className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors
-                            ${serviceType === st ? 'border-navy-400 bg-navy-50 text-navy-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                          {st.charAt(0).toUpperCase() + st.slice(1)}
-                        </button>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Recharge Code — only if prepaid */}
-              {serviceType === 'prepaid' && (
-                <div>
-                  <label className="label">Recharge Code <span className="text-slate-400 font-normal">(optional)</span></label>
-                  <input className="input" type="text" value={rechargeCode} onChange={e => setRechargeCode(e.target.value)} placeholder="e.g. 1234-5678" />
-                </div>
-              )}
-
-              {/* Tariff Type — water/electricity only */}
-              {(utilType === 'water' || utilType === 'electricity') && (
-                <div>
-                  <label className="label">Tariff Type <span className="text-slate-400 font-normal">(optional)</span></label>
-                  <input className="input" type="text" value={tariffType} onChange={e => setTariffType(e.target.value)} placeholder="e.g. Residential, Commercial" />
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs text-slate-500">No saved account found for this {utilScope === 'unit' ? 'unit' : 'property'} / utility type. Add one in <strong>Utility Accounts</strong>.</p>
                 </div>
               )}
 
