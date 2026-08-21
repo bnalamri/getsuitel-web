@@ -107,6 +107,19 @@ export default function UtilitiesClient({
 
   // Utility account auto-fill (read-only — manage accounts in Utility Accounts page)
   const [accountAutoFilled, setAccountAutoFilled] = useState(false)
+  type AcctOption = { id: string; label: string | null; consumer_no: string | null; meter_number: string | null; service_type: string | null; recharge_code: string | null; tariff_type: string | null; tank_number: string | null }
+  const [availableAccounts, setAvailableAccounts] = useState<AcctOption[]>([])
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
+
+  function fillAccount(a: AcctOption) {
+    setSelectedAccountId(a.id)
+    setConsumerNo(a.consumer_no   ?? '')
+    setMeterNumber(a.meter_number  ?? '')
+    setRechargeCode(a.recharge_code ?? '')
+    setTariffType(a.tariff_type   ?? '')
+    if (a.service_type) setServiceType(a.service_type)
+    setAccountAutoFilled(true)
+  }
 
   // Derive active contract for selected unit
   const selectedUnit = units.find(u => u.id === unitId)
@@ -121,9 +134,11 @@ export default function UtilitiesClient({
     if (who === 'tenant' || who === 'owner') setBilledTo(who)
   }, [unitId, utilType, activeContract])
 
-  // Auto-fill Consumer No., Meter Number etc. from utility_accounts when selection changes
+  // Auto-fill / account picker from utility_accounts when selection changes
   useEffect(() => {
     setAccountAutoFilled(false)
+    setAvailableAccounts([])
+    setSelectedAccountId(null)
     const params = new URLSearchParams({ utility_type: utilType })
     if (utilScope === 'general' && propertyId) {
       params.set('property_id', propertyId)
@@ -136,15 +151,23 @@ export default function UtilitiesClient({
     fetch(`/api/utility-accounts?${params.toString()}`)
       .then(r => r.json())
       .then(data => {
-        if (!data || !data.id) return
-        setConsumerNo(data.consumer_no   ?? '')
-        setMeterNumber(data.meter_number  ?? '')
-        setRechargeCode(data.recharge_code ?? '')
-        setTariffType(data.tariff_type   ?? '')
-        if (data.service_type) setServiceType(data.service_type)
-        setAccountAutoFilled(true)
+        if (utilScope === 'general') {
+          // API returns array for general accounts
+          if (!Array.isArray(data)) {
+            if (data?.error) console.error('[utility-accounts]', data.error)
+            return
+          }
+          if (data.length === 0) return
+          setAvailableAccounts(data)
+          if (data.length === 1) fillAccount(data[0])  // auto-fill if only one
+          // if multiple, user picks below
+        } else {
+          // API returns single object for unit-level
+          if (!data || !data.id) return
+          fillAccount(data)
+        }
       })
-      .catch(() => {})
+      .catch(e => console.error('[utility-accounts fetch]', e))
   }, [unitId, propertyId, utilType, utilScope])
 
   const tenantId = activeContract?.tenants?.id ?? null
@@ -175,6 +198,8 @@ export default function UtilitiesClient({
     setRechargeCode('')
     setTariffType('')
     setAccountAutoFilled(false)
+    setAvailableAccounts([])
+    setSelectedAccountId(null)
     setAttachmentFile(null)
     if (attachFileRef.current) attachFileRef.current.value = ''
     setError('')
@@ -554,6 +579,29 @@ export default function UtilitiesClient({
                 <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-sm text-amber-800">
                   <TrendingDown size={14} className="text-amber-600 flex-shrink-0" />
                   General bills are always billed to Owner
+                </div>
+              )}
+
+              {/* Account picker — shown when multiple general accounts exist for this property + type */}
+              {utilScope === 'general' && availableAccounts.length > 1 && (
+                <div>
+                  <label className="label">Select Account</label>
+                  <select
+                    className="input"
+                    value={selectedAccountId ?? ''}
+                    onChange={e => {
+                      const acc = availableAccounts.find(a => a.id === e.target.value)
+                      if (acc) fillAccount(acc)
+                    }}
+                  >
+                    <option value="">— Pick an account —</option>
+                    {availableAccounts.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.label ? `${a.label}` : `C# ${a.consumer_no ?? '—'}`}
+                        {a.consumer_no && a.label ? ` (C# ${a.consumer_no})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 

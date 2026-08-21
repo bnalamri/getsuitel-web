@@ -8,6 +8,7 @@ type Account = {
   property_id: string
   unit_id: string | null
   utility_type: string
+  label: string | null
   consumer_no: string | null
   meter_number: string | null
   recharge_code: string | null
@@ -39,7 +40,7 @@ const svcLabel = (s: string | null) =>
 function emptyForm() {
   return {
     id: '', property_id: '', unit_id: '', utility_type: 'electricity',
-    consumer_no: '', meter_number: '', recharge_code: '',
+    label: '', consumer_no: '', meter_number: '', recharge_code: '',
     tariff_type: '', service_type: 'postpaid', notes: '', tank_number: '',
   }
 }
@@ -99,6 +100,7 @@ export default function UtilityAccountsClient({
       property_id: a.property_id,
       unit_id: a.unit_id ?? '',
       utility_type: a.utility_type,
+      label: a.label ?? '',
       consumer_no: a.consumer_no ?? '',
       meter_number: a.meter_number ?? '',
       recharge_code: a.recharge_code ?? '',
@@ -127,6 +129,7 @@ export default function UtilityAccountsClient({
           property_id:   form.property_id,
           unit_id:       form.unit_id || null,
           utility_type:  form.utility_type,
+          label:         form.label || null,
           consumer_no:   form.consumer_no  || null,
           meter_number:  form.meter_number || null,
           recharge_code: form.recharge_code || null,
@@ -237,7 +240,7 @@ export default function UtilityAccountsClient({
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Property','Unit','Type','Service','Consumer No.','Meter No.','Recharge Code','Tariff','Tank No.','Notes',''].map(h => (
+                {['Property','Unit','Type','Label','Service','Consumer No.','Meter No.','Recharge Code','Tariff','Tank No.','Notes',''].map(h => (
                   <th key={h} className={`px-3 py-3 text-left font-semibold text-slate-600 text-xs uppercase tracking-wide whitespace-nowrap${h === '' ? ' no-print' : ''}`}>{h}</th>
                 ))}
               </tr>
@@ -261,6 +264,7 @@ export default function UtilityAccountsClient({
                       {typeLabel(a.utility_type)}
                     </span>
                   </td>
+                  <td className="px-3 py-3 text-slate-500 text-xs">{a.label ?? <span className="text-slate-300">—</span>}</td>
                   <td className="px-3 py-3 text-slate-600 capitalize">{svcLabel(a.service_type)}</td>
                   <td className="px-3 py-3 text-slate-700 font-mono text-xs">{a.consumer_no ?? '—'}</td>
                   <td className="px-3 py-3 text-slate-700 font-mono text-xs">{a.meter_number ?? '—'}</td>
@@ -336,6 +340,15 @@ export default function UtilityAccountsClient({
                   className={select}>
                   {SERVICE_TYPES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
                 </select>
+              </div>
+
+              {/* Label (optional name for this account) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Account Label <span className="text-slate-400 font-normal">(optional — e.g. "Main Meter", "Fire Tank")</span>
+                </label>
+                <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+                  placeholder="e.g. Main Meter" className={input}/>
               </div>
 
               {/* Consumer No. */}

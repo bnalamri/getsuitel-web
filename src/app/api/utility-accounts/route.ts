@@ -16,6 +16,8 @@ async function getOrgAndRole() {
 
 // GET /api/utility-accounts?unit_id=...&utility_type=...
 // GET /api/utility-accounts?property_id=...&utility_type=...&general=true
+// For general scope: returns ARRAY (may have multiple accounts of same type)
+// For unit scope:    returns single object or null
 export async function GET(req: Request) {
   const profile = await getOrgAndRole()
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -28,26 +30,37 @@ export async function GET(req: Request) {
 
   const admin = createAdminClient()
 
-  let q = admin
-    .from('utility_accounts')
-    .select('id, consumer_no, meter_number, recharge_code, tariff_type, service_type')
-    .eq('organization_id', profile.organization_id)
-
-  if (utilityType) q = q.eq('utility_type', utilityType)
+  const baseSelect = 'id, label, consumer_no, meter_number, recharge_code, tariff_type, service_type, tank_number'
 
   if (general && propertyId) {
-    // Property-level (general) account — unit_id IS NULL
-    q = q.eq('property_id', propertyId).is('unit_id', null)
-  } else if (unitId) {
-    // Unit-level account
-    q = q.eq('unit_id', unitId)
-  } else {
-    return NextResponse.json(null)
+    // Property-level (general) — return ALL matching accounts (may be multiple)
+    let q = admin
+      .from('utility_accounts')
+      .select(baseSelect)
+      .eq('organization_id', profile.organization_id)
+      .eq('property_id', propertyId)
+      .is('unit_id', null)
+      .order('created_at', { ascending: true })
+    if (utilityType) q = q.eq('utility_type', utilityType)
+    const { data, error } = await q
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data ?? [])   // always returns array
   }
 
-  const { data, error } = await q.maybeSingle()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  if (unitId) {
+    // Unit-level — still one account per (unit, type)
+    let q = admin
+      .from('utility_accounts')
+      .select(baseSelect)
+      .eq('organization_id', profile.organization_id)
+      .eq('unit_id', unitId)
+    if (utilityType) q = q.eq('utility_type', utilityType)
+    const { data, error } = await q.maybeSingle()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)         // returns single object or null
+  }
+
+  return NextResponse.json(null)
 }
 
 // POST /api/utility-accounts — upsert account details
@@ -56,7 +69,7 @@ export async function POST(req: Request) {
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { id, property_id, unit_id, utility_type, consumer_no, meter_number, recharge_code, tariff_type, service_type, notes, tank_number } = body
+  const { id, property_id, unit_id, utility_type, label, consumer_no, meter_number, recharge_code, tariff_type, service_type, notes, tank_number } = body
 
   if (!property_id || !utility_type) {
     return NextResponse.json({ error: 'property_id and utility_type are required' }, { status: 400 })
@@ -69,6 +82,7 @@ export async function POST(req: Request) {
     property_id,
     unit_id: unit_id ?? null,
     utility_type,
+    label:         label         || null,
     consumer_no:   consumer_no   || null,
     meter_number:  meter_number  || null,
     recharge_code: recharge_code || null,
