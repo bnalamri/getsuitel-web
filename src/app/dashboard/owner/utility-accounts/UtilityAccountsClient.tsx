@@ -345,11 +345,13 @@ export default function UtilityAccountsClient({
                   placeholder="e.g. 1234567890" className={input}/>
               </div>
 
-              {/* Meter No. */}
+              {/* Meter No. / Telephone No. */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Meter Number</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  {form.utility_type === 'internet' ? 'Telephone Number' : 'Meter Number'}
+                </label>
                 <input value={form.meter_number} onChange={e => setForm(f => ({ ...f, meter_number: e.target.value }))}
-                  placeholder="e.g. M-00123" className={input}/>
+                  placeholder={form.utility_type === 'internet' ? 'e.g. 24123456' : 'e.g. M-00123'} className={input}/>
               </div>
 
               {/* Recharge Code (prepaid only) */}

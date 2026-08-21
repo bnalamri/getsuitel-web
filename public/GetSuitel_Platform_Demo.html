@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetSuitel — Interactive Platform Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;height:100vh;overflow:hidden;color:#fff}
+#app{display:flex;flex-direction:column;height:100vh}
+.topbar{display:flex;align-items:center;padding:14px 28px;background:rgba(15,23,42,0.97);border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;gap:20px;z-index:10}
+.logo{font-size:18px;font-weight:900;color:#fff;white-space:nowrap}.logo span{color:#C9931A}
+.crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.45)}
+.crumb .sep{color:rgba(255,255,255,0.2)}
+.crumb .cl{cursor:pointer;transition:color .2s}.crumb .cl:hover{color:rgba(255,255,255,.9)}
+.crumb .ca{color:rgba(255,255,255,.85)}
+.counter{margin-left:auto;font-size:12px;color:rgba(255,255,255,.3);white-space:nowrap}
+.main{flex:1;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;padding:40px 40px 100px}
+.bottombar{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;gap:16px;padding:14px 28px;background:rgba(15,23,42,0.97);border-top:1px solid rgba(255,255,255,0.07)}
+.pbar{flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.pfill{height:100%;border-radius:2px;transition:width .4s ease}
+.btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#fff;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.pri{background:#1e40af;border-color:#1e40af}.btn.pri:hover{background:#1d4ed8}
+
+/* COVER */
+.cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 108px);text-align:center;padding:40px 20px}
+.badge{display:inline-block;background:rgba(201,147,26,.15);border:1px solid rgba(201,147,26,.35);color:#C9931A;font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px}
+.cover h1{font-size:clamp(38px,6vw,70px);font-weight:900;color:#fff;line-height:1.05;margin-bottom:14px}.cover h1 span{color:#C9931A}
+.cover-sub{font-size:17px;color:rgba(255,255,255,.55);margin-bottom:36px;max-width:540px;line-height:1.7}
+.role-pills{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:44px}
+.pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 14px;font-size:13px;color:rgba(255,255,255,.65)}
+.pill .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.start-btn{background:#1e40af;color:#fff;border:none;padding:15px 44px;border-radius:12px;font-size:17px;font-weight:700;cursor:pointer;transition:all .2s}
+.start-btn:hover{background:#1d4ed8;transform:translateY(-2px);box-shadow:0 8px 28px rgba(30,64,175,.45)}
+.key-hint{margin-top:20px;font-size:12px;color:rgba(255,255,255,.25)}
+
+/* OVERVIEW */
+.overview{width:100%;max-width:1080px;padding-top:20px}
+.section-title{font-size:30px;font-weight:800;color:#fff;margin-bottom:6px}
+.section-sub{font-size:14px;color:rgba(255,255,255,.4);margin-bottom:32px}
+.role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.rcard{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:24px 20px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.rcard:hover{background:rgba(255,255,255,.065);transform:translateY(-3px);border-color:rgba(255,255,255,.12)}
+.rcard-top{height:3px;position:absolute;top:0;left:0;right:0}
+.rcard-icon{font-size:32px;margin-bottom:14px;margin-top:6px}
+.rcard-name{font-size:18px;font-weight:700;color:#fff;margin-bottom:6px}
+.rcard-desc{font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:14px}
+.rcard-count{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block}
+.rcard-arr{position:absolute;bottom:18px;right:18px;color:rgba(255,255,255,.2);font-size:16px;transition:all .2s}
+.rcard:hover .rcard-arr{color:rgba(255,255,255,.7);transform:translateX(3px)}
+
+/* FEATURE LIST */
+.fview{width:100%;max-width:1000px;padding-top:10px}
+.fheader{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.fcard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;display:flex;gap:12px}
+.fcard:hover{background:rgba(255,255,255,.07);transform:translateY(-2px);border-color:rgba(255,255,255,.12)}
+.fcard-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.fcard-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+.fcard-desc{font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:8px}
+.fcard-steps{font-size:11px;font-weight:700}
+
+/* STEP VIEW */
+.sview{width:100%;max-width:860px;padding-top:10px}
+.sheader{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.stitle{font-size:22px;font-weight:800;color:#fff}
+.rtag{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+.steps{display:flex;flex-direction:column;gap:0;position:relative}
+.steps::before{content:'';position:absolute;left:27px;top:28px;bottom:28px;width:2px;background:rgba(255,255,255,.06);pointer-events:none}
+.step{display:flex;gap:18px;padding-bottom:16px;opacity:.2;transition:opacity .45s,transform .45s;transform:translateX(-8px)}
+.step.vis{opacity:1;transform:translateX(0)}
+.snum{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;z-index:1;transition:background .4s;background:rgba(255,255,255,.07)}
+.sbody{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px 18px;transition:all .3s}
+.stname{font-size:15px;font-weight:700;color:#fff;margin-bottom:5px}
+.stdetail{font-size:13px;color:rgba(255,255,255,.6);line-height:1.65}
+.sttag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:8px}
+.placeholder{font-size:12px;color:rgba(255,255,255,.2);margin-top:6px;font-style:italic}
+
+/* Animations */
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ai{animation:fi .35s ease forwards}
+.d1{animation-delay:.06s;opacity:0}.d2{animation-delay:.12s;opacity:0}.d3{animation-delay:.18s;opacity:0}
+.d4{animation-delay:.24s;opacity:0}.d5{animation-delay:.30s;opacity:0}.d6{animation-delay:.36s;opacity:0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const R=[
+{id:'owner',name:'Owner',icon:'🏢',c:'#1e40af',lc:'rgba(30,64,175,0.14)',features:[
+  {name:'Property & Unit Setup',icon:'🏗️',desc:'Add properties and configure units with rent details',steps:[
+    {t:'Add a Property',d:'Properties → "Add Property" → Enter name, address, city, and type (Residential / Commercial / Mixed) → Save. Property appears in your list instantly.',tag:'Properties Page',i:'🏠'},
+    {t:'Add Units',d:'Open the property → Units tab → "Add Unit" → Enter unit number, floor, type (Studio / 1BR / 2BR), monthly rent, and currency (OMR / USD / EUR) → Save.',tag:'Units Page',i:'🚪'},
+    {t:'Configure Utility Responsibilities',d:'During contract setup, specify for each utility — Water, Electricity, Internet — who pays (Owner or Tenant), with consumer account numbers and meter IDs.',tag:'Contract Setup',i:'⚡'},
+    {t:'Unit Ready for Tenants',d:'Unit status shows "Vacant" and is ready to be assigned to a tenant through a lease contract.',tag:'Status: Vacant ✅',i:'✅'},
+  ]},
+  {name:'Tenant Onboarding',icon:'👥',desc:'Register tenants and activate lease contracts',steps:[
+    {t:'Add Tenant Profile',d:'Tenants → "Add Tenant" → Enter full name, email, phone, national ID, and emergency contact → Save.',tag:'Tenants Page',i:'👤'},
+    {t:'Invitation Email Sent',d:'Tenant receives an email with a link to set their password and access the GetSuitel tenant portal at getsuitel.com.',tag:'Invitation Email',i:'📧'},
+    {t:'Create Lease Contract',d:'Contracts → "Add Contract" → Select property, unit, tenant → Set start/end dates, monthly rent, payment frequency (Monthly / Quarterly / Yearly), and grace period.',tag:'Contracts Page',i:'📝'},
+    {t:'Upload Municipality Agreement',d:'Attach the official tenancy agreement PDF required by local authorities. Both owner and tenant can view and download it at any time.',tag:'Document Upload',i:'📎'},
+    {t:'Contract Activated',d:'Unit changes to "Occupied". Auto-invoicing starts. Tenant can log in, view details, pay invoices, and submit maintenance requests.',tag:'Status: Active 🎉',i:'🎉'},
+  ]},
+  {name:'Invoice & Payment Collection',icon:'💰',desc:'Auto-generate rent invoices and track payments',steps:[
+    {t:'Automatic Invoice Generation',d:'On the invoice date each month, the system generates rent invoices for every active contract automatically — no manual action from the owner.',tag:'Automated Cron Job',i:'⚙️'},
+    {t:'Tenant Receives Email',d:'"Rent Invoice for August 2026 — Flat 11 — 250.000 OMR — Due by 05 Aug 2026". Email includes a "View & Pay" button.',tag:'Email Notification',i:'📬'},
+    {t:'Tenant Pays & Uploads Receipt',d:'Tenant → Invoices → "Pay Now" → Selects method (Bank Transfer / Mobile Wallet / Cash / Cheque) → Uploads photo of payment confirmation.',tag:'Tenant Portal',i:'💳'},
+    {t:'Owner Reviews Receipt',d:'Owner reviews uploaded proof → "Confirm" to mark as Paid, or "Reject" with an explanatory note.',tag:'Receipt Review',i:'🔍'},
+    {t:'Invoice Closed',d:'Invoice status updates to "Paid". Overdue banners disappear. Payment recorded in Month-End Closing report.',tag:'Status: Paid ✅',i:'✅'},
+  ]},
+  {name:'Maintenance Management',icon:'🔧',desc:'Assign, track, and close maintenance work orders',steps:[
+    {t:'Tenant Submits a Request',d:'Tenant → Maintenance → "New Request" → Describes the issue → Selects urgency: Low / Medium / High / Emergency → Submits.',tag:'Tenant Portal',i:'📋'},
+    {t:'Owner Notified by Email',d:'"New Maintenance Request — Flat 11 — Syid Ahmed — AC not cooling — High Priority" with tenant phone number.',tag:'Email to Owner',i:'📧'},
+    {t:'Assign a Technician',d:'Owner → Maintenance → "Assign" → Select technician → Set estimated cost → Confirm. Technician receives their own email notification.',tag:'Owner Portal',i:'👷'},
+    {t:'Technician Completes the Job',d:'Technician visits unit → completes the repair → "Mark Complete" → Enters actual charges (labor + materials).',tag:'Technician Portal',i:'🔧'},
+    {t:'Invoice Generated, Job Closed',d:'Service invoice auto-created. Owner notified: "Job completed by Ahmed — Charge: 28.000 OMR". Tenant sees completion details.',tag:'Invoice Created',i:'🧾'},
+  ]},
+  {name:'Utility Bills',icon:'⚡',desc:'Register water, electricity & internet bills and invoice tenants',steps:[
+    {t:'Register a Utility Bill',d:'Utility Bills → "+" → Select type (Water / Electricity / Internet) → Select property and unit → Enter meter readings (from/to) and bill amount.',tag:'Utility Bills Page',i:'📊'},
+    {t:'Upload Meter Reading Photo',d:'Attach a photo of the physical meter as evidence for the billing period. Set who pays: Tenant or Owner.',tag:'Attachment',i:'📸'},
+    {t:'Invoice Automatically Created',d:'If billed to tenant, a utility invoice is created and linked to the bill. If owner, it is recorded as an expense only.',tag:'Auto Invoice',i:'🧾'},
+    {t:'Tenant Receives Email',d:'"Water bill — 11.320 OMR due 31 Aug 2026 — AlSarjah_A Unit Flat 32" with a "View & Pay" link.',tag:'Email Notification',i:'📬'},
+  ]},
+  {name:'Reports & Analytics',icon:'📊',desc:'15+ financial reports with export and print support',steps:[
+    {t:'Choose a Report',d:'Reports → Select from: Analytics, P&L Statement, Monthly Income, Month-End Closing, Tenant Directory, Maintenance Cost Analysis, Vacancy Report, Utility Trends, Annual Portfolio, and more.',tag:'Reports Page',i:'📈'},
+    {t:'Filter & Analyze',d:'Filter by property and date range. Charts show revenue vs expenses, occupancy rate, collection rate, maintenance costs by category, and utility trends.',tag:'Interactive Filters',i:'🔍'},
+    {t:'Export & Share',d:'Export as Excel (.xlsx) with full formatting, or PDF with GetSuitel branded header. Share via email or WhatsApp from the browser.',tag:'Export / Print',i:'📤'},
+  ]},
+]},
+{id:'tenant',name:'Tenant',icon:'🏠',c:'#059669',lc:'rgba(5,150,105,0.14)',features:[
+  {name:'View My Contract',icon:'📋',desc:'Access lease details, documents and unit info',steps:[
+    {t:'First Login',d:'Tenant receives invitation email → Sets password → Logs in → Dashboard shows active contract summary, pending invoices, maintenance status, and unread notices.',tag:'Tenant Dashboard',i:'🔑'},
+    {t:'View Contract Details',d:'My Contract → Full lease: property, unit number, start/end dates, monthly rent (250.000 OMR), payment frequency, grace period, and contract status.',tag:'My Contract',i:'📝'},
+    {t:'Download Municipality Agreement',d:'Owner-uploaded tenancy agreement is available for the tenant to view and download as PDF at any time from the contract page.',tag:'Document',i:'📎'},
+    {t:'Update Personal Details',d:'My Details section → Edit phone, emergency contact, nationality. Changes sync to the owner\'s tenant records automatically.',tag:'My Details',i:'✏️'},
+  ]},
+  {name:'Pay Rent Invoice',icon:'💳',desc:'Pay monthly rent via multiple payment methods',steps:[
+    {t:'Receive Invoice Email',d:'"Rent Invoice for August 2026 — Flat 11 — 250.000 OMR — Due 05 Aug". Click "View & Pay" to go to the payment panel.',tag:'Email Notification',i:'📬'},
+    {t:'Select Payment Method',d:'Invoices → "Pay Now" → Bank Transfer (see owner bank details), Mobile Wallet (see mobile number), Cash (owner marks paid), or Cheque.',tag:'Payment Options',i:'💰'},
+    {t:'Upload Payment Receipt',d:'After paying, upload a screenshot of the bank transfer or mobile wallet confirmation. Add a reference number note if needed.',tag:'Receipt Upload',i:'📸'},
+    {t:'Owner Confirms, Invoice Paid',d:'Owner reviews and confirms → Invoice status changes to "Paid" → Tenant sees the update and the invoice moves to payment history.',tag:'Status: Paid ✅',i:'✅'},
+  ]},
+  {name:'Submit Maintenance',icon:'🔧',desc:'Report issues and track repair progress',steps:[
+    {t:'Submit a Request',d:'Maintenance → "New Request" → Describe the issue (e.g., "AC not cooling in master bedroom") → Select urgency level → Submit.',tag:'New Request',i:'📋'},
+    {t:'Awaiting Assignment',d:'Owner is notified by email. Tenant sees: "Pending — Awaiting Assignment" with a reference number for tracking.',tag:'Pending Status',i:'⏳'},
+    {t:'Technician Assigned',d:'Tenant sees: "Assigned to: Ahmed — Est. Cost: 30.000 OMR — Status: In Progress". They know who is coming and when.',tag:'In Progress',i:'👷'},
+    {t:'Completed',d:'"Completed by: Ahmed — Charge: 28.000 OMR — [date]". If a service invoice was generated, it appears in their Invoices.',tag:'Completed ✅',i:'✅'},
+  ]},
+  {name:'Notices & Communication',icon:'📢',desc:'Receive building announcements from management',steps:[
+    {t:'Notice Received by Email',d:'Owner sends a notice (e.g., "Water outage Saturday 09:00–13:00"). Tenant receives a formatted email with full message and any attached document.',tag:'Email Notification',i:'📬'},
+    {t:'View in Notices Page',d:'Notices → See all announcements sorted by date → Read full content → Download any attached file (PDF, image).',tag:'Notices Page',i:'📋'},
+    {t:'Platform Notices from GetSuitel',d:'GetSuitel can send system-wide announcements (new features, maintenance windows) that appear as banners on dashboards and in tenant Notices.',tag:'Platform Notice',i:'📡'},
+  ]},
+]},
+{id:'technician',name:'Technician',icon:'🔧',c:'#d97706',lc:'rgba(217,119,6,0.14)',features:[
+  {name:'Receive Work Order',icon:'📋',desc:'Get notified of new maintenance assignments',steps:[
+    {t:'Assignment Email',d:'"New Work Order: AC Repair — AlSarjah_A Flat 11 — Tenant: Syid Ahmed — Contact: +968 9xxx xxxx — Est. Cost: 30.000 OMR".',tag:'Email Notification',i:'📬'},
+    {t:'View in Work Orders',d:'Log in → Work Orders → "Open" tab → Full details: unit address, tenant contact, problem description, and estimated cost.',tag:'Work Orders Page',i:'📋'},
+    {t:'Check the Schedule',d:'Schedule → Calendar view of all assigned jobs grouped by date → Plan the day. Color-coded: amber = Open, blue = In Progress, green = Done.',tag:'Schedule Page',i:'📅'},
+  ]},
+  {name:'Complete Job & Invoice',icon:'✅',desc:'Mark jobs done and submit actual charges',steps:[
+    {t:'Visit Unit & Do the Work',d:'Job is under "In Progress" in Work Orders. Tenant has been notified of the upcoming visit.',tag:'In Progress',i:'🔧'},
+    {t:'Mark as Complete',d:'Work Orders → "Mark Complete" → Enter actual charges: labor amount + materials + description of work done.',tag:'Complete Job Form',i:'✅'},
+    {t:'Invoice Auto-Generated',d:'System creates a service charge invoice. Owner emailed: "Job completed by Ahmed — Flat 11 — Total Charge: 28.000 OMR".',tag:'Auto Invoice',i:'🧾'},
+    {t:'Job Moves to Done',d:'Work order in "Done" tab. Owner and tenant see "Completed by: Ahmed — Charge: 28.000 OMR" in their maintenance views.',tag:'Status: Done 🏆',i:'🏆'},
+  ]},
+  {name:'Manage Schedule',icon:'📅',desc:'View all assigned jobs in a calendar view',steps:[
+    {t:'Open the Schedule',d:'Schedule → Calendar view with all assigned maintenance jobs grouped by date and sorted by time.',tag:'Schedule Page',i:'📅'},
+    {t:'See Day Details',d:'Click any date → All jobs for that day: unit location, tenant contact, problem type, urgency, and estimated duration.',tag:'Day View',i:'🔍'},
+    {t:'Prioritize & Plan',d:'Amber = Open, Blue = In Progress, Green = Done. Emergency jobs highlighted. Plan route for maximum efficiency.',tag:'Status Colors',i:'🎯'},
+  ]},
+]},
+{id:'superadmin',name:'Superadmin',icon:'👑',c:'#7c3aed',lc:'rgba(124,58,237,0.14)',features:[
+  {name:'Owner Onboarding',icon:'🏢',desc:'Review new registrations and activate subscriptions',steps:[
+    {t:'New Registration Submitted',d:'Owner registers at getsuitel.com as Individual (national ID) or Company (CR number, authorized rep, company document) → Submits.',tag:'Registration',i:'📝'},
+    {t:'Superadmin Notified',d:'"New owner registration — Anwar Real Estate LLC — Muscat, Oman". Email includes all registration details for review.',tag:'Email Alert',i:'📬'},
+    {t:'Review in Admin Panel',d:'Admin → Owners → New registration with "Trial" status → Review CR document, company name, authorized rep, verify completeness.',tag:'Admin Dashboard',i:'🔍'},
+    {t:'Activate Subscription',d:'"Manage Subscription" → Set plan (Basic / Pro / Enterprise) → Set duration → "Activate" → Owner is now live.',tag:'Subscription Active ✅',i:'✅'},
+  ]},
+  {name:'Subscription Management',icon:'💼',desc:'Control plans, renewals, and account status',steps:[
+    {t:'View All Organizations',d:'Owners page → All orgs with: name, plan, status (Active / Trial / Expired / Canceled), expiry date, and revenue. Color badges highlight issues instantly.',tag:'Owners Page',i:'📊'},
+    {t:'Edit Subscription',d:'"Edit Limits" → Change plan → Set exact expiry date or extend by duration (1/3/6/12 months) → Changes take effect immediately.',tag:'Edit Subscription',i:'✏️'},
+    {t:'Force Purge Canceled Org',d:'"Force Purge" → Cascades delete all org data (properties, units, tenants, contracts, invoices) → Audit log created → Storage freed.',tag:'Admin Action',i:'🗑️'},
+  ]},
+  {name:'Platform Notices',icon:'📢',desc:'Broadcast announcements to all owners and tenants',steps:[
+    {t:'Create a Platform Notice',d:'Admin → Notices → "New Notice" → Write title and body → Select recipients: All Owners, All Tenants, or specific orgs → Attach file → Send.',tag:'Admin Notices',i:'✏️'},
+    {t:'Multi-Channel Delivery',d:'All recipients receive an email. Owners see a "From GetSuitel" dashboard banner. Tenants see it in their Notices page.',tag:'Email + Dashboard Banner',i:'📡'},
+    {t:'Share as Image',d:'Each notice has a Share button → Generates a branded GetSuitel notice card → Share to WhatsApp, copy link, or download the card.',tag:'Social Sharing',i:'📤'},
+  ]},
+  {name:'Org Restore & Snapshots',icon:'🔄',desc:'Restore organization data from daily snapshots',steps:[
+    {t:'Daily Automatic Snapshots',d:'Every night at midnight, the system snapshots every org: all properties, units, tenants, contracts, invoices, and settings. Stored for 30 days.',tag:'Automated Cron',i:'⚙️'},
+    {t:'Owner Reports a Problem',d:'Owner accidentally deletes data. Superadmin opens that owner\'s profile → Clicks "Restore".',tag:'Admin Action',i:'🔍'},
+    {t:'Select Restore Point',d:'Choose snapshot: yesterday, 2 days ago... → Preview summary of what will be restored → Confirm.',tag:'Restore Selection',i:'📅'},
+    {t:'Data Restored',d:'Org data reverts to the selected point in time. Properties, tenants, and contracts reappear as they were. Restore log entry created.',tag:'Restored ✅',i:'✅'},
+  ]},
+]},
+];
+
+let view='cover',roleIdx=null,featIdx=null,revealed=0;
+const role=()=>R[roleIdx];
+const feat=()=>role()?.features[featIdx];
+
+function render(){
+  let crumb='',main='',foot='';
+  if(view==='cover'){
+    main=coverHtml();
+    foot=`<div class="bottombar" style="justify-content:center"><span style="font-size:12px;color:rgba(255,255,255,.3)">Press Space or → to navigate · Click any card to jump in · Esc returns to overview</span></div>`;
+  } else if(view==='overview'){
+    crumb=bc([{l:'Home',fn:"go('cover')"}],'Platform Overview');
+    main=overviewHtml();
+    foot=footHtml();
+  } else if(view==='role'){
+    crumb=bc([{l:'Home',fn:"go('cover')"},{l:'Overview',fn:"go('overview')"}],role().name+' Portal');
+    main=roleHtml();
+    foot=footHtml();
+  } else if(view==='feature'){
+    crumb=bc([{l:'Home',fn:"go('cover')"},{l:'Overview',fn:"go('overview')"},{l:role().name,fn:"go('role')"}],feat().name);
+    main=featHtml();
+    foot=featFootHtml();
+  }
+  const ctr=view==='feature'?`Step ${Math.min(revealed,feat().steps.length)} / ${feat().steps.length}`:view==='role'?`${role().features.length} features`:view==='overview'?'4 portals':'Interactive Demo';
+  document.getElementById('app').innerHTML=`<div class="topbar"><div class="logo">Get<span>Suitel</span></div>${crumb}<div class="counter">${ctr}</div></div><div class="main">${main}</div>${foot}`;
+}
+
+function bc(links,cur){
+  return `<div class="crumb">${links.map(x=>`<span class="cl" onclick="${x.fn}">${x.l}</span><span class="sep">›</span>`).join('')}<span class="ca">${cur}</span></div>`;
+}
+
+function coverHtml(){
+  return `<div class="cover">
+    <div class="badge ai d1">Interactive Platform Demo</div>
+    <h1 class="ai d2">Get<span>Suitel</span><br>Smart Property Management</h1>
+    <p class="cover-sub ai d3">End-to-end real estate management for Owners, Tenants, Technicians &amp; Administrators</p>
+    <div class="role-pills ai d4">
+      ${R.map(r=>`<div class="pill"><div class="dot" style="background:${r.c}"></div>${r.name} Portal — ${r.features.length} Features</div>`).join('')}
+    </div>
+    <button class="start-btn ai d5" onclick="go('overview')">Explore the Platform &nbsp;→</button>
+    <p class="key-hint ai d6">Use ← → arrow keys or Space to navigate</p>
+  </div>`;
+}
+
+function overviewHtml(){
+  return `<div class="overview">
+    <div class="section-title ai">Platform Portals</div>
+    <div class="section-sub ai d1">Click a portal to explore its features and step-by-step process flows</div>
+    <div class="role-grid">
+      ${R.map((r,i)=>`<div class="rcard ai d${i+1}" onclick="selRole(${i})">
+        <div class="rcard-top" style="background:${r.c}"></div>
+        <div class="rcard-icon">${r.icon}</div>
+        <div class="rcard-name">${r.name} Portal</div>
+        <div class="rcard-desc">${r.id==='owner'?'Property managers and landlords who own and manage real estate assets':r.id==='tenant'?'Residents who rent units and access a portal for payments and communication':r.id==='technician'?'Service technicians who receive and complete maintenance work orders':'GetSuitel platform administrators managing all organizations and subscriptions'}</div>
+        <div class="rcard-count" style="background:${r.lc};color:${r.c}">${r.features.length} Features</div>
+        <div class="rcard-arr">→</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function roleHtml(){
+  const r=role();
+  return `<div class="fview">
+    <div class="fheader ai">
+      <button class="btn" onclick="go('overview')">← Back</button>
+      <div>
+        <div style="font-size:24px;font-weight:800;color:#fff">${r.icon} ${r.name} Portal</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.4);margin-top:3px">Click a feature to see its step-by-step process flow</div>
+      </div>
+    </div>
+    <div class="fgrid">
+      ${r.features.map((f,i)=>`<div class="fcard ai d${Math.min(i+1,6)}" onclick="selFeat(${i})">
+        <div class="fcard-icon">${f.icon}</div>
+        <div>
+          <div class="fcard-name">${f.name}</div>
+          <div class="fcard-desc">${f.desc}</div>
+          <div class="fcard-steps" style="color:${r.c}">${f.steps.length} steps →</div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function featHtml(){
+  const r=role();const f=feat();
+  return `<div class="sview">
+    <div class="sheader ai">
+      <button class="btn" onclick="go('role')">← Back to ${r.name}</button>
+      <div style="flex:1"></div>
+      <div class="rtag" style="background:${r.lc};color:${r.c}">${r.icon} ${r.name} Portal</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px" class="ai d1">
+      <span style="font-size:28px">${f.icon}</span>
+      <span class="stitle">${f.name}</span>
+    </div>
+    <div class="steps">
+      ${f.steps.map((s,i)=>{
+        const v=i<revealed,cur=i===revealed-1;
+        return `<div class="step${v?' vis':''}" id="st${i}">
+          <div class="snum" style="${v?'background:'+r.c:'background:rgba(255,255,255,.07)'}">${v?s.i:i+1}</div>
+          <div class="sbody" style="${cur?'border-color:'+r.c+'55;background:'+r.lc:''}">
+            <div class="stname">${s.t}</div>
+            ${v?`<div class="stdetail">${s.d}</div><span class="sttag" style="background:${r.lc};color:${r.c}">${s.tag}</span>`:`<div class="placeholder">Click "Next Step →" to reveal</div>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function prog(){
+  if(view==='cover')return 0;
+  if(view==='overview')return 20;
+  if(view==='role')return 50;
+  if(view==='feature')return 50+((revealed/(feat()?.steps.length||1))*50);
+  return 0;
+}
+
+function footHtml(){
+  return `<div class="bottombar">
+    <button class="btn" onclick="navBack()">← Back</button>
+    <div class="pbar"><div class="pfill" style="width:${prog()}%;background:#1e40af"></div></div>
+    <button class="btn pri" onclick="navFwd()">Next →</button>
+  </div>`;
+}
+
+function featFootHtml(){
+  const r=role(),steps=feat().steps,done=revealed>=steps.length;
+  return `<div class="bottombar">
+    <button class="btn" onclick="go('role')">← ${r.name} Features</button>
+    <div class="pbar"><div class="pfill" style="width:${prog()}%;background:${r.c}"></div></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:12px;color:rgba(255,255,255,.35)">${revealed}/${steps.length} revealed</span>
+      ${done?`<button class="btn" style="background:${r.c};border-color:${r.c}" onclick="go('role')">View More Features →</button>`
+            :`<button class="btn" style="background:${r.c};border-color:${r.c};color:#fff" onclick="nxtStep()">Next Step →</button>`}
+    </div>
+  </div>`;
+}
+
+function go(v){view=v;if(v==='overview'||v==='cover'){roleIdx=null;featIdx=null;}if(v==='role')featIdx=null;revealed=0;render();}
+function selRole(i){roleIdx=i;featIdx=null;revealed=0;view='role';render();}
+function selFeat(i){featIdx=i;revealed=1;view='feature';render();}
+function nxtStep(){const s=feat().steps;if(revealed<s.length){revealed++;render();setTimeout(()=>{document.getElementById('st'+(revealed-1))?.scrollIntoView({behavior:'smooth',block:'nearest'});},80);}}
+function navBack(){if(view==='overview')go('cover');else if(view==='role')go('overview');else if(view==='feature')go('role');}
+function navFwd(){if(view==='cover')go('overview');else if(view==='overview')selRole(0);else if(view==='role')selFeat(0);else nxtStep();}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();navFwd();}
+  if(e.key==='ArrowLeft'){e.preventDefault();navBack();}
+  if(e.key==='Escape'){go('overview');}
+});
+render();
+</script>
+</body>
+</html>

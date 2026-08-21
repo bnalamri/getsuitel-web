@@ -332,7 +332,7 @@ export default function UtilitiesClient({
                         <div className="text-xs text-slate-400 mt-0.5">
                           {b.consumer_no && <span>C# {b.consumer_no}</span>}
                           {b.consumer_no && b.meter_number && ' · '}
-                          {b.meter_number && <span>M# {b.meter_number}</span>}
+                          {b.meter_number && <span>{b.utility_type === 'internet' ? 'Ph#' : 'M#'} {b.meter_number}</span>}
                         </div>
                       )}
                     </td>
@@ -563,7 +563,7 @@ export default function UtilitiesClient({
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-700">
                     {consumerNo   && <div><span className="text-slate-400">Consumer No. </span>{consumerNo}</div>}
-                    {meterNumber  && <div><span className="text-slate-400">Meter No. </span>{meterNumber}</div>}
+                    {meterNumber  && <div><span className="text-slate-400">{utilType === 'internet' ? 'Telephone No. ' : 'Meter No. '}</span>{meterNumber}</div>}
                     {serviceType  && <div><span className="text-slate-400">Service </span>{serviceType.charAt(0).toUpperCase()+serviceType.slice(1)}</div>}
                     {tariffType   && <div><span className="text-slate-400">Tariff </span>{tariffType}</div>}
                     {rechargeCode && <div><span className="text-slate-400">Recharge </span>{rechargeCode}</div>}
