@@ -455,7 +455,12 @@ export default function UtilitiesClient({
 
               {/* Utility type */}
               <div>
-                <label className="label">Utility Type</label>
+                <label className="label">
+                  Utility Type
+                  {utilScope === 'general' && (
+                    <span className="ml-2 text-slate-400 font-normal text-xs">— selects the matching general account</span>
+                  )}
+                </label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['water', 'electricity', 'internet'] as const).map(t => (
                     <button
