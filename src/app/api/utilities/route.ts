@@ -26,7 +26,25 @@ function emailHtml(headerColor: string, label: string, body: string) {
 </table></td></tr></table></body></html>`
 }
 
-async function getOrgAndRole() {
+async function getOrgAndRole(req?: Request) {
+  const admin = createAdminClient()
+
+  // Mobile sends Bearer token in Authorization header — validate via admin client
+  const authHeader = req?.headers.get('Authorization') ?? ''
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    const { data: { user }, error } = await admin.auth.getUser(token)
+    if (!user || error) return null
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role, organization_id')
+      .eq('id', user.id)
+      .single()
+    if (!profile || !['owner', 'property_manager', 'manager', 'financial_manager'].includes(profile.role)) return null
+    return profile as { role: string; organization_id: string }
+  }
+
+  // Web uses cookie-based session
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -41,7 +59,7 @@ async function getOrgAndRole() {
 
 // GET /api/utilities  — list utility bills for org
 export async function GET(req: Request) {
-  const profile = await getOrgAndRole()
+  const profile = await getOrgAndRole(req)
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
@@ -72,7 +90,7 @@ export async function GET(req: Request) {
 
 // POST /api/utilities  — create utility bill + auto-create invoice or expense
 export async function POST(req: Request) {
-  const profile = await getOrgAndRole()
+  const profile = await getOrgAndRole(req)
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
@@ -210,7 +228,7 @@ export async function POST(req: Request) {
 
 // PATCH /api/utilities  — mark bill as paid (creates expense for owner bills)
 export async function PATCH(req: Request) {
-  const profile = await getOrgAndRole()
+  const profile = await getOrgAndRole(req)
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, action } = await req.json()
