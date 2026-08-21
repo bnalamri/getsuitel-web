@@ -260,8 +260,8 @@ export default function UtilitiesClient({
     setSuccess(actionMsg)
     setShowForm(false)
     resetForm()
-    router.refresh()
-    setTimeout(() => setSuccess(''), 4000)
+    // Use full reload to avoid RSC schema-cache crash on router.refresh()
+    setTimeout(() => { window.location.reload() }, 800)
   }
 
   async function markPaid(billId: string) {
@@ -271,8 +271,9 @@ export default function UtilitiesClient({
       body: JSON.stringify({ id: billId, action: 'mark_paid' }),
     })
     if (res.ok) {
+      // Optimistic update — show "Paid" instantly without waiting for server reload
+      setBills(prev => prev.map(b => b.id === billId ? { ...b, status: 'paid' } : b))
       setSuccess('✓ Bill marked as paid — expense recorded')
-      router.refresh()
       setTimeout(() => setSuccess(''), 4000)
     }
   }
