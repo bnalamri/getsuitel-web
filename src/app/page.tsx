@@ -140,14 +140,17 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
   const [activeTab, setActiveTab] = useState(0)
-  // Live plan prices + platform currency from DB
+  // Live plans (full data) + platform currency from DB
+  type DbPlanLanding = { slug:string; name_en:string; name_ar:string; desc_en:string; desc_ar:string; price_monthly:number; features_en:string[]; features_ar:string[]; is_popular:boolean }
+  const [dbPlans, setDbPlans] = useState<DbPlanLanding[]>([])
   const [livePrices, setLivePrices] = useState<Record<string,number>>({})
   const [platformCurrency, setPlatformCurrency] = useState('OMR')
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
-    fetch('/api/plans').then(r => r.json()).then((data: Array<{slug:string;price_monthly:number}>) => {
+    fetch('/api/plans').then(r => r.json()).then((data: DbPlanLanding[]) => {
       if (Array.isArray(data)) {
+        setDbPlans(data)
         const map: Record<string,number> = {}
         data.forEach(p => { map[p.slug] = p.price_monthly })
         setLivePrices(map)
@@ -519,18 +522,20 @@ export default function LandingPage() {
             <p className="text-xl text-slate-500">{C.pricing.sub}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8 items-start">
-            {C.pricing.plans.map((p, i) => {
-              const slugMap = ['basic','pro','enterprise']
-              const liveNum = livePrices[slugMap[i]]
-              const displayNum = liveNum ?? Number(p.price.replace(/[^0-9.]/g,''))
-              const highlight = i === 1
-              const currencyImgSrc = highlight ? '/currency/omr_light.png' : '/currency/omr_dark.png'
+            {(dbPlans.length === 3 ? dbPlans : C.pricing.plans).map((item, i) => {
+              const db = dbPlans.length === 3 ? dbPlans[i] : null
+              const displayName    = db ? (lang==='ar' ? db.name_ar    : db.name_en)    : (item as {name:string}).name
+              const displayDesc    = db ? (lang==='ar' ? db.desc_ar    : db.desc_en)    : (item as {desc:string}).desc
+              const displayFeatures: string[] = db ? (lang==='ar' ? db.features_ar : db.features_en) : (item as {features:string[]}).features
+              const displayNum     = db ? db.price_monthly : Number((item as {price:string}).price.replace(/[^0-9.]/g,''))
+              const highlight      = db ? db.is_popular : i === 1
               const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
+              const currencyImgSrc = highlight ? '/currency/omr_light.png' : '/currency/omr_dark.png'
               return (
                 <div key={i} className={`rounded-2xl p-8 ${highlight ? 'bg-navy-800 text-white shadow-2xl shadow-navy-900/30 ring-2 ring-gold-400 scale-105' : 'bg-white border border-slate-200'}`}>
                   {highlight && <div className="bg-gold-400 text-navy-900 text-xs font-black px-3 py-1 rounded-full w-fit mb-4">{C.pricing.popular}</div>}
-                  <div className={`text-lg font-bold mb-1 ${highlight?'text-white':'text-slate-900'}`}>{p.name}</div>
-                  <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{p.desc}</div>
+                  <div className={`text-lg font-bold mb-1 ${highlight?'text-white':'text-slate-900'}`}>{displayName}</div>
+                  <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{displayDesc}</div>
                   <div className="flex items-baseline gap-2 mb-8">
                     {platformCurrency === 'OMR'
                       // eslint-disable-next-line @next/next/no-img-element
@@ -541,7 +546,7 @@ export default function LandingPage() {
                     <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
                   </div>
                   <ul className="space-y-3 mb-8">
-                    {p.features.map((f, j) => (
+                    {displayFeatures.map((f, j) => (
                       <li key={j} className={`flex items-center gap-3 text-sm ${highlight?'text-white/80':'text-slate-600'}`}>
                         <CheckCircle size={15} className={`flex-shrink-0 ${highlight?'text-gold-400':'text-emerald-500'}`} />{f}
                       </li>
