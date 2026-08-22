@@ -205,7 +205,7 @@ export default function PlansPage() {
     setLoading(true)
     const res = await fetch('/api/admin/plans')
     const data = await res.json()
-    setPlans(data ?? []); setLoading(false)
+    setPlans(Array.isArray(data) ? data : []); setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
