@@ -141,11 +141,12 @@ function FeaturesPairEditor({
 }
 
 const SLUG_OPTIONS = [
-  { value:'basic',      label:'basic — Basic plan',      sort:1 },
-  { value:'pro',        label:'pro — Pro plan',          sort:2 },
+  { value:'basic',      label:'basic — Basic plan',           sort:1 },
+  { value:'pro',        label:'pro — Pro plan',               sort:2 },
   { value:'enterprise', label:'enterprise — Enterprise plan', sort:3 },
+  { value:'exclusive',  label:'exclusive — Fully Managed',    sort:4 },
 ]
-const SLUG_SORT: Record<string,number> = { basic:1, pro:2, enterprise:3 }
+const SLUG_SORT: Record<string,number> = { basic:1, pro:2, enterprise:3, exclusive:4 }
 
 function PlanEditor({ plan, onSave, onCancel, saving, currency }:
   { plan:Partial<Plan>; onSave:(p:Partial<Plan>)=>void; onCancel:()=>void; saving:boolean; currency:string }) {

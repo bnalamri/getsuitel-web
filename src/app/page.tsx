@@ -561,36 +561,45 @@ export default function LandingPage() {
           </div>
 
           {/* Exclusive / Fully Managed plan */}
-          <div className="mt-10 rounded-2xl overflow-hidden bg-gradient-to-r from-slate-900 via-navy-900 to-slate-900 ring-2 ring-gold-400 shadow-2xl">
-            <div className="px-8 py-8 md:flex md:items-center md:gap-10">
-              {/* Left: badge + title + desc */}
-              <div className="md:w-72 flex-shrink-0 mb-6 md:mb-0">
-                <div className="inline-flex items-center gap-2 bg-gold-400 text-navy-900 text-xs font-black px-3 py-1 rounded-full mb-4">
-                  <span>★</span> {C.pricing.exclusive.badge}
-                </div>
-                <div className="text-2xl font-black text-white mb-2">{C.pricing.exclusive.name}</div>
-                <div className="text-white/60 text-sm leading-relaxed">{C.pricing.exclusive.desc}</div>
-                <div className="mt-4">
-                  <span className="text-3xl font-black text-gold-400">{C.pricing.exclusive.price}</span>
+          {(() => {
+            const dbEx = dbPlans.find(p => p.slug === 'exclusive')
+            const exName     = dbEx ? (lang==='ar' ? dbEx.name_ar : dbEx.name_en)     : C.pricing.exclusive.name
+            const exDesc     = dbEx ? (lang==='ar' ? dbEx.desc_ar : dbEx.desc_en)     : C.pricing.exclusive.desc
+            const exFeatures = dbEx ? (lang==='ar' ? dbEx.features_ar : dbEx.features_en) : C.pricing.exclusive.features
+            const exPrice    = dbEx ? dbEx.price_monthly : null
+            return (
+              <div className="mt-10 rounded-2xl overflow-hidden bg-gradient-to-r from-slate-900 via-navy-900 to-slate-900 ring-2 ring-gold-400 shadow-2xl">
+                <div className="px-8 py-8 md:flex md:items-center md:gap-10">
+                  <div className="md:w-72 flex-shrink-0 mb-6 md:mb-0">
+                    <div className="inline-flex items-center gap-2 bg-gold-400 text-navy-900 text-xs font-black px-3 py-1 rounded-full mb-4">
+                      <span>★</span> {C.pricing.exclusive.badge}
+                    </div>
+                    <div className="text-2xl font-black text-white mb-2">{exName}</div>
+                    <div className="text-white/60 text-sm leading-relaxed">{exDesc}</div>
+                    <div className="mt-4">
+                      {exPrice != null
+                        ? <span className="text-3xl font-black text-gold-400">{exPrice} <span className="text-lg font-normal">{C.pricing.month}</span></span>
+                        : <span className="text-3xl font-black text-gold-400">{C.pricing.exclusive.price}</span>
+                      }
+                    </div>
+                  </div>
+                  <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 mb-6 md:mb-0">
+                    {exFeatures.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
+                        <CheckCircle size={15} className="flex-shrink-0 text-gold-400" />{f}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex-shrink-0">
+                    <a href={C.pricing.exclusive.ctaHref}
+                      className="block text-center bg-gold-400 hover:bg-gold-300 text-navy-900 font-black px-8 py-3.5 rounded-xl transition-colors text-sm whitespace-nowrap">
+                      {C.pricing.exclusive.cta} {C.pricing.exclusive.ctaArrow}
+                    </a>
+                  </div>
                 </div>
               </div>
-              {/* Middle: features */}
-              <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 mb-6 md:mb-0">
-                {C.pricing.exclusive.features.map((f, i) => (
-                  <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
-                    <CheckCircle size={15} className="flex-shrink-0 text-gold-400" />{f}
-                  </li>
-                ))}
-              </ul>
-              {/* Right: CTA */}
-              <div className="flex-shrink-0">
-                <a href={C.pricing.exclusive.ctaHref}
-                  className="block text-center bg-gold-400 hover:bg-gold-300 text-navy-900 font-black px-8 py-3.5 rounded-xl transition-colors text-sm whitespace-nowrap">
-                  {C.pricing.exclusive.cta} {C.pricing.exclusive.ctaArrow}
-                </a>
-              </div>
-            </div>
-          </div>
+            )
+          })()}
         </div>
       </section>
 
