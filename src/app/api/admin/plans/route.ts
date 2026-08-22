@@ -1,15 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireSuperadmin } from '@/lib/api-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 // ── GET all plans (including inactive) — superadmin only ──────────────────
 export async function GET() {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
   const supabase = await createClient()
-
-  const { data: profile } = await supabase
-    .from('profiles').select('role').single()
-  if (profile?.role !== 'superadmin')
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
   const { data, error } = await supabase
     .from('subscription_plans')
     .select('*')
@@ -21,19 +19,15 @@ export async function GET() {
 
 // ── PATCH — update a plan ─────────────────────────────────────────────────
 export async function PATCH(req: NextRequest) {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
   const supabase = await createClient()
-
-  const { data: profile } = await supabase
-    .from('profiles').select('role').single()
-  if (profile?.role !== 'superadmin')
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
   const body = await req.json()
   const { id, ...fields } = body
 
   if (!id) return NextResponse.json({ error: 'Missing plan id' }, { status: 400 })
 
-  // Only allow safe fields to be updated
   const allowed = [
     'name_en','name_ar','desc_en','desc_ar','price_monthly','stripe_price_id',
     'max_properties','max_units','max_tenants','max_staff','trial_days',
@@ -57,13 +51,10 @@ export async function PATCH(req: NextRequest) {
 
 // ── POST — create new plan ────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const auth = await requireSuperadmin()
+  if (!auth.ok) return auth.response
+
   const supabase = await createClient()
-
-  const { data: profile } = await supabase
-    .from('profiles').select('role').single()
-  if (profile?.role !== 'superadmin')
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
   const body = await req.json()
   const { data, error } = await supabase
     .from('subscription_plans')
