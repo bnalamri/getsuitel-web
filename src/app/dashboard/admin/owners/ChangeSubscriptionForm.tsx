@@ -5,6 +5,11 @@ import { Settings2, Loader2, X, Calendar, Clock, AlertTriangle } from 'lucide-re
 
 import { PLANS, type DbPlan } from '@/lib/utils/plans'
 
+function currencySymbol(c: string) {
+  const map: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', OMR:'OMR', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
+  return map[c] ?? c
+}
+
 const DURATION_OPTIONS = [
   { label: '1 month',   value: 1  },
   { label: '3 months',  value: 3  },
@@ -27,9 +32,11 @@ export default function ChangeSubscriptionForm({
   const [error, setError]       = useState('')
   const [plan, setPlan]         = useState(currentPlan)
   const [plans, setPlans]       = useState<DbPlan[]>(PLANS)
+  const [currency, setCurrency] = useState('OMR')
 
   useEffect(() => {
     fetch('/api/plans').then(r => r.json()).then(data => { if (Array.isArray(data)) setPlans(data) }).catch(()=>{})
+    fetch('/api/admin/platform-settings').then(r => r.json()).then(d => { if (d?.default_currency) setCurrency(d.default_currency) }).catch(()=>{})
   }, [])
   const [status, setStatus]     = useState(currentStatus)
 
@@ -119,7 +126,7 @@ export default function ChangeSubscriptionForm({
             <select className="input" value={plan} onChange={e => setPlan(e.target.value)}>
               {plans.map(p => (
                 <option key={p.slug} value={p.slug}>
-                  {p.name_en} — ${p.price_monthly}/mo
+                  {p.name_en} — {currencySymbol(currency)} {p.price_monthly}/mo
                 </option>
               ))}
             </select>
