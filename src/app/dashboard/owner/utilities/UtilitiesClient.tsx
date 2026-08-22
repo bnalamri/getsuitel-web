@@ -213,6 +213,19 @@ export default function UtilitiesClient({
     setError('')
 
     const effectiveBilledTo = utilScope === 'general' ? 'owner' : billedTo
+
+    // Pre-upload attachment so the URL can be included in the tenant notification email
+    let attachmentUrl: string | null = null
+    if (attachmentFile) {
+      const fd = new FormData()
+      fd.append('file', attachmentFile)
+      const upRes = await fetch('/api/utility-bills/upload', { method: 'POST', body: fd })
+      if (upRes.ok) {
+        const upJson = await upRes.json()
+        attachmentUrl = upJson.url ?? null
+      }
+    }
+
     const res = await fetch('/api/utilities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -236,20 +249,13 @@ export default function UtilitiesClient({
         service_type: serviceType || null,
         recharge_code: (serviceType === 'prepaid' && rechargeCode) ? rechargeCode : null,
         tariff_type:  (utilType !== 'internet' && tariffType) ? tariffType : null,
+        attachment_url: attachmentUrl,
       }),
     })
 
     const json = await res.json()
 
     if (!res.ok) { setLoading(false); setError(json.error ?? 'Failed to save'); return }
-
-    // Upload attachment if provided
-    if (attachmentFile && json.id) {
-      const fd = new FormData()
-      fd.append('billId', json.id)
-      fd.append('file', attachmentFile)
-      await fetch('/api/utility-bills/upload', { method: 'POST', body: fd })
-    }
 
     setLoading(false)
 

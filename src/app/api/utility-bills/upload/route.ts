@@ -17,44 +17,50 @@ export async function POST(req: Request) {
   }
 
   const formData = await req.formData()
-  const billId = formData.get('billId') as string | null
+  const billId = formData.get('billId') as string | null  // optional — omit for pre-upload
   const file   = formData.get('file')   as File   | null
 
-  if (!billId || !file) {
-    return NextResponse.json({ error: 'Missing billId or file' }, { status: 400 })
+  if (!file) {
+    return NextResponse.json({ error: 'Missing file' }, { status: 400 })
   }
 
   const admin = createAdminClient()
+  const ext   = file.name.split('.').pop() ?? 'pdf'
 
-  // Verify bill belongs to this org
-  const { data: bill } = await admin
-    .from('utility_bills')
-    .select('id, organization_id')
-    .eq('id', billId)
-    .single()
+  if (billId) {
+    // Post-creation upload — verify bill belongs to this org, then update it
+    const { data: bill } = await admin
+      .from('utility_bills')
+      .select('id, organization_id')
+      .eq('id', billId)
+      .single()
 
-  if (!bill || bill.organization_id !== profile.organization_id) {
-    return NextResponse.json({ error: 'Bill not found' }, { status: 404 })
+    if (!bill || bill.organization_id !== profile.organization_id) {
+      return NextResponse.json({ error: 'Bill not found' }, { status: 404 })
+    }
+
+    const path = `${profile.organization_id}/${billId}/attachment.${ext}`
+    const arrayBuffer = await file.arrayBuffer()
+    const { error: uploadErr } = await admin.storage
+      .from('utility-bills')
+      .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
+    if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
+
+    const { data: { publicUrl } } = admin.storage.from('utility-bills').getPublicUrl(path)
+    await admin.from('utility_bills').update({ attachment_url: publicUrl }).eq('id', billId)
+    return NextResponse.json({ ok: true, url: publicUrl })
   }
 
-  const ext  = file.name.split('.').pop() ?? 'pdf'
-  const path = `${profile.organization_id}/${billId}/attachment.${ext}`
-
+  // Pre-upload (no bill ID yet) — upload to a temp path and return the URL.
+  // The caller passes this URL in the bill creation POST body so the email includes it.
+  const tempId  = crypto.randomUUID()
+  const path    = `${profile.organization_id}/pre-${tempId}/attachment.${ext}`
   const arrayBuffer = await file.arrayBuffer()
   const { error: uploadErr } = await admin.storage
     .from('utility-bills')
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
-
   if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
 
   const { data: { publicUrl } } = admin.storage.from('utility-bills').getPublicUrl(path)
-
-  const { error: updateErr } = await admin
-    .from('utility_bills')
-    .update({ attachment_url: publicUrl })
-    .eq('id', billId)
-
-  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
-
   return NextResponse.json({ ok: true, url: publicUrl })
 }

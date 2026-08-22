@@ -100,6 +100,7 @@ export async function POST(req: Request) {
     bill_date, due_date, amount, currency,
     billed_to, meter_from, meter_to, notes,
     consumer_no, meter_number, service_type, recharge_code, tariff_type,
+    attachment_url,
   } = body
 
   const isGeneral = utility_scope === 'general'
@@ -139,6 +140,7 @@ export async function POST(req: Request) {
       service_type:    service_type    ?? null,
       recharge_code:   (service_type === 'prepaid' && recharge_code) ? recharge_code : null,
       tariff_type:     (utility_type !== 'internet' && tariff_type) ? tariff_type : null,
+      attachment_url:  attachment_url ?? null,
       status:          'pending',
     })
     .select('id')
@@ -190,7 +192,14 @@ export async function POST(req: Request) {
               Please pay this amount directly to the utility company.
               If you have any questions, contact your property manager.
             </p>
-          </div>`)
+          </div>
+          ${attachment_url ? `
+          <div style="margin-top:20px">
+            <a href="${attachment_url}"
+               style="display:inline-block;background:#1e40af;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-weight:600;font-size:14px">
+              View Bill Document
+            </a>
+          </div>` : ''}`)
 
         await resend.emails.send({
           from:    'GetSuitel <noreply@getsuitel.com>',
