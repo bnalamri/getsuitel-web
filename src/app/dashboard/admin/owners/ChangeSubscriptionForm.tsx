@@ -1,7 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Settings2, Loader2, X, Calendar, Clock, AlertTriangle } from 'lucide-react'
+
+import { PLANS, type DbPlan } from '@/lib/utils/plans'
 
 const DURATION_OPTIONS = [
   { label: '1 month',   value: 1  },
@@ -24,6 +26,11 @@ export default function ChangeSubscriptionForm({
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [plan, setPlan]         = useState(currentPlan)
+  const [plans, setPlans]       = useState<DbPlan[]>(PLANS)
+
+  useEffect(() => {
+    fetch('/api/plans').then(r => r.json()).then(data => { if (Array.isArray(data)) setPlans(data) }).catch(()=>{})
+  }, [])
   const [status, setStatus]     = useState(currentStatus)
 
   // Activation options (when status = active)
@@ -110,9 +117,11 @@ export default function ChangeSubscriptionForm({
           <div>
             <label className="label">Plan</label>
             <select className="input" value={plan} onChange={e => setPlan(e.target.value)}>
-              <option value="basic">Basic</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
+              {plans.map(p => (
+                <option key={p.slug} value={p.slug}>
+                  {p.name_en} — ${p.price_monthly}/mo
+                </option>
+              ))}
             </select>
           </div>
 

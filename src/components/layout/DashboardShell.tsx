@@ -10,7 +10,7 @@ import {
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
   ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
-  UserCheck, DollarSign, Zap, Database,
+  UserCheck, DollarSign, Zap, Database, Package,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin', icon:LayoutDashboard, en:'Dashboard', ar:'لوحة التحكم' },
       { href:'/dashboard/admin/owners', icon:Shield, en:'Owners', ar:'الملاك' },
       { href:'/dashboard/admin/subscriptions', icon:CreditCard, en:'Subscriptions', ar:'الاشتراكات' },
+      { href:'/dashboard/admin/plans', icon:Package, en:'Plans & Pricing', ar:'الخطط والأسعار' },
       { href:'/dashboard/admin/notices', icon:Bell, en:'Notices', ar:'الإشعارات' },
     ]},
     { en:'Accounts', ar:'الحسابات', items:[

@@ -140,9 +140,19 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
   const [activeTab, setActiveTab] = useState(0)
+  // Live plan prices from DB — overrides hardcoded prices in content object
+  const [livePrices, setLivePrices] = useState<Record<string,number>>({})
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
+    // Fetch live plan prices from DB
+    fetch('/api/plans').then(r => r.json()).then((data: Array<{slug:string;price_monthly:number}>) => {
+      if (Array.isArray(data)) {
+        const map: Record<string,number> = {}
+        data.forEach(p => { map[p.slug] = p.price_monthly })
+        setLivePrices(map)
+      }
+    }).catch(() => {})
   }, [])
   function toggleLang() {
     const next = lang === 'en' ? 'ar' : 'en'
@@ -507,6 +517,8 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 items-start">
             {C.pricing.plans.map((p, i) => {
+              const slugMap = ['basic','pro','enterprise']
+              const displayPrice = livePrices[slugMap[i]] ? `$${livePrices[slugMap[i]]}` : p.price
               const highlight = i === 1
               return (
                 <div key={i} className={`rounded-2xl p-8 ${highlight ? 'bg-navy-800 text-white shadow-2xl shadow-navy-900/30 ring-2 ring-gold-400 scale-105' : 'bg-white border border-slate-200'}`}>
@@ -514,7 +526,7 @@ export default function LandingPage() {
                   <div className={`text-lg font-bold mb-1 ${highlight?'text-white':'text-slate-900'}`}>{p.name}</div>
                   <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{p.desc}</div>
                   <div className="flex items-baseline gap-1 mb-8">
-                    <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{p.price}</span>
+                    <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{displayPrice}</span>
                     <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
                   </div>
                   <ul className="space-y-3 mb-8">

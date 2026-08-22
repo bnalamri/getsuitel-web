@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
-import { PLANS } from '@/lib/utils/plans'
+import { PLANS, type DbPlan } from '@/lib/utils/plans'
 import PhoneInput from '@/components/PhoneInput'
 
 const t = {
@@ -86,6 +86,10 @@ export default function RegisterPage() {
     if (params.get('from') === 'explore') {
       setStep(0)
     }
+    // Fetch live plans from DB
+    fetch('/api/plans').then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0) setPlanList(data)
+    }).catch(() => {})
   }, [])
   function toggleLang() {
     const next = lang === 'en' ? 'ar' : 'en'
@@ -100,6 +104,7 @@ export default function RegisterPage() {
   const [ownerType, setOwnerType] = useState<'individual'|'company'>('individual')
   const [crFile, setCrFile] = useState<File|null>(null)
   const [plan, setPlan] = useState('basic')
+  const [planList, setPlanList] = useState<DbPlan[]>(PLANS)
   const [inviteCode, setInviteCode] = useState('')
   const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
   const [inviteErr, setInviteErr] = useState('')
@@ -265,7 +270,7 @@ export default function RegisterPage() {
     }
   }
 
-  const selectedPlan = PLANS.find(p => p.id === plan)
+  const selectedPlan = planList.find(p => p.slug === plan)
 
   return (
     <div dir={dir} className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 flex items-center justify-center p-4">
@@ -398,18 +403,18 @@ export default function RegisterPage() {
               <h2 className="text-xl font-bold mb-1">{T.step1}</h2>
               <p className="text-slate-500 text-sm mb-5">{T.step1Sub}</p>
               <div className="space-y-3 mb-6">
-                {PLANS.map(p => (
-                  <button key={p.id} type="button" onClick={() => setPlan(p.id)}
-                    className={`w-full text-start p-4 rounded-xl border-2 transition-all ${plan===p.id ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                {planList.map(p => (
+                  <button key={p.slug} type="button" onClick={() => setPlan(p.slug)}
+                    className={`w-full text-start p-4 rounded-xl border-2 transition-all ${plan===p.slug ? 'border-navy-700 bg-navy-50' : 'border-slate-200 hover:border-slate-300'}`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-slate-900">{lang==='ar'?p.nameAr:p.nameEn}
-                          {p.popular && <span className="ml-2 text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full">{T.popular}</span>}
+                        <div className="font-semibold text-slate-900">{lang==='ar'?p.name_ar:p.name_en}
+                          {p.is_popular && <span className="ml-2 text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full">{T.popular}</span>}
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5">{lang==='ar'?p.descAr:p.descEn}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{lang==='ar'?p.desc_ar:p.desc_en}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-navy-700 text-lg">${p.price}<span className="text-xs font-normal text-slate-400">{T.perMonth}</span></div>
+                        <div className="font-bold text-navy-700 text-lg">${p.price_monthly}<span className="text-xs font-normal text-slate-400">{T.perMonth}</span></div>
                       </div>
                     </div>
                   </button>
@@ -430,7 +435,7 @@ export default function RegisterPage() {
                 <h2 className="text-xl font-bold">{T.step2}</h2>
                 {role === 'owner' && selectedPlan && (
                   <span className="ml-auto text-xs bg-navy-100 text-navy-700 px-2.5 py-1 rounded-full font-medium">
-                    {lang==='ar'?selectedPlan.nameAr:selectedPlan.nameEn}
+                    {lang==='ar'?selectedPlan.name_ar:selectedPlan.name_en}
                   </span>
                 )}
                 {role !== 'owner' && (
