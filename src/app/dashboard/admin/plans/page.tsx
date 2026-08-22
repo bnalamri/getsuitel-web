@@ -98,17 +98,33 @@ function FeaturesEditor({ value, onChange, label }: { value:string[]; onChange:(
   )
 }
 
+const SLUG_OPTIONS = [
+  { value:'basic',      label:'basic — Basic plan' },
+  { value:'pro',        label:'pro — Pro plan' },
+  { value:'enterprise', label:'enterprise — Enterprise plan' },
+]
+
 function PlanEditor({ plan, onSave, onCancel, saving, currency }:
   { plan:Partial<Plan>; onSave:(p:Partial<Plan>)=>void; onCancel:()=>void; saving:boolean; currency:string }) {
   const [p, setP] = useState<Partial<Plan>>(plan)
   const set = (k: keyof Plan, v: unknown) => setP(prev => ({...prev,[k]:v}))
+  const isNew = !plan.id
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Slug (unique key)</label>
-          <input className="input" value={p.slug??''} onChange={e=>set('slug',e.target.value)} placeholder="e.g. pro"/>
+          {isNew ? (
+            <select className="input" value={p.slug??''} onChange={e=>set('slug',e.target.value)}>
+              <option value="" disabled>Select slug…</option>
+              {SLUG_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="input bg-slate-50 text-slate-500 font-mono cursor-not-allowed select-none">{p.slug}</div>
+          )}
         </div>
         <div>
           <label className="label">Price / month ({currency})</label>
