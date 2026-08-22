@@ -577,7 +577,7 @@ export default function LandingPage() {
                     <div className="text-2xl font-black text-white mb-2">{exName}</div>
                     <div className="text-white/60 text-sm leading-relaxed">{exDesc}</div>
                     <div className="mt-4">
-                      {exPrice != null
+                      {exPrice != null && exPrice > 0
                         ? <span className="text-3xl font-black text-gold-400">{exPrice} <span className="text-lg font-normal">{C.pricing.month}</span></span>
                         : <span className="text-3xl font-black text-gold-400">{C.pricing.exclusive.price}</span>
                       }
