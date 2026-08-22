@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   Loader2, Save, Plus, X, ChevronDown, ChevronUp,
-  ToggleLeft, ToggleRight, Package, Star,
+  ToggleLeft, ToggleRight, Package, Star, ArrowUp, ArrowDown,
 } from 'lucide-react'
 
 type Plan = {
@@ -63,36 +63,78 @@ function LimitInput({ label, value, onChange }: { label:string; value:number; on
   )
 }
 
-function FeaturesEditor({ value, onChange, label }: { value:string[]; onChange:(v:string[])=>void; label:string }) {
-  const [draft, setDraft] = useState('')
+function FeaturesPairEditor({
+  en, ar, onChangeEn, onChangeAr,
+}: { en:string[]; ar:string[]; onChangeEn:(v:string[])=>void; onChangeAr:(v:string[])=>void }) {
+  // Ensure both arrays are same length
+  const len = Math.max(en.length, ar.length)
+  const rows = Array.from({length: len}, (_, i) => ({ en: en[i]??'', ar: ar[i]??'' }))
+
+  const update = (i:number, field:'en'|'ar', val:string) => {
+    const next = [...rows]
+    next[i] = {...next[i], [field]: val}
+    onChangeEn(next.map(r=>r.en))
+    onChangeAr(next.map(r=>r.ar))
+  }
+  const remove = (i:number) => {
+    const next = rows.filter((_,j)=>j!==i)
+    onChangeEn(next.map(r=>r.en))
+    onChangeAr(next.map(r=>r.ar))
+  }
+  const move = (i:number, dir:-1|1) => {
+    const next = [...rows]
+    const tmp = next[i]; next[i] = next[i+dir]; next[i+dir] = tmp
+    onChangeEn(next.map(r=>r.en))
+    onChangeAr(next.map(r=>r.ar))
+  }
+  const add = () => {
+    onChangeEn([...en, ''])
+    onChangeAr([...ar, ''])
+  }
+
   return (
-    <div>
-      <label className="label text-xs">{label}</label>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {value.map((f,i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 rounded-full px-2.5 py-0.5 text-xs">
-            {f}
-            <button type="button" onClick={() => onChange(value.filter((_,j)=>j!==i))}>
-              <X size={10}/>
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          className="input text-sm flex-1"
-          placeholder="Add feature…"
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if(e.key==='Enter'&&draft.trim()){onChange([...value,draft.trim()]);setDraft('')} }}
-        />
-        <button
-          type="button"
-          className="btn-secondary px-3 text-sm"
-          onClick={() => { if(draft.trim()){onChange([...value,draft.trim()]);setDraft('')} }}
-        >
-          Add
+    <div className="col-span-2">
+      <div className="flex items-center justify-between mb-2">
+        <label className="label mb-0">Features</label>
+        <button type="button" onClick={add} className="btn-secondary text-xs px-3 py-1 flex items-center gap-1">
+          <Plus size={12}/> Add feature
         </button>
+      </div>
+      {rows.length === 0 && (
+        <p className="text-xs text-slate-400 text-center py-3 border border-dashed border-slate-200 rounded-xl">No features yet — click "Add feature"</p>
+      )}
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
+            <span className="text-xs text-slate-400 w-5 text-center flex-shrink-0">{i+1}</span>
+            <input
+              className="input text-sm flex-1 bg-white"
+              placeholder="English feature…"
+              value={row.en}
+              onChange={e=>update(i,'en',e.target.value)}
+            />
+            <input
+              className="input text-sm flex-1 bg-white text-right"
+              dir="rtl"
+              placeholder="…الميزة بالعربية"
+              value={row.ar}
+              onChange={e=>update(i,'ar',e.target.value)}
+            />
+            <div className="flex flex-col gap-0.5 flex-shrink-0">
+              <button type="button" disabled={i===0} onClick={()=>move(i,-1)}
+                className="text-slate-300 hover:text-slate-600 disabled:opacity-20">
+                <ArrowUp size={13}/>
+              </button>
+              <button type="button" disabled={i===rows.length-1} onClick={()=>move(i,1)}
+                className="text-slate-300 hover:text-slate-600 disabled:opacity-20">
+                <ArrowDown size={13}/>
+              </button>
+            </div>
+            <button type="button" onClick={()=>remove(i)} className="text-slate-300 hover:text-red-400 flex-shrink-0">
+              <X size={14}/>
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -187,10 +229,10 @@ function PlanEditor({ plan, onSave, onCancel, saving, currency }:
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FeaturesEditor label="Features (English)" value={p.features_en??[]}
-          onChange={v=>set('features_en',v)}/>
-        <FeaturesEditor label="Features (Arabic)" value={p.features_ar??[]}
-          onChange={v=>set('features_ar',v)}/>
+        <FeaturesPairEditor
+          en={p.features_en??[]} ar={p.features_ar??[]}
+          onChangeEn={v=>set('features_en',v)} onChangeAr={v=>set('features_ar',v)}
+        />
       </div>
 
       <div className="flex gap-6">
