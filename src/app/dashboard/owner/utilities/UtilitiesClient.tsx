@@ -253,8 +253,8 @@ export default function UtilitiesClient({
 
     setLoading(false)
 
-    const actionMsg = json.action === 'invoiced'
-      ? '✓ Bill saved — tenant invoice created'
+    const actionMsg = json.action === 'notified'
+      ? '✓ Bill saved — tenant notified by email'
       : '✓ Bill saved — click "Mark Paid" when you settle it'
 
     setSuccess(actionMsg)
@@ -335,7 +335,9 @@ export default function UtilitiesClient({
                 </tr>
               )}
               {bills.map(b => {
-                const chip = STATUS_CHIP[b.status] ?? { label: b.status, cls: 'bg-slate-50 text-slate-500 border-slate-200' }
+                const chip = (b.status === 'pending' && b.billed_to === 'tenant')
+                  ? { label: 'Notified', cls: 'bg-blue-50 text-blue-700 border-blue-200' }
+                  : STATUS_CHIP[b.status] ?? { label: b.status, cls: 'bg-slate-50 text-slate-500 border-slate-200' }
                 const isElec = b.utility_type === 'electricity'
                 const isWifi = b.utility_type === 'internet'
                 return (
@@ -398,7 +400,7 @@ export default function UtilitiesClient({
                             View Attachment
                           </a>
                         )}
-                        {b.status === 'pending' && (
+                        {b.status === 'pending' && b.billed_to !== 'tenant' && (
                           <button
                             onClick={() => markPaid(b.id)}
                             className="text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-400 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"

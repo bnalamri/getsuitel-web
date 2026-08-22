@@ -149,77 +149,62 @@ export async function POST(req: Request) {
   const utilityLabel = utility_type === 'water' ? 'Water' : utility_type === 'electricity' ? 'Electricity' : 'Internet'
 
   if (!isGeneral && billed_to === 'tenant' && tenant_id) {
-    // Create tenant invoice
-    const { data: inv, error: invErr } = await admin
-      .from('invoices')
-      .insert({
-        organization_id: profile.organization_id,
-        tenant_id,
-        unit_id,
-        type:     'utility',
-        amount:   Number(amount),
-        currency: currency ?? 'OMR',
-        due_date,
-        status:   'sent',
-        notes:    `${utilityLabel} bill for period ending ${bill_date}${notes ? ` — ${notes}` : ''}`,
-      })
-      .select('id')
-      .single()
+    // Tenant pays utility company directly — no invoice created in GetSuitel.
+    // Just notify the tenant by email so they know the amount and due date.
+    try {
+      const { data: tenantRow } = await admin
+        .from('tenants')
+        .select('full_name, email')
+        .eq('id', tenant_id)
+        .single()
 
-    if (!invErr && inv) {
-      await admin
-        .from('utility_bills')
-        .update({ status: 'invoiced', invoice_id: inv.id })
-        .eq('id', bill.id)
+      const { data: unitRow } = await admin
+        .from('units')
+        .select('unit_number, properties(name)')
+        .eq('id', unit_id)
+        .single()
 
-      // Notify tenant by email
-      try {
-        const { data: tenantRow } = await admin
-          .from('tenants')
-          .select('full_name, email')
-          .eq('id', tenant_id)
-          .single()
+      if (tenantRow?.email) {
+        const unitLabel = `${(unitRow?.properties as { name: string } | null)?.name ?? ''} — Unit ${unitRow?.unit_number ?? ''}`
+        const amountFmt = `${Number(amount).toFixed(3)} ${currency ?? 'OMR'}`
+        const extraRows = [
+          consumer_no   ? `<tr><td style="color:#64748b;padding:4px 16px 4px 0">Consumer No.</td><td style="font-weight:600">${consumer_no}</td></tr>` : '',
+          meter_number  ? `<tr><td style="color:#64748b;padding:4px 16px 4px 0">${utility_type === 'internet' ? 'Phone #' : 'Meter #'}</td><td style="font-weight:600">${meter_number}</td></tr>` : '',
+          notes         ? `<tr><td style="color:#64748b;padding:4px 16px 4px 0">Notes</td><td style="font-weight:600">${notes}</td></tr>` : '',
+        ].join('')
 
-        const { data: unitRow } = await admin
-          .from('units')
-          .select('unit_number, properties(name)')
-          .eq('id', unit_id)
-          .single()
+        const html = emailHtml('#1e40af', `${utilityLabel} Bill Notification`, `
+          <div style="font-size:15px;color:#334155;line-height:1.8">
+            Dear ${tenantRow.full_name},<br><br>
+            A ${utilityLabel.toLowerCase()} bill has been received for your unit.
+            Please pay this bill directly to the utility company by the due date.<br><br>
+            <table style="font-size:14px;border-collapse:collapse">
+              <tr><td style="color:#64748b;padding:4px 16px 4px 0">Type</td><td style="font-weight:600">${utilityLabel}</td></tr>
+              <tr><td style="color:#64748b;padding:4px 16px 4px 0">Amount</td><td style="font-weight:600">${amountFmt}</td></tr>
+              <tr><td style="color:#64748b;padding:4px 16px 4px 0">Bill Date</td><td style="font-weight:600">${fmtDate(bill_date)}</td></tr>
+              <tr><td style="color:#64748b;padding:4px 16px 4px 0">Due Date</td><td style="font-weight:600">${fmtDate(due_date)}</td></tr>
+              <tr><td style="color:#64748b;padding:4px 16px 4px 0">Unit</td><td style="font-weight:600">${unitLabel}</td></tr>
+              ${extraRows}
+            </table>
+            <p style="margin-top:16px;font-size:13px;color:#64748b">
+              Please pay this amount directly to the utility company.
+              If you have any questions, contact your property manager.
+            </p>
+          </div>`)
 
-        if (tenantRow?.email) {
-          const unitLabel  = `${(unitRow?.properties as { name: string } | null)?.name ?? ''} — Unit ${unitRow?.unit_number ?? ''}`
-          const amountFmt  = `${Number(amount).toFixed(3)} ${currency ?? 'OMR'}`
-          const html = emailHtml('#1e40af', 'Utility Bill Invoice', `
-            <div style="font-size:15px;color:#334155;line-height:1.8">
-              Dear ${tenantRow.full_name},<br><br>
-              A new utility bill has been issued for your unit.<br><br>
-              <table style="font-size:14px;border-collapse:collapse">
-                <tr><td style="color:#64748b;padding:4px 16px 4px 0">Type</td><td style="font-weight:600">${utilityLabel}</td></tr>
-                <tr><td style="color:#64748b;padding:4px 16px 4px 0">Amount</td><td style="font-weight:600">${amountFmt}</td></tr>
-                <tr><td style="color:#64748b;padding:4px 16px 4px 0">Due Date</td><td style="font-weight:600">${fmtDate(due_date)}</td></tr>
-                <tr><td style="color:#64748b;padding:4px 16px 4px 0">Unit</td><td style="font-weight:600">${unitLabel}</td></tr>
-              </table>
-            </div>
-            <div style="margin-top:24px">
-              <a href="${APP_URL}/dashboard/tenant/invoices"
-                 style="display:inline-block;background:#1e40af;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
-                View &amp; Pay
-              </a>
-            </div>`)
-
-          await resend.emails.send({
-            from:    'GetSuitel <noreply@getsuitel.com>',
-            to:      [tenantRow.email],
-            subject: `${utilityLabel} bill — ${amountFmt} due ${fmtDate(due_date)} — ${unitRow?.unit_number ?? ''}`,
-            html,
-          })
-        }
-      } catch (_) {
-        // Email failure should not block the response
+        await resend.emails.send({
+          from:    'GetSuitel <noreply@getsuitel.com>',
+          to:      [tenantRow.email],
+          subject: `${utilityLabel} bill — ${amountFmt} due ${fmtDate(due_date)} — ${unitRow?.unit_number ?? ''}`,
+          html,
+        })
       }
+    } catch (_) {
+      // Email failure should not block the response
     }
 
-    return NextResponse.json({ ok: true, id: bill.id, invoice_id: inv?.id ?? null, action: 'invoiced' })
+    // Bill stays as 'pending' — a record/tracker for the owner; tenant pays utility company directly
+    return NextResponse.json({ ok: true, id: bill.id, action: 'notified' })
   }
 
   // Owner bill — stays pending until owner marks it paid
