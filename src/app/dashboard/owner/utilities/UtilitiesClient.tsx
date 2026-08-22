@@ -566,7 +566,7 @@ export default function UtilitiesClient({
                   </div>
                   {billedTo === 'tenant' && activeContract && (
                     <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1">
-                      <CheckCircle2 size={11}/> Will generate an invoice for {activeContract.tenants?.full_name ?? 'tenant'}
+                      <CheckCircle2 size={11}/> Tenant will be notified by email — {activeContract.tenants?.full_name ?? 'tenant'} pays utility company directly
                     </p>
                   )}
                   {billedTo === 'owner' && (
