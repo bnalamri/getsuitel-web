@@ -58,6 +58,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
       { href:'/dashboard/owner/utilities', icon:Zap, en:'Utility Bills', ar:'فواتير المرافق' },
       { href:'/dashboard/owner/utility-accounts', icon:Database, en:'Utility Accounts', ar:'حسابات المرافق' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -65,7 +66,6 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
-      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
     ]},
     { en:'Advanced Reports', ar:'تقارير متقدمة', items:[
@@ -124,6 +124,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/units', icon:DoorOpen, en:'Units', ar:'الوحدات' },
       { href:'/dashboard/owner/tenants', icon:Users, en:'Tenants', ar:'المستأجرون' },
       { href:'/dashboard/owner/contracts', icon:FileText, en:'Contracts', ar:'العقود' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -131,7 +132,6 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
-      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
       { href:'/dashboard/owner/reports/vacancy', icon:Building2, en:'Vacancy Duration', ar:'مدة الشغور' },
       { href:'/dashboard/owner/reports/lease-pipeline', icon:CalendarCheck, en:'Lease Renewal Pipeline', ar:'خط تجديد العقود' },
@@ -160,6 +160,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/payments', icon:CreditCard, en:'Payments', ar:'المدفوعات' },
       { href:'/dashboard/owner/utilities', icon:Zap, en:'Utility Bills', ar:'فواتير المرافق' },
       { href:'/dashboard/owner/utility-accounts', icon:Database, en:'Utility Accounts', ar:'حسابات المرافق' },
+      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
     ]},
     { en:'Reports', ar:'التقارير', items:[
       { href:'/dashboard/owner/reports', icon:BarChart2, en:'Analytics', ar:'التحليلات' },
@@ -167,7 +168,6 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/monthly', icon:CalendarCheck, en:'Monthly Statement', ar:'الكشف الشهري', newTab:true },
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
-      { href:'/dashboard/owner/expenses', icon:Receipt, en:'Expenses', ar:'المصروفات' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
       { href:'/dashboard/owner/reports/payment-aging', icon:AlertTriangle, en:'Payment Aging', ar:'تقادم المدفوعات' },
       { href:'/dashboard/owner/reports/noi', icon:TrendingUp, en:'NOI Report', ar:'صافي الدخل التشغيلي' },
