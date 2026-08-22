@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   Loader2, Save, Plus, X, ChevronDown, ChevronUp,
-  ToggleLeft, ToggleRight, DollarSign, Package, Star,
+  ToggleLeft, ToggleRight, Package, Star,
 } from 'lucide-react'
 
 type Plan = {
@@ -34,9 +34,14 @@ const DEFAULT_PLAN: Omit<Plan,'id'> = {
   is_popular:false, is_active:true, sort_order:99,
 }
 
-function currencySymbol(c: string) {
-  const map: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', OMR:'OMR', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
-  return map[c] ?? c
+const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
+
+function CurrencyIcon({ code, light = false }: { code: string; light?: boolean }) {
+  if (code === 'OMR') return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={light ? '/currency/omr_light.png' : '/currency/omr_dark.png'} alt="OMR" style={{ height:'0.75em', width:'auto', display:'inline' }} />
+  )
+  return <span>{CURRENCY_TEXT[code] ?? code}</span>
 }
 
 function LimitInput({ label, value, onChange }: { label:string; value:number; onChange:(v:number)=>void }) {
@@ -108,7 +113,7 @@ function PlanEditor({ plan, onSave, onCancel, saving, currency }:
         <div>
           <label className="label">Price / month ({currency})</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-medium">{currencySymbol(currency)}</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center"><CurrencyIcon code={currency} /></span>
             <input type="number" className="input pl-8" value={p.price_monthly??0}
               onChange={e=>set('price_monthly',Number(e.target.value))} min={0}/>
           </div>
@@ -327,7 +332,7 @@ export default function PlansPage() {
 
                   <div className="flex items-center gap-6 text-sm flex-shrink-0">
                     <div className="text-center">
-                      <p className="font-bold text-slate-900 text-lg">{currencySymbol(currency)} {plan.price_monthly}<span className="text-xs text-slate-400 font-normal">/mo</span></p>
+                      <p className="font-bold text-slate-900 text-lg inline-flex items-center gap-1"><CurrencyIcon code={currency} />{plan.price_monthly}<span className="text-xs text-slate-400 font-normal">/mo</span></p>
                     </div>
                     <div className="text-center hidden sm:block">
                       <p className="text-xs text-slate-400 uppercase tracking-wide">Properties</p>
