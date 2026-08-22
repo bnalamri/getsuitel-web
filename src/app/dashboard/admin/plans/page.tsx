@@ -99,10 +99,11 @@ function FeaturesEditor({ value, onChange, label }: { value:string[]; onChange:(
 }
 
 const SLUG_OPTIONS = [
-  { value:'basic',      label:'basic — Basic plan' },
-  { value:'pro',        label:'pro — Pro plan' },
-  { value:'enterprise', label:'enterprise — Enterprise plan' },
+  { value:'basic',      label:'basic — Basic plan',      sort:1 },
+  { value:'pro',        label:'pro — Pro plan',          sort:2 },
+  { value:'enterprise', label:'enterprise — Enterprise plan', sort:3 },
 ]
+const SLUG_SORT: Record<string,number> = { basic:1, pro:2, enterprise:3 }
 
 function PlanEditor({ plan, onSave, onCancel, saving, currency }:
   { plan:Partial<Plan>; onSave:(p:Partial<Plan>)=>void; onCancel:()=>void; saving:boolean; currency:string }) {
@@ -116,7 +117,10 @@ function PlanEditor({ plan, onSave, onCancel, saving, currency }:
         <div>
           <label className="label">Slug (unique key)</label>
           {isNew ? (
-            <select className="input" value={p.slug??''} onChange={e=>set('slug',e.target.value)}>
+            <select className="input" value={p.slug??''} onChange={e => {
+              const slug = e.target.value
+              setP(prev => ({...prev, slug, sort_order: SLUG_SORT[slug] ?? prev.sort_order}))
+            }}>
               <option value="" disabled>Select slug…</option>
               {SLUG_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -202,8 +206,9 @@ function PlanEditor({ plan, onSave, onCancel, saving, currency }:
         </label>
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-700">Sort order</label>
-          <input type="number" className="input w-20 text-sm" value={p.sort_order??0}
-            onChange={e=>set('sort_order',Number(e.target.value))}/>
+          <div className="input w-20 text-sm bg-slate-50 text-slate-500 cursor-not-allowed select-none">
+            {p.slug ? (SLUG_SORT[p.slug] ?? p.sort_order ?? '—') : '—'}
+          </div>
         </div>
       </div>
 
