@@ -522,11 +522,15 @@ export default function LandingPage() {
             <p className="text-xl text-slate-500">{C.pricing.sub}</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8 items-start">
-            {(dbPlans.length === 3 ? dbPlans : C.pricing.plans).map((item, i) => {
-              const db = dbPlans.length === 3 ? dbPlans[i] : null
+            {(() => {
+              const stdSlugs = ['basic','pro','enterprise']
+              const stdPlans = stdSlugs.map(s => dbPlans.find(p => p.slug === s) ?? null)
+              const hasAll = stdPlans.every(Boolean)
+              return C.pricing.plans.map((item, i) => {
+              const db = hasAll ? stdPlans[i] : null
               const displayName    = db ? (lang==='ar' ? db.name_ar    : db.name_en)    : (item as {name:string}).name
               const displayDesc    = db ? (lang==='ar' ? db.desc_ar    : db.desc_en)    : (item as {desc:string}).desc
-              const displayFeatures: string[] = db ? (lang==='ar' ? db.features_ar : db.features_en) : (item as {features:string[]}).features
+              const displayFeatures: string[] = db ? (lang==='ar' ? db.features_ar : db.features_en) : [...((item as {features:readonly string[]}).features)]
               const displayNum     = db ? db.price_monthly : Number((item as {price:string}).price.replace(/[^0-9.]/g,''))
               const highlight      = db ? db.is_popular : i === 1
               const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
@@ -557,7 +561,8 @@ export default function LandingPage() {
                   </Link>
                 </div>
               )
-            })}
+            })
+            })()}
           </div>
 
           {/* Exclusive / Fully Managed plan */}
