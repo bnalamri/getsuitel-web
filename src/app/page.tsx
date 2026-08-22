@@ -140,18 +140,21 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
   const [activeTab, setActiveTab] = useState(0)
-  // Live plan prices from DB — overrides hardcoded prices in content object
+  // Live plan prices + platform currency from DB
   const [livePrices, setLivePrices] = useState<Record<string,number>>({})
+  const [platformCurrency, setPlatformCurrency] = useState('OMR')
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
-    // Fetch live plan prices from DB
     fetch('/api/plans').then(r => r.json()).then((data: Array<{slug:string;price_monthly:number}>) => {
       if (Array.isArray(data)) {
         const map: Record<string,number> = {}
         data.forEach(p => { map[p.slug] = p.price_monthly })
         setLivePrices(map)
       }
+    }).catch(() => {})
+    fetch('/api/currency').then(r => r.json()).then(d => {
+      if (d?.currency) setPlatformCurrency(d.currency)
     }).catch(() => {})
   }, [])
   function toggleLang() {
@@ -518,15 +521,23 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 items-start">
             {C.pricing.plans.map((p, i) => {
               const slugMap = ['basic','pro','enterprise']
-              const displayPrice = livePrices[slugMap[i]] ? `$${livePrices[slugMap[i]]}` : p.price
+              const liveNum = livePrices[slugMap[i]]
+              const displayNum = liveNum ?? Number(p.price.replace(/[^0-9.]/g,''))
               const highlight = i === 1
+              const currencyImgSrc = highlight ? '/currency/omr_light.png' : '/currency/omr_dark.png'
+              const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
               return (
                 <div key={i} className={`rounded-2xl p-8 ${highlight ? 'bg-navy-800 text-white shadow-2xl shadow-navy-900/30 ring-2 ring-gold-400 scale-105' : 'bg-white border border-slate-200'}`}>
                   {highlight && <div className="bg-gold-400 text-navy-900 text-xs font-black px-3 py-1 rounded-full w-fit mb-4">{C.pricing.popular}</div>}
                   <div className={`text-lg font-bold mb-1 ${highlight?'text-white':'text-slate-900'}`}>{p.name}</div>
                   <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{p.desc}</div>
-                  <div className="flex items-baseline gap-1 mb-8">
-                    <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{displayPrice}</span>
+                  <div className="flex items-baseline gap-2 mb-8">
+                    {platformCurrency === 'OMR'
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={currencyImgSrc} alt="OMR" style={{height:'2.5rem',width:'auto',marginBottom:'0.25rem'}} />
+                      : <span className={`text-4xl font-black ${highlight?'text-white':'text-slate-900'}`}>{CURRENCY_TEXT[platformCurrency] ?? platformCurrency}</span>
+                    }
+                    <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{displayNum}</span>
                     <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
                   </div>
                   <ul className="space-y-3 mb-8">
