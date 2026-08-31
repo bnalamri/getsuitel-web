@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { Building2, Users, DollarSign, TrendingUp, AlertCircle } from 'lucide-react'
+import { Building2, Users, TrendingUp, AlertCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+
+// Wraps OmrSymbol so it can be passed as a StatCard icon slot
+const OmrIcon = (_: { className?: string }) => <OmrSymbol variant="dark" size={24} />
 
 async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const [branches, orgs, billing] = await Promise.all([
@@ -49,7 +52,7 @@ export default async function HQDashboardPage() {
           sub={`${stats.totalBranches} total`} color="yellow" />
         <StatCard icon={Users} label="Total Orgs" value={stats.totalOrgs}
           sub="across all branches" color="blue" />
-        <StatCard icon={DollarSign} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
+        <StatCard icon={OmrIcon} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
           sub="all billing records" color="green" />
         <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
           sub="branch billing" color="red" />

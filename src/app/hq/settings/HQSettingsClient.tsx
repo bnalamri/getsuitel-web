@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Shield, KeyRound, Eye, EyeOff, Globe, Languages,
-  ExternalLink, Loader2, Save, Calendar, DollarSign, Download,
+  ExternalLink, Loader2, Save, Calendar, Download,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
@@ -232,7 +232,7 @@ export default function HQSettingsClient({
           </div>
           {cfgMsg && <Msg ok={cfgMsg.ok} text={cfgMsg.text} />}
           <button type="submit" disabled={cfgLoading} className={btn}>
-            {cfgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+            {cfgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <OmrSymbol variant="dark" size={16} />}
             {cfgMsg?.ok ? 'Saved!' : 'Save Defaults'}
           </button>
         </form>

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, DollarSign, AlertCircle } from 'lucide-react'
+import { CreditCard, AlertCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 export default async function HQBillingPage() {
@@ -27,7 +27,7 @@ export default async function HQBillingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-lg bg-green-100 flex items-center justify-center">
-            <DollarSign className="w-6 h-6 text-green-700" />
+            <OmrSymbol variant="dark" size={24} />
           </div>
           <div>
             <p className="text-xs text-gray-500 flex items-center gap-1">Total Collected <OmrSymbol variant="dark" size={13} /></p>

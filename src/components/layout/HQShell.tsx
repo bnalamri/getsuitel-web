@@ -6,8 +6,14 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Building2, CreditCard, BarChart2,
   Settings, LogOut, Menu, X, ChevronLeft, ChevronRight,
-  Globe, TrendingUp, DollarSign, Users, Bell,
+  Globe, TrendingUp, Users, Bell,
 } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
+
+// Nav icon wrapper for OmrSymbol — accepts className for consistent sizing
+const OmrNavIcon = ({ className }: { className?: string }) => (
+  <OmrSymbol variant="white" size={20} className={className} />
+)
 
 type Profile = { id: string; full_name: string | null; email: string; role: string; avatar_url?: string | null }
 
@@ -22,7 +28,7 @@ const NAV: NavGroup[] = [
   ]},
   { label: 'Finance', items: [
     { href: '/hq/billing',          icon: CreditCard,  label: 'Branch Billing'   },
-    { href: '/hq/billing/revenue',  icon: DollarSign,  label: 'Revenue Overview' },
+    { href: '/hq/billing/revenue',  icon: OmrNavIcon,  label: 'Revenue Overview' },
   ]},
   { label: 'Reports', items: [
     { href: '/hq/reports',           icon: BarChart2,   label: 'Platform Reports' },
@@ -74,7 +80,9 @@ export default function HQShell({ profile, children }: { profile: Profile; child
             )}
             <div className="space-y-0.5">
               {group.items.map(item => {
-                const active = pathname === item.href || (item.href.length > 4 && pathname.startsWith(item.href + '/'))
+                const allHrefs = NAV.flatMap(g => g.items.map(i => i.href))
+                const exactMatch = allHrefs.includes(pathname)
+                const active = pathname === item.href || (!exactMatch && item.href.length > 4 && pathname.startsWith(item.href + '/'))
                 return (
                   <Link
                     key={item.href}
