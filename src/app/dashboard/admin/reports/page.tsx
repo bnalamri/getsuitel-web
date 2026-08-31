@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { BarChart2, TrendingUp, CreditCard } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
 import PrintButton from '@/components/PrintButton'
@@ -17,15 +18,23 @@ export default async function AdminReportsPage() {
   const printerName = (adminProfile?.full_name as string) || user?.email || 'Superadmin'
 
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
+  // Get branch org IDs for filtering child tables
+  const branchOrgIds = branchId
+    ? ((await admin.from('organizations').select('id').eq('branch_id', branchId)).data ?? []).map((o: { id: string }) => o.id)
+    : null
+  const safeIds = branchOrgIds && branchOrgIds.length > 0 ? branchOrgIds : ['']
+
+  const orgQ = admin.from('organizations').select('subscription_plan, subscription_status, subscription_expires_at, created_at')
   const [orgs, props, units, tenants, contracts, maintenance, proofs] = await Promise.all([
-    admin.from('organizations').select('subscription_plan, subscription_status, subscription_expires_at, created_at'),
-    admin.from('properties').select('id, created_at'),
-    admin.from('units').select('id, status'),
-    admin.from('tenants').select('id, created_at'),
-    admin.from('contracts').select('id, status'),
-    admin.from('maintenance_requests').select('id, status, priority'),
-    admin.from('subscription_payment_proofs').select('id, status, submitted_at'),
+    branchId ? orgQ.eq('branch_id', branchId) : orgQ,
+    branchOrgIds ? admin.from('properties').select('id, created_at').in('organization_id', safeIds) : admin.from('properties').select('id, created_at'),
+    branchOrgIds ? admin.from('units').select('id, status').in('organization_id', safeIds) : admin.from('units').select('id, status'),
+    branchOrgIds ? admin.from('tenants').select('id, created_at').in('organization_id', safeIds) : admin.from('tenants').select('id, created_at'),
+    branchOrgIds ? admin.from('contracts').select('id, status').in('organization_id', safeIds) : admin.from('contracts').select('id, status'),
+    branchOrgIds ? admin.from('maintenance_requests').select('id, status, priority').in('organization_id', safeIds) : admin.from('maintenance_requests').select('id, status, priority'),
+    branchOrgIds ? admin.from('subscription_payment_proofs').select('id, status, submitted_at').in('organization_id', safeIds) : admin.from('subscription_payment_proofs').select('id, status, submitted_at'),
   ])
 
   const orgList = orgs.data ?? []

@@ -50,7 +50,7 @@ export default async function AdminSettingsPage() {
         <p className="text-xs text-slate-400 mt-2">Branch assignment is managed by HQ. Contact your HQ administrator to change this.</p>
       </div>
 
-      <AdminSettingsForm profile={profile} />
+      <AdminSettingsForm profile={profile} branchDisplayName={branch?.display_name ?? null} />
     </div>
   )
 }

@@ -26,19 +26,12 @@ const TIMEZONES = [
 
 const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']
 
-export default function AdminSettingsForm({ profile }: { profile: Record<string, unknown> | null }) {
+export default function AdminSettingsForm({ profile, branchDisplayName }: { profile: Record<string, unknown> | null; branchDisplayName?: string | null }) {
   const [loading, setLoading]   = useState(false)
   const [saved, setSaved]       = useState(false)
   const router = useRouter()
   const { lang, setLang } = useShell()
   const [fullName, setFullName] = useState((profile?.full_name as string) ?? '')
-
-  // ── Branch identity state ────────────────────────────────────────────────
-  const [branchName,     setBranchName]     = useState((profile?.branch_name as string) ?? '')
-  const [branchLogoUrl,  setBranchLogoUrl]  = useState((profile?.branch_logo_url as string) ?? '')
-  const [branchLoading,  setBranchLoading]  = useState(false)
-  const [branchSaved,    setBranchSaved]    = useState(false)
-  const [branchError,    setBranchError]    = useState('')
 
   // ── Platform settings state ──────────────────────────────────────────────
   const [platformCurrency,   setPlatformCurrency]   = useState('OMR')
@@ -130,19 +123,6 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
     await supabase.from('profiles').update({ lang_pref: newLang }).eq('id', profile?.id as string)
   }
 
-  async function handleBranchIdentity(e: React.FormEvent) {
-    e.preventDefault(); setBranchError('')
-    setBranchLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.from('profiles')
-      .update({ branch_name: branchName || null, branch_logo_url: branchLogoUrl || null })
-      .eq('id', profile?.id as string)
-    setBranchLoading(false)
-    if (error) { setBranchError(error.message); return }
-    setBranchSaved(true); setTimeout(() => setBranchSaved(false), 3000)
-    router.refresh()
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -168,36 +148,19 @@ export default function AdminSettingsForm({ profile }: { profile: Record<string,
   return (
     <div className="space-y-6">
 
-      {/* ── Branch Identity ── */}
-      <div className="card p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Building2 size={16} className="text-gold-600" />
-          <h3 className="font-semibold text-slate-900">Branch Identity</h3>
+      {/* ── Branch Identity — read-only, set by HQ ── */}
+      {branchDisplayName && (
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 size={16} className="text-gold-600" />
+            <h3 className="font-semibold text-slate-900">Branch Identity</h3>
+          </div>
+          <div className="bg-slate-50 rounded-xl px-4 py-3 mt-3">
+            <p className="text-sm font-semibold text-slate-900">GetSuitel — {branchDisplayName} Branch</p>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Branch identity is set by HQ and cannot be changed here.</p>
         </div>
-        <p className="text-xs text-slate-500 mb-4">
-          Configure your GetSuitel branch. Your sidebar will display <strong>GetSuitel — [Branch Name] Branch</strong>.
-          Leave blank to show the standard GetSuitel branding.
-        </p>
-        <form onSubmit={handleBranchIdentity} className="space-y-4">
-          <div>
-            <label className="label">Branch Name</label>
-            <input className="input" value={branchName} onChange={e => setBranchName(e.target.value)}
-              placeholder="e.g. Riyadh, Dubai, Kuwait City" />
-            <p className="text-xs text-slate-400 mt-1">Displayed as: GetSuitel — {branchName || 'Riyadh'} Branch</p>
-          </div>
-          <div>
-            <label className="label">Branch Logo URL <span className="text-slate-400 font-normal">(optional co-brand)</span></label>
-            <input className="input" value={branchLogoUrl} onChange={e => setBranchLogoUrl(e.target.value)}
-              placeholder="https://yourbrand.com/logo.png" />
-          </div>
-          {branchError && <p className="text-red-600 text-sm">{branchError}</p>}
-          <button type="submit" disabled={branchLoading}
-            className="btn-primary flex items-center gap-2 text-sm">
-            {branchLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {branchSaved ? 'Saved!' : 'Save Branch Identity'}
-          </button>
-        </form>
-      </div>
+      )}
 
       {/* ── Platform Settings ── */}
       <div className="card p-6">

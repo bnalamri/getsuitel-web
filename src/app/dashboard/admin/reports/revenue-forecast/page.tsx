@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { AlertTriangle, TrendingUp, RefreshCw, Coins } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
@@ -27,22 +28,18 @@ export default async function RevenueForecastPage() {
   const printerName = (adminProfile?.full_name as string) || user.email || 'Superadmin'
 
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Fetch admin org's currency setting
-  const { data: adminOrg } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
-  let adminCurrency = 'OMR'
-  if (adminOrg?.organization_id) {
-    const { data: orgData } = await supabase.from('organizations').select('default_currency').eq('id', adminOrg.organization_id).single()
-    adminCurrency = (orgData as any)?.default_currency ?? 'OMR'
-  }
+  const adminCurrency = 'OMR'
 
-  const { data: orgs } = await admin
+  const orgQ = admin
     .from('organizations')
     .select('id, name, subscription_plan, subscription_status, subscription_expires_at')
     .not('subscription_status', 'in', '("canceled")')
     .order('subscription_expires_at', { ascending: true })
+  const { data: orgs } = await (branchId ? orgQ.eq('branch_id', branchId) : orgQ)
 
   const orgList = (orgs ?? []) as {
     id: string; name: string; subscription_plan: string;

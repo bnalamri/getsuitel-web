@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { Mail, Clock, CheckCircle } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
 import RevokeButton from './RevokeButton'
@@ -15,11 +16,21 @@ const roleColor: Record<string, string> = {
 export default async function InvitationsPage() {
   noStore()
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
-  const { data: invites } = await admin
+  // Get branch org IDs to scope invitations
+  const branchOrgIds = branchId
+    ? ((await admin.from('organizations').select('id').eq('branch_id', branchId)).data ?? []).map((o: { id: string }) => o.id)
+    : null
+  const safeIds = branchOrgIds && branchOrgIds.length > 0 ? branchOrgIds : ['']
+
+  const inviteQ = admin
     .from('staff_invitations')
     .select('*, organizations(name)')
     .order('created_at', { ascending: false })
+  const { data: invites } = await (branchOrgIds
+    ? inviteQ.in('organization_id', safeIds)
+    : inviteQ)
 
   const list    = invites ?? []
   const pending = list.filter(i => i.status === 'pending' && new Date(i.expires_at) > new Date())

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { ShieldOff } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
 import { UsersTable } from './UsersTable'
@@ -17,13 +18,23 @@ const roleColor: Record<string, string> = {
 export default async function UsersPage() {
   noStore()
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
-  // Fetch all profiles with org name
-  const { data: profiles, error: profilesError } = await admin
+  // Get branch org IDs to scope users
+  const branchOrgIds = branchId
+    ? ((await admin.from('organizations').select('id').eq('branch_id', branchId)).data ?? []).map((o: { id: string }) => o.id)
+    : null
+  const safeIds = branchOrgIds && branchOrgIds.length > 0 ? branchOrgIds : ['']
+
+  // Fetch profiles scoped to this branch's orgs
+  const profileQ = admin
     .from('profiles')
     .select('id, full_name, email, phone, role, organization_id, created_at, organizations!organization_id(name)')
     .neq('role', 'superadmin')
     .order('created_at', { ascending: false })
+  const { data: profiles, error: profilesError } = await (branchOrgIds
+    ? profileQ.in('organization_id', safeIds)
+    : profileQ)
 
   if (profilesError) console.error('Users page profiles error:', profilesError)
 

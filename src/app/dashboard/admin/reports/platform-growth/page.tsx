@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { TrendingUp, Building2, UserCheck, XCircle } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
@@ -15,14 +16,16 @@ export default async function PlatformGrowthPage() {
   const printerName = (adminProfile?.full_name as string) || user.email || 'Superadmin'
 
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Fetch all orgs
-  const { data: orgs } = await admin
+  // Fetch orgs scoped to this branch
+  const orgQ = admin
     .from('organizations')
     .select('id, created_at, subscription_status, subscription_plan, canceled_at')
     .order('created_at', { ascending: true })
+  const { data: orgs } = await (branchId ? orgQ.eq('branch_id', branchId) : orgQ)
 
   const orgList = (orgs ?? []) as {
     id: string; created_at: string; subscription_status: string;
