@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { Building2, Users, TrendingUp, AlertCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import BranchHealthTable from './_components/BranchHealthTable'
+import ActivityFeed from './_components/ActivityFeed'
+import RegionalChart from './_components/RegionalChart'
 
 // Wraps OmrSymbol so it can be passed as a StatCard icon slot
 const OmrIcon = (_: { className?: string }) => <OmrSymbol variant="dark" size={24} />
@@ -56,6 +59,15 @@ export default async function HQDashboardPage() {
           sub="all billing records" color="green" />
         <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
           sub="branch billing" color="red" />
+      </div>
+
+      {/* Branch health */}
+      <BranchHealthTable />
+
+      {/* Activity + Regional — two column on wide screens */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <ActivityFeed />
+        <RegionalChart />
       </div>
 
       {/* Branch list */}
