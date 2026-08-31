@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle, FileCheck } from 'lucide-react'
+import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle, FileCheck, Bell } from 'lucide-react'
 import Link from 'next/link'
 import MarkProofReviewedButton from './MarkProofReviewedButton'
 import SuperadminWelcomeModal from '@/components/SuperadminWelcomeModal'
@@ -25,6 +25,13 @@ export default async function AdminDashboard() {
 
   // Fetch branch name for welcome modal (from profiles.branch_name)
   const { data: myProfile } = await supabase.from('profiles').select('branch_name').eq('id', user.id).single()
+
+  // HQ notices inbox (RLS filters to this branch automatically)
+  const { data: hqNotices } = await supabase
+    .from('hq_notices')
+    .select('id, title, body, priority, created_at')
+    .order('created_at', { ascending: false })
+    .limit(5)
 
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
@@ -153,6 +160,41 @@ export default async function AdminDashboard() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* HQ Notices inbox */}
+      {hqNotices && hqNotices.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
+            <Bell size={16} className="text-yellow-500" />
+            <h3 className="font-semibold text-slate-900">From HQ</h3>
+            <span className="text-xs text-slate-400 ml-1">Platform announcements</span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {hqNotices.map((n: Record<string, unknown>) => {
+              const priority = n.priority as string
+              const priorityColor = priority === 'urgent' ? 'bg-red-100 text-red-700'
+                : priority === 'high' ? 'bg-amber-100 text-amber-700'
+                : 'bg-blue-100 text-blue-700'
+              return (
+                <div key={n.id as string} className="px-5 py-3">
+                  <div className="flex items-start gap-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize flex-shrink-0 mt-0.5 ${priorityColor}`}>
+                      {priority}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900">{n.title as string}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.body as string}</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {new Date(n.created_at as string).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
