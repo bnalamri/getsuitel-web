@@ -40,19 +40,21 @@ export default async function AdminDashboard() {
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
 
-  // Scope all org queries to this superadmin's branch
-  const orgQ = () => branchId
-    ? admin.from('organizations').eq('branch_id', branchId)
-    : admin.from('organizations')
+  // Helper: select from organizations scoped to this branch
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orgSel = (sel: string, opts?: any) => {
+    const q = admin.from('organizations').select(sel, opts)
+    return branchId ? q.eq('branch_id', branchId) : q
+  }
 
   const [orgsRes, individualsRes, companiesRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
-    orgQ().select('*', { count: 'exact', head: true }),
-    orgQ().select('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
-    orgQ().select('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
+    orgSel('*', { count: 'exact', head: true }),
+    orgSel('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
+    orgSel('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
     admin.from('properties').select('*', { count: 'exact', head: true }),
     admin.from('units').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }),
-    orgQ().select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
+    orgSel('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
     admin.from('subscription_payment_proofs')
       .select('*, organizations(name, subscription_plan)')
       .eq('status', 'pending')
@@ -60,9 +62,9 @@ export default async function AdminDashboard() {
   ])
 
   const [activeRes, trialingRes, pastDueRes] = await Promise.all([
-    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
-    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
+    orgSel('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
+    orgSel('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
+    orgSel('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
   ])
 
   const stats = [
