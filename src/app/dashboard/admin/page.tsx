@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle, FileCheck } from 'lucide-react'
 import Link from 'next/link'
 import MarkProofReviewedButton from './MarkProofReviewedButton'
+import SuperadminWelcomeModal from '@/components/SuperadminWelcomeModal'
 
 export const metadata = { title: 'Admin Dashboard' }
 
@@ -21,6 +22,9 @@ export default async function AdminDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  // Fetch branch name for welcome modal (from profiles.branch_name)
+  const { data: myProfile } = await supabase.from('profiles').select('branch_name').eq('id', user.id).single()
 
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
@@ -59,6 +63,8 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <SuperadminWelcomeModal userId={user.id} branchName={(myProfile?.branch_name as string | null) ?? null} />
+
       <div className="flex items-center gap-3">
         <Shield size={24} className="text-navy-700" />
         <div>
