@@ -1,4 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { Shield, Building2, Users, Home, TrendingUp, CreditCard, AlertCircle, FileCheck, Bell } from 'lucide-react'
 import Link from 'next/link'
 import MarkProofReviewedButton from './MarkProofReviewedButton'
@@ -26,6 +27,9 @@ export default async function AdminDashboard() {
   // Fetch branch name for welcome modal (from profiles.branch_name)
   const { data: myProfile } = await supabase.from('profiles').select('branch_name').eq('id', user.id).single()
 
+  // Get this superadmin's branch — all org queries are scoped to it
+  const branchId = await getMyBranchId()
+
   // HQ notices inbox (RLS filters to this branch automatically)
   const { data: hqNotices } = await supabase
     .from('hq_notices')
@@ -36,14 +40,19 @@ export default async function AdminDashboard() {
   // Use admin client to bypass RLS — admin needs cross-org visibility
   const admin = createAdminClient()
 
+  // Scope all org queries to this superadmin's branch
+  const orgQ = () => branchId
+    ? admin.from('organizations').eq('branch_id', branchId)
+    : admin.from('organizations')
+
   const [orgsRes, individualsRes, companiesRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
-    admin.from('organizations').select('*', { count: 'exact', head: true }),
-    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
-    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
+    orgQ().select('*', { count: 'exact', head: true }),
+    orgQ().select('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
+    orgQ().select('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
     admin.from('properties').select('*', { count: 'exact', head: true }),
     admin.from('units').select('*', { count: 'exact', head: true }),
     admin.from('tenants').select('*', { count: 'exact', head: true }),
-    admin.from('organizations').select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
+    orgQ().select('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
     admin.from('subscription_payment_proofs')
       .select('*, organizations(name, subscription_plan)')
       .eq('status', 'pending')
@@ -51,9 +60,9 @@ export default async function AdminDashboard() {
   ])
 
   const [activeRes, trialingRes, pastDueRes] = await Promise.all([
-    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
-    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
-    admin.from('organizations').select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
+    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'active'),
+    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
+    orgQ().select('*', { count: 'exact', head: true }).eq('subscription_status', 'past_due'),
   ])
 
   const stats = [

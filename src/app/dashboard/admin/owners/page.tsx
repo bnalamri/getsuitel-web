@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { Shield } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
 import OwnersFilter from './OwnersFilter'
@@ -9,11 +10,14 @@ export const metadata = { title: 'Owners' }
 export default async function OwnersPage() {
   noStore()
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
-  const { data: orgs } = await admin
+  const orgQuery = admin
     .from('organizations')
     .select('*, profiles!organizations_owner_id_fkey(full_name, email, phone, national_id)')
     .order('created_at', { ascending: false })
+
+  const { data: orgs } = await (branchId ? orgQuery.eq('branch_id', branchId) : orgQuery)
 
   const orgIds = (orgs ?? []).map(o => o.id)
   const [propsRes, unitsRes, tenantsRes] = orgIds.length > 0 ? await Promise.all([

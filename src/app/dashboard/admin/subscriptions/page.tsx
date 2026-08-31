@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { AlertCircle } from 'lucide-react'
 import { unstable_noStore as noStore } from 'next/cache'
 import SubscriptionsTable from './SubscriptionsTable'
@@ -9,12 +10,15 @@ export const metadata = { title: 'Subscriptions' }
 export default async function SubscriptionsPage() {
   noStore()
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
-  const { data: orgs } = await admin
+  const orgQuery = admin
     .from('organizations')
     .select('*, profiles!organizations_owner_id_fkey(full_name, email)')
     .order('subscription_status')
     .order('created_at', { ascending: false })
+
+  const { data: orgs } = await (branchId ? orgQuery.eq('branch_id', branchId) : orgQuery)
 
   const list = orgs ?? []
   const byStatus = {
