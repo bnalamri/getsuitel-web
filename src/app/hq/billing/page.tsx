@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { CreditCard, DollarSign, AlertCircle } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 export default async function HQBillingPage() {
   const supabase = await createClient()
@@ -29,7 +30,7 @@ export default async function HQBillingPage() {
             <DollarSign className="w-6 h-6 text-green-700" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Total Collected (OMR)</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">Total Collected <OmrSymbol variant="dark" size={13} /></p>
             <p className="text-2xl font-bold text-gray-900">{totalCollected.toFixed(3)}</p>
           </div>
         </div>
@@ -38,7 +39,7 @@ export default async function HQBillingPage() {
             <AlertCircle className="w-6 h-6 text-yellow-700" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Pending Collection (OMR)</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">Pending Collection <OmrSymbol variant="dark" size={13} /></p>
             <p className="text-2xl font-bold text-gray-900">{totalPending.toFixed(3)}</p>
           </div>
         </div>
@@ -54,9 +55,9 @@ export default async function HQBillingPage() {
               <tr>
                 <th className="px-5 py-3 text-left">Branch</th>
                 <th className="px-5 py-3 text-left">Month</th>
-                <th className="px-5 py-3 text-right">Revenue (OMR)</th>
-                <th className="px-5 py-3 text-right">Share (OMR)</th>
-                <th className="px-5 py-3 text-right">License (OMR)</th>
+                <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={13} /></span></th>
+                <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">Share <OmrSymbol variant="dark" size={13} /></span></th>
+                <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span></th>
                 <th className="px-5 py-3 text-left">Status</th>
               </tr>
             </thead>

@@ -6,6 +6,7 @@ import {
   Shield, KeyRound, Eye, EyeOff, Globe, Languages,
   ExternalLink, Loader2, Save, Calendar, DollarSign, Download,
 } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Profile = { id: string; full_name: string | null; email: string; avatar_url?: string | null }
 type Config  = { date_format: string; default_currency: string; currency_symbol: string }
@@ -18,7 +19,7 @@ const btn   = 'flex items-center gap-2 px-5 py-2 bg-yellow-500 hover:bg-yellow-6
 
 const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']
 const CURRENCIES = [
-  { code: 'OMR', symbol: 'OMR', label: 'Omani Rial (OMR)' },
+  { code: 'OMR', symbol: 'OMR', label: 'Omani Rial' },
   { code: 'SAR', symbol: 'SAR', label: 'Saudi Riyal (SAR)' },
   { code: 'AED', symbol: 'AED', label: 'UAE Dirham (AED)' },
   { code: 'USD', symbol: '$',   label: 'US Dollar (USD)'  },
@@ -222,6 +223,12 @@ export default function HQSettingsClient({
                 <option key={c.code} value={c.code}>{c.label}</option>
               ))}
             </select>
+            {currency === 'OMR' && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                <span>Symbol:</span>
+                <OmrSymbol variant="dark" size={18} />
+              </div>
+            )}
           </div>
           {cfgMsg && <Msg ok={cfgMsg.ok} text={cfgMsg.text} />}
           <button type="submit" disabled={cfgLoading} className={btn}>

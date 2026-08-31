@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Building2, Plus, Search, Edit2, Trash2, CheckCircle, XCircle, Archive } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Branch = {
   id: string; name: string; display_name: string; region: string | null; city: string | null
@@ -85,7 +86,7 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
                 <th className="px-5 py-3 text-left">Superadmin</th>
                 <th className="px-5 py-3 text-left">Location</th>
                 <th className="px-5 py-3 text-center">Orgs</th>
-                <th className="px-5 py-3 text-right">License (OMR)</th>
+                <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span></th>
                 <th className="px-5 py-3 text-right">Rev Share</th>
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>

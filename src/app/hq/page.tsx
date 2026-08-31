@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Building2, Users, DollarSign, TrendingUp, AlertCircle } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const [branches, orgs, billing] = await Promise.all([
@@ -48,7 +49,7 @@ export default async function HQDashboardPage() {
           sub={`${stats.totalBranches} total`} color="yellow" />
         <StatCard icon={Users} label="Total Orgs" value={stats.totalOrgs}
           sub="across all branches" color="blue" />
-        <StatCard icon={DollarSign} label="Total Revenue (OMR)" value={stats.totalRevenue.toFixed(3)}
+        <StatCard icon={DollarSign} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
           sub="all billing records" color="green" />
         <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
           sub="branch billing" color="red" />
@@ -70,7 +71,7 @@ export default async function HQDashboardPage() {
                   <th className="px-5 py-3 text-left">Branch</th>
                   <th className="px-5 py-3 text-left">City</th>
                   <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-right">License Fee (OMR)</th>
+                  <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License Fee <OmrSymbol variant="dark" size={13} /></span></th>
                   <th className="px-5 py-3 text-right">Rev Share %</th>
                 </tr>
               </thead>
@@ -110,7 +111,7 @@ export default async function HQDashboardPage() {
 }
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
-  icon: React.ElementType; label: string; value: string | number; sub: string; color: string
+  icon: React.ElementType; label: React.ReactNode; value: string | number; sub: string; color: string
 }) {
   const colors: Record<string, string> = {
     yellow: 'bg-yellow-100 text-yellow-700',

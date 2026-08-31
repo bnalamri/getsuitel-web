@@ -91,7 +91,7 @@ export default function BranchFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="License Fee (OMR/month)" k="license_fee_omr" type="number" placeholder="50.000" />
+            <Field label="License Fee /month" k="license_fee_omr" type="number" placeholder="50.000" />
             <Field label="Revenue Share %" k="revenue_share_pct" type="number" placeholder="15" />
           </div>
 
