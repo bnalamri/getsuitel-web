@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { Building2, Plus, Search, Edit2, Trash2, CheckCircle, XCircle, Archive } from 'lucide-react'
+import { Building2, Plus, Search, Edit2, Mail } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
+import InviteCodeDialog from '@/components/hq/InviteCodeDialog'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Branch = {
@@ -22,6 +23,7 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
   const [filter, setFilter]     = useState<'all'|'active'|'suspended'|'archived'>('all')
   const [showModal, setModal]   = useState(false)
   const [editing, setEditing]   = useState<Branch | null>(null)
+  const [inviteBranch, setInvite] = useState<{ id: string; name: string } | null>(null)
 
   const visible = branches.filter(b => {
     const matchQ = !q || b.display_name.toLowerCase().includes(q.toLowerCase()) ||
@@ -121,13 +123,22 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => openEdit(b)}
-                      className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
-                      title="Edit branch"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setInvite({ id: b.id, name: b.display_name })}
+                        className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
+                        title="Generate invite code"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openEdit(b)}
+                        className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
+                        title="Edit branch"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -140,7 +151,23 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
         <BranchFormModal
           branch={editing}
           onClose={() => setModal(false)}
-          onSaved={() => { setModal(false); window.location.reload() }}
+          onSaved={(savedId, savedName) => {
+            setModal(false)
+            if (!editing) {
+              // New branch — open invite dialog right away
+              setInvite({ id: savedId, name: savedName })
+            } else {
+              window.location.reload()
+            }
+          }}
+        />
+      )}
+
+      {inviteBranch && (
+        <InviteCodeDialog
+          branchId={inviteBranch.id}
+          branchName={inviteBranch.name}
+          onClose={() => { setInvite(null); window.location.reload() }}
         />
       )}
     </div>

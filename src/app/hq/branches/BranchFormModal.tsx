@@ -13,7 +13,7 @@ export default function BranchFormModal({
 }: {
   branch: Branch | null
   onClose: () => void
-  onSaved: () => void
+  onSaved: (id: string, displayName: string) => void
 }) {
   const [form, setForm] = useState({
     name:               branch?.name ?? '',
@@ -50,7 +50,8 @@ export default function BranchFormModal({
         }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Save failed') }
-      onSaved()
+      const saved = await res.json()
+      onSaved(saved.id, saved.display_name ?? saved.name)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Save failed')
     } finally {

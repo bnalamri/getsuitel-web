@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password',
-  '/auth/verify-email', '/auth/reset-password']
+  '/auth/verify-email', '/auth/reset-password', '/auth/invite']
 
 // Always let logout through regardless of auth state
 const ALWAYS_PUBLIC = ['/auth/logout']
