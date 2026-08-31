@@ -74,7 +74,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
             )}
             <div className="space-y-0.5">
               {group.items.map(item => {
-                const active = pathname === item.href || (item.href !== '/hq' && pathname.startsWith(item.href))
+                const active = pathname === item.href || (item.href.length > 4 && pathname.startsWith(item.href + '/'))
                 return (
                   <Link
                     key={item.href}
