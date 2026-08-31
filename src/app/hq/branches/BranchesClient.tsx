@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { Building2, Plus, Search, Edit2, Mail } from 'lucide-react'
+import Link from 'next/link'
+import { Building2, Plus, Search, Edit2, Mail, ExternalLink } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
 import InviteCodeDialog from '@/components/hq/InviteCodeDialog'
 import OmrSymbol from '@/components/ui/OmrSymbol'
@@ -104,7 +105,12 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
                 </tr>
               ) : visible.map(b => (
                 <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-gray-900">{b.display_name}</td>
+                  <td className="px-5 py-3 font-medium text-gray-900">
+                    <Link href={`/hq/branches/${b.id}`} className="hover:text-yellow-700 hover:underline flex items-center gap-1">
+                      {b.display_name}
+                      <ExternalLink className="w-3 h-3 opacity-40" />
+                    </Link>
+                  </td>
                   <td className="px-5 py-3">
                     {b.profiles ? (
                       <div>
