@@ -129,7 +129,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
   )
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-[#FFF8ED] overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col flex-shrink-0 ${sidebarW} bg-gray-900 transition-all duration-300 relative`}>
         <SidebarContent />
