@@ -47,13 +47,24 @@ export default async function AdminDashboard() {
     return branchId ? q.eq('branch_id', branchId) : q
   }
 
+  // Get branch org IDs for scoping properties/units/tenants
+  const branchOrgIds = branchId
+    ? ((await admin.from('organizations').select('id').eq('branch_id', branchId)).data ?? []).map((o: { id: string }) => o.id)
+    : null
+
   const [orgsRes, individualsRes, companiesRes, propsRes, unitsRes, tenantsRes, recentOrgsRes, proofsRes] = await Promise.all([
     orgSel('*', { count: 'exact', head: true }),
     orgSel('*', { count: 'exact', head: true }).eq('owner_type', 'individual'),
     orgSel('*', { count: 'exact', head: true }).eq('owner_type', 'company'),
-    admin.from('properties').select('*', { count: 'exact', head: true }),
-    admin.from('units').select('*', { count: 'exact', head: true }),
-    admin.from('tenants').select('*', { count: 'exact', head: true }),
+    branchOrgIds
+      ? admin.from('properties').select('*', { count: 'exact', head: true }).in('organization_id', branchOrgIds.length ? branchOrgIds : [''])
+      : admin.from('properties').select('*', { count: 'exact', head: true }),
+    branchOrgIds
+      ? admin.from('units').select('*', { count: 'exact', head: true }).in('organization_id', branchOrgIds.length ? branchOrgIds : [''])
+      : admin.from('units').select('*', { count: 'exact', head: true }),
+    branchOrgIds
+      ? admin.from('tenants').select('*', { count: 'exact', head: true }).in('organization_id', branchOrgIds.length ? branchOrgIds : [''])
+      : admin.from('tenants').select('*', { count: 'exact', head: true }),
     orgSel('*, profiles!organizations_owner_id_fkey(full_name, email)').order('created_at', { ascending: false }).limit(5),
     admin.from('subscription_payment_proofs')
       .select('*, organizations(name, subscription_plan)')
