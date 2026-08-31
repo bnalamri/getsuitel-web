@@ -16,14 +16,17 @@ function Field({ label, k, value, onChange, type = 'text', placeholder = '' }: {
   onChange: (k: string, v: string) => void
   type?: string; placeholder?: string
 }) {
+  const inputId = `bf-${k}`
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={e => onChange(k, e.target.value)}
         placeholder={placeholder}
+        autoComplete="off"
         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
       />
     </div>
