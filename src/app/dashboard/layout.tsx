@@ -31,8 +31,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     organization = org
   }
 
+  // For superadmins, determine if this is a branch superadmin (has a row in branches table)
+  let isBranchSuperadmin = false
+  if (profile.role === 'superadmin') {
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('id')
+      .eq('superadmin_id', user.id)
+      .single()
+    isBranchSuperadmin = !!branch
+  }
+
   return (
-    <DashboardShell profile={{ ...profile, organizations: organization }}>
+    <DashboardShell profile={{ ...profile, organizations: organization }} isBranchSuperadmin={isBranchSuperadmin}>
       {children}
       {isDemo && <DemoTourPanel />}
     </DashboardShell>

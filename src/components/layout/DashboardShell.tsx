@@ -182,12 +182,16 @@ const NAV: Record<string, NavGroup[]> = {
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-function Sidebar({ profile, lang, collapsed, onToggle }: {
-  profile: Profile; lang:'ar'|'en'; collapsed:boolean; onToggle:()=>void
+function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin }: {
+  profile: Profile; lang:'ar'|'en'; collapsed:boolean; onToggle:()=>void; isBranchSuperadmin?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const groups = NAV[profile.role] ?? NAV.owner
+  const rawGroups = NAV[profile.role] ?? NAV.owner
+  // Hide Cron Monitor from branch superadmins — it's an HQ-only platform tool
+  const groups = isBranchSuperadmin
+    ? rawGroups.map(g => ({ ...g, items: g.items.filter(i => i.href !== '/dashboard/admin/cron-monitor') }))
+    : rawGroups
 
   const ROLE_COLORS: Record<string, string> = {
     superadmin:        'from-slate-900 to-slate-700',
@@ -373,10 +377,11 @@ function Topbar({ profile, lang, setLang, onMobileOpen }: {
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
 export default function DashboardShell({
-  profile, children
+  profile, children, isBranchSuperadmin,
 }: {
   profile: Profile & { organizations?: unknown }
   children: React.ReactNode
+  isBranchSuperadmin?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -399,7 +404,7 @@ export default function DashboardShell({
 
         {/* Mobile sidebar */}
         <div className={`fixed inset-y-0 left-0 z-50 w-60 lg:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)}/>
+          <Sidebar profile={profile} lang={lang} collapsed={false} onToggle={() => setMobileOpen(false)} isBranchSuperadmin={isBranchSuperadmin}/>
           <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 text-white/70 hover:text-white">
             <X size={20}/>
           </button>
@@ -407,7 +412,7 @@ export default function DashboardShell({
 
         {/* Desktop sidebar */}
         <div className="hidden lg:flex flex-shrink-0">
-          <Sidebar profile={profile} lang={lang} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)}/>
+          <Sidebar profile={profile} lang={lang} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} isBranchSuperadmin={isBranchSuperadmin}/>
         </div>
 
         {/* Main */}

@@ -42,10 +42,10 @@ export default async function RevenueForecastPage() {
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Read currency + date format from this superadmin's platform settings
+  // Read currency + date format from platform settings
   const [currencyRow, dateFormatRow] = await Promise.all([
-    admin.from('platform_settings').select('value').eq('key', 'default_currency').eq('superadmin_id', user.id).single(),
-    admin.from('platform_settings').select('value').eq('key', 'default_date_format').eq('superadmin_id', user.id).single(),
+    admin.from('platform_settings').select('value').eq('key', 'default_currency').maybeSingle(),
+    admin.from('platform_settings').select('value').eq('key', 'default_date_format').maybeSingle(),
   ])
   const adminCurrency = (currencyRow.data?.value as string) ?? 'OMR'
   const adminDateFormat = (dateFormatRow.data?.value as string) ?? 'DD/MM/YYYY'

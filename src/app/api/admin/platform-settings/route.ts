@@ -1,4 +1,4 @@
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { requireSuperadmin } from '@/lib/api-auth'
 import { NextResponse } from 'next/server'
 
@@ -7,15 +7,8 @@ export async function GET() {
   if (!auth.ok) return auth.response
 
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ default_currency: 'OMR' })
-
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('platform_settings')
-      .select('key, value')
-      .eq('superadmin_id', user.id)
+    const { data, error } = await admin.from('platform_settings').select('key, value')
     if (error) return NextResponse.json({ default_currency: 'OMR' })
     const settings: Record<string, string> = {}
     data?.forEach(r => { settings[r.key] = r.value })
@@ -30,21 +23,12 @@ export async function PUT(req: Request) {
   if (!auth.ok) return auth.response
 
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-
     const body = await req.json()
     const admin = createAdminClient()
     const updates = Object.entries(body).map(([key, value]) => ({
-      key,
-      value: String(value),
-      superadmin_id: user.id,
-      updated_at: new Date().toISOString(),
+      key, value: String(value), updated_at: new Date().toISOString(),
     }))
-    const { error } = await admin
-      .from('platform_settings')
-      .upsert(updates, { onConflict: 'key,superadmin_id' })
+    const { error } = await admin.from('platform_settings').upsert(updates, { onConflict: 'key' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (e) {
