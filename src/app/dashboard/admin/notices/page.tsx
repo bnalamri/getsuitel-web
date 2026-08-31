@@ -1,4 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getMyBranchId } from '@/lib/admin-branch'
 import { Bell, Clock, Globe, Building2 } from 'lucide-react'
 import AdminNoticeForm from './AdminNoticeForm'
 import ShareNoticeButton from '@/components/ShareNoticeButton'
@@ -18,16 +19,18 @@ export default async function AdminNoticesPage() {
   }
 
   const admin = createAdminClient()
+  const branchId = await getMyBranchId()
 
+  // Scope notices to this superadmin's own, and orgs to their branch
   const [noticesRes, orgsRes] = await Promise.all([
     admin
       .from('platform_notices')
       .select('*, organizations(name)')
+      .eq('created_by', user.id)
       .order('created_at', { ascending: false }),
-    admin
-      .from('organizations')
-      .select('id, name')
-      .order('name'),
+    branchId
+      ? admin.from('organizations').select('id, name').eq('branch_id', branchId).order('name')
+      : admin.from('organizations').select('id, name').order('name'),
   ])
 
   const notices = noticesRes.data ?? []

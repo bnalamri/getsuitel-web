@@ -62,6 +62,17 @@ export default async function CronMonitorPage() {
   const auth = await requireSuperadmin()
   if (!auth.ok) redirect('/login')
 
+  // Cron jobs run platform-wide — only the original platform superadmin (no assigned branch) accesses this
+  const { createClient } = await import('@/lib/supabase/server')
+  const { getMyBranchId } = await import('@/lib/admin-branch')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const branchId = user ? await getMyBranchId() : null
+  if (branchId) {
+    // Branch superadmins are redirected — cron is a platform-level HQ tool
+    redirect('/dashboard/admin')
+  }
+
   const admin = createAdminClient()
 
   // Last run per job
