@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FileText, Calendar, Home, DollarSign, ExternalLink } from 'lucide-react'
+import { FileText, Calendar, Home, ExternalLink } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 import MyDetailsForm from './MyDetailsForm'
 import FloorPlanCard from './FloorPlanCard'
 
@@ -88,7 +89,7 @@ export default async function TenantContractPage() {
 
       {/* Financial */}
       <div className="card p-6">
-        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><DollarSign size={16} />Financial</h3>
+        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2"><OmrSymbol size={16} />Financial</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div><div className="text-slate-500">Monthly Rent</div><div className="text-2xl font-black text-navy-700 mt-0.5">{Number(contract.rent_amount).toLocaleString()} <span className="text-base font-semibold">{contract.currency}</span></div></div>
           <div><div className="text-slate-500">Security Deposit</div><div className="text-2xl font-black text-slate-700 mt-0.5">{Number(contract.deposit_amount).toLocaleString()} <span className="text-base font-semibold">{contract.currency}</span></div></div>

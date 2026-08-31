@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import AssignTechnicianForm from './AssignTechnicianForm'
 import MarkPaidButton from './MarkPaidButton'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 const priorityColor: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700', high: 'bg-orange-100 text-orange-700',
@@ -137,7 +138,7 @@ export default function MaintenanceFilters({ requests, technicians, canManage, d
                     <div className="space-y-0.5">
                       <div className="text-xs font-medium text-amber-700">Tenant pays directly</div>
                       {chargeAmount != null && (
-                        <div className="text-xs text-slate-400">Est. OMR {parseFloat(String(chargeAmount)).toFixed(3)}</div>
+                        <div className="text-xs text-slate-400">Est. <OmrSymbol size={11} /> {parseFloat(String(chargeAmount)).toFixed(3)}</div>
                       )}
                     </div>
                   )
@@ -147,7 +148,7 @@ export default function MaintenanceFilters({ requests, technicians, canManage, d
                       <div className="space-y-0.5">
                         <div className="text-xs font-medium text-green-700">✓ Paid</div>
                         {finalAmount != null && (
-                          <div className="text-xs text-slate-500">OMR {parseFloat(String(finalAmount)).toFixed(3)}</div>
+                          <div className="text-xs text-slate-500"><OmrSymbol size={11} /> {parseFloat(String(finalAmount)).toFixed(3)}</div>
                         )}
                       </div>
                     )
@@ -155,7 +156,7 @@ export default function MaintenanceFilters({ requests, technicians, canManage, d
                     chargeCell = (
                       <div className="space-y-1.5">
                         <div className="text-xs font-medium text-slate-700">
-                          OMR {parseFloat(String(finalAmount)).toFixed(3)}
+                          <OmrSymbol size={11} /> {parseFloat(String(finalAmount)).toFixed(3)}
                         </div>
                         <div className="text-xs text-blue-600">Invoice received</div>
                         <MarkPaidButton requestId={r.id} />
@@ -166,7 +167,7 @@ export default function MaintenanceFilters({ requests, technicians, canManage, d
                       <div className="space-y-0.5">
                         <div className="text-xs font-medium text-slate-700">Owner pays</div>
                         {chargeAmount != null && (
-                          <div className="text-xs text-slate-400">Est. OMR {parseFloat(String(chargeAmount)).toFixed(3)}</div>
+                          <div className="text-xs text-slate-400">Est. <OmrSymbol size={11} /> {parseFloat(String(chargeAmount)).toFixed(3)}</div>
                         )}
                         <div className="text-xs text-slate-400">Awaiting invoice</div>
                       </div>

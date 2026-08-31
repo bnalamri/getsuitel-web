@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, CheckCircle, Receipt } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 export default function SubmitChargeForm({
   orderId, agreedAmount, finalAmount, invoicePaid,
@@ -29,7 +30,7 @@ export default function SubmitChargeForm({
         </div>
         {finalAmount != null && (
           <div className="text-sm text-green-600 mt-1">
-            OMR {parseFloat(String(finalAmount)).toFixed(3)}
+            <OmrSymbol size={14} /> {parseFloat(String(finalAmount)).toFixed(3)}
           </div>
         )}
       </div>
@@ -43,7 +44,7 @@ export default function SubmitChargeForm({
           <CheckCircle size={16} /> Invoice submitted — awaiting payment
         </div>
         <div className="text-sm text-blue-600 mt-1">
-          OMR {parseFloat(amount || '0').toFixed(3)} · Property manager has been notified by email
+          <OmrSymbol size={14} /> {parseFloat(amount || '0').toFixed(3)} · Property manager has been notified by email
         </div>
       </div>
     )
@@ -76,7 +77,7 @@ export default function SubmitChargeForm({
           <div className="font-semibold text-slate-900 text-sm">Submit Service Charge</div>
           {agreedAmount != null && (
             <div className="text-xs text-slate-400">
-              Agreed estimate: OMR {parseFloat(String(agreedAmount)).toFixed(3)}
+              Agreed estimate: <OmrSymbol size={12} /> {parseFloat(String(agreedAmount)).toFixed(3)}
             </div>
           )}
         </div>

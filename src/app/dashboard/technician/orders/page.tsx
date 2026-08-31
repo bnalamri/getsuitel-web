@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ClipboardList, CalendarDays, CheckCircle2 } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 import UpdateStatusButton from './UpdateStatusButton'
 import SubmitChargeForm from './SubmitChargeForm'
 import CompleteJobModal from './CompleteJobModal'
@@ -178,7 +179,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: {
                 {isDone && chargePayer === 'tenant' && chargeAmount != null && (
                   <div className="mt-4 pt-4 border-t border-slate-100">
                     <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      OMR {parseFloat(String(chargeAmount)).toFixed(3)} — collected directly from tenant
+                      <OmrSymbol size={12} /> {parseFloat(String(chargeAmount)).toFixed(3)} — collected directly from tenant
                     </div>
                   </div>
                 )}

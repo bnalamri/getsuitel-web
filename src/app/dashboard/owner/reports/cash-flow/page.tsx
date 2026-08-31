@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
 import PropertySelectClient from '@/components/PropertySelectClient'
@@ -106,7 +107,7 @@ export default async function CashFlowForecastPage({ searchParams }: { searchPar
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <DollarSign size={20} className={totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'} />
+          <OmrSymbol size={20} variant="dark" />
           <div>
             <div className={`text-xl font-bold ${totalNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}><OmrAmount value={totalNet} /></div>
             <div className="text-xs text-slate-500">Projected Net Cash Flow</div>

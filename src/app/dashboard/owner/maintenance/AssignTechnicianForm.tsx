@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, CalendarDays } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Tech = { id: string; full_name: string }
 
@@ -48,7 +49,7 @@ export default function AssignTechnicianForm({
         </div>
         {currentChargePayer && currentChargePayer !== 'none' && currentChargeAmount != null && (
           <div className="text-xs text-slate-400">
-            OMR {Number(currentChargeAmount).toFixed(3)} · {currentChargePayer}
+            <OmrSymbol size={11} /> {Number(currentChargeAmount).toFixed(3)} · {currentChargePayer}
           </div>
         )}
         <button

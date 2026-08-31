@@ -1,6 +1,7 @@
 'use client'
 import { TrendingUp, Download, BarChart2, CreditCard, Receipt, Layers, FileSpreadsheet } from 'lucide-react'
 import OmrAmount from '@/components/OmrAmount'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Org        = { id: string; name: string; subscription_plan: string; subscription_status: string; subscription_expires_at?: string; default_currency?: string }
 type Invoice    = { organization_id: string; amount: number; currency: string; status: string; type: string; created_at: string; due_date: string }
@@ -589,7 +590,7 @@ export default function FinancialReportPDF({
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold text-slate-900 tabular-nums">{fmt(data.amount)}</div>
-                    <div className="text-xs text-slate-400">OMR</div>
+                    <div className="text-xs text-slate-400"><OmrSymbol size={12} /></div>
                   </div>
                 </div>
               ))}

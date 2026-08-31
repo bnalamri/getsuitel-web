@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, CheckCircle, X } from 'lucide-react'
+import OmrSymbol from '@/components/ui/OmrSymbol'
 
 export default function CompleteJobModal({
   orderId, orderTitle, agreedAmount, agreedPayer,
@@ -84,7 +85,7 @@ export default function CompleteJobModal({
                 Charge Amount (optional)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">OMR</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2"><OmrSymbol size={16} variant="dark" /></span>
                 <input
                   type="number"
                   value={amount}
@@ -96,7 +97,7 @@ export default function CompleteJobModal({
                 />
               </div>
               {agreedAmount != null && (
-                <p className="text-xs text-slate-400 mt-1">Agreed estimate: OMR {Number(agreedAmount).toFixed(3)}</p>
+                <p className="text-xs text-slate-400 mt-1">Agreed estimate: <OmrSymbol size={12} /> {Number(agreedAmount).toFixed(3)}</p>
               )}
             </div>
 
