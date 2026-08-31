@@ -1,6 +1,7 @@
 import { requireSuperadmin } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { Lock } from 'lucide-react'
 import CronMonitorPDF from './CronMonitorPDF'
 import CronRunButton from './CronRunButton'
 import LocalTime from './LocalTime'
@@ -62,16 +63,13 @@ export default async function CronMonitorPage() {
   const auth = await requireSuperadmin()
   if (!auth.ok) redirect('/login')
 
-  // Cron jobs run platform-wide — only the original platform superadmin (no assigned branch) accesses this
+  // Determine if this is a branch superadmin — they can view logs but not trigger jobs
   const { createClient } = await import('@/lib/supabase/server')
   const { getMyBranchId } = await import('@/lib/admin-branch')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const branchId = user ? await getMyBranchId() : null
-  if (branchId) {
-    // Branch superadmins are redirected — cron is a platform-level HQ tool
-    redirect('/dashboard/admin')
-  }
+  const isBranchSuperadmin = !!branchId
 
   const admin = createAdminClient()
 
@@ -100,6 +98,14 @@ export default async function CronMonitorPage() {
         </div>
         <CronMonitorPDF logs={logs} />
       </div>
+
+      {/* Branch notice — view-only */}
+      {isBranchSuperadmin && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <Lock size={15} className="mt-0.5 flex-shrink-0 text-amber-600" />
+          <p>Cron jobs run platform-wide across all branches. You can view the logs below, but only HQ can trigger jobs manually.</p>
+        </div>
+      )}
 
       {/* Status cards — one per known job */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -133,7 +139,7 @@ export default async function CronMonitorPage() {
                 <p className="text-xs text-slate-400 italic">No runs recorded yet.</p>
               )}
               <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
-                <CronRunButton job={jobName} />
+                <CronRunButton job={jobName} disabled={isBranchSuperadmin} />
               </div>
             </div>
           )

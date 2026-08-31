@@ -20,6 +20,16 @@ function fmtCurrency(n: number, currency: string) {
   return `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${currency}`
 }
 
+function fmtDate(iso: string, fmt: string) {
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(d.getFullYear())
+  if (fmt === 'MM/DD/YYYY') return `${mm}/${dd}/${yyyy}`
+  if (fmt === 'YYYY-MM-DD') return `${yyyy}-${mm}-${dd}`
+  return `${dd}/${mm}/${yyyy}` // DD/MM/YYYY default
+}
+
 export default async function RevenueForecastPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -32,7 +42,13 @@ export default async function RevenueForecastPage() {
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const adminCurrency = 'OMR'
+  // Read currency + date format from this superadmin's platform settings
+  const [currencyRow, dateFormatRow] = await Promise.all([
+    admin.from('platform_settings').select('value').eq('key', 'default_currency').eq('superadmin_id', user.id).single(),
+    admin.from('platform_settings').select('value').eq('key', 'default_date_format').eq('superadmin_id', user.id).single(),
+  ])
+  const adminCurrency = (currencyRow.data?.value as string) ?? 'OMR'
+  const adminDateFormat = (dateFormatRow.data?.value as string) ?? 'DD/MM/YYYY'
 
   const orgQ = admin
     .from('organizations')
@@ -221,7 +237,7 @@ export default async function RevenueForecastPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold ${daysLeft <= 7 ? 'text-red-600' : 'text-amber-600'}`}>
-                          {new Date(o.subscription_expires_at!).toLocaleDateString('en-GB')} ({daysLeft}d)
+                          {fmtDate(o.subscription_expires_at!, adminDateFormat)} ({daysLeft}d)
                         </span>
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-700">{fmtCurrency(PLAN_PRICES[o.subscription_plan] ?? 0, adminCurrency)}/mo</td>

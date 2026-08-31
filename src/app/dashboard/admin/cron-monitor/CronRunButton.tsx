@@ -5,7 +5,7 @@ import { Play, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 type State = 'idle' | 'running' | 'done' | 'error'
 
-export default function CronRunButton({ job }: { job: string }) {
+export default function CronRunButton({ job, disabled }: { job: string; disabled?: boolean }) {
   const [state, setState] = useState<State>('idle')
   const [msg,   setMsg]   = useState('')
   const router = useRouter()
@@ -66,6 +66,10 @@ export default function CronRunButton({ job }: { job: string }) {
       </button>
       {msg && <p className="text-xs text-red-500 text-right max-w-[180px] leading-tight">{msg}</p>}
     </div>
+  )
+
+  if (disabled) return (
+    <span className="text-xs text-slate-400 italic">HQ only</span>
   )
 
   return (
