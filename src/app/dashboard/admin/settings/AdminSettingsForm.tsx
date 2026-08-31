@@ -156,7 +156,7 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
             <h3 className="font-semibold text-slate-900">Branch Identity</h3>
           </div>
           <div className="bg-slate-50 rounded-xl px-4 py-3 mt-3">
-            <p className="text-sm font-semibold text-slate-900">GetSuitel — {branchDisplayName} Branch</p>
+            <p className="text-sm font-semibold text-slate-900">{branchDisplayName}</p>
           </div>
           <p className="text-xs text-slate-400 mt-2">Branch identity is set by HQ and cannot be changed here.</p>
         </div>
