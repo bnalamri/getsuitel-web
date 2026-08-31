@@ -8,6 +8,28 @@ type Branch = {
   superadmin_id: string | null
 }
 
+// Defined outside the parent component so React treats it as a stable component type.
+// If defined inside, every keystroke re-creates the function reference, causing React
+// to unmount/remount the input and lose focus on every character typed.
+function Field({ label, k, value, onChange, type = 'text', placeholder = '' }: {
+  label: string; k: string; value: string
+  onChange: (k: string, v: string) => void
+  type?: string; placeholder?: string
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(k, e.target.value)}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+      />
+    </div>
+  )
+}
+
 export default function BranchFormModal({
   branch, onClose, onSaved,
 }: {
@@ -59,19 +81,6 @@ export default function BranchFormModal({
     }
   }
 
-  const Field = ({ label, k, type = 'text', placeholder = '' }: { label: string; k: string; type?: string; placeholder?: string }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={(form as Record<string, string>)[k]}
-        onChange={e => set(k, e.target.value)}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-      />
-    </div>
-  )
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
@@ -85,15 +94,15 @@ export default function BranchFormModal({
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-          <Field label="Branch Name (city/region identifier)" k="name" placeholder="e.g. Muscat" />
+          <Field label="Branch Name (city/region identifier)" k="name" value={form.name} onChange={set} placeholder="e.g. Muscat" />
           <div className="grid grid-cols-2 gap-4">
-            <Field label="City" k="city" placeholder="e.g. Muscat" />
-            <Field label="Region" k="region" placeholder="e.g. Oman" />
+            <Field label="City" k="city" value={form.city} onChange={set} placeholder="e.g. Muscat" />
+            <Field label="Region" k="region" value={form.region} onChange={set} placeholder="e.g. Oman" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="License Fee /month" k="license_fee_omr" type="number" placeholder="50.000" />
-            <Field label="Revenue Share %" k="revenue_share_pct" type="number" placeholder="15" />
+            <Field label="License Fee /month" k="license_fee_omr" value={form.license_fee_omr} onChange={set} type="number" placeholder="50.000" />
+            <Field label="Revenue Share %" k="revenue_share_pct" value={form.revenue_share_pct} onChange={set} type="number" placeholder="15" />
           </div>
 
           <div>
@@ -109,8 +118,8 @@ export default function BranchFormModal({
             </select>
           </div>
 
-          <Field label="Superadmin User ID (optional)" k="superadmin_id" placeholder="UUID of the superadmin" />
-          <Field label="Logo URL (optional)" k="logo_url" placeholder="https://..." />
+          <Field label="Superadmin User ID (optional)" k="superadmin_id" value={form.superadmin_id} onChange={set} placeholder="UUID of the superadmin" />
+          <Field label="Logo URL (optional)" k="logo_url" value={form.logo_url} onChange={set} placeholder="https://..." />
         </div>
 
         {/* Footer */}
