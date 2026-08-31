@@ -210,11 +210,22 @@ function Sidebar({ profile, lang, collapsed, onToggle }: {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
         {!collapsed && (
-          <Link href="https://www.getsuitel.com" className="flex flex-col">
+          <Link href="https://www.getsuitel.com" className="flex flex-col gap-0.5">
             <span className="font-black text-lg tracking-tight leading-none">
               Get<span className="text-gold-400">Suitel</span>
             </span>
-            <span className="text-white/40 text-[10px] tracking-widest">SMART RE</span>
+            {profile.role === 'superadmin' && (profile as Record<string,unknown>).branch_name ? (
+              <span className="text-gold-400/80 text-[10px] font-semibold tracking-wide leading-none">
+                — {String((profile as Record<string,unknown>).branch_name)} Branch
+              </span>
+            ) : (
+              <span className="text-white/40 text-[10px] tracking-widest">SMART RE</span>
+            )}
+            {profile.role === 'superadmin' && (profile as Record<string,unknown>).branch_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={String((profile as Record<string,unknown>).branch_logo_url)} alt="branch logo"
+                className="h-5 object-contain mt-1 opacity-80" />
+            )}
           </Link>
         )}
         <button onClick={onToggle} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors ml-auto">
