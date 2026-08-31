@@ -16,8 +16,8 @@ export default async function AdminSettingsPage() {
   ])
 
   const branchLabel = branch?.display_name
-    ? `GetSuitel — ${branch.display_name} Branch`
-    : (profile?.branch_name as string | null) ?? 'Not assigned'
+    ?? (profile?.branch_name as string | null)
+    ?? 'Not assigned'
 
   return (
     <div className="space-y-6 max-w-lg">

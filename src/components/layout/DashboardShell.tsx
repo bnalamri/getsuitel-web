@@ -220,7 +220,7 @@ function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin }: {
             </span>
             {profile.role === 'superadmin' && (profile as Record<string,unknown>).branch_name ? (
               <span className="text-gold-400/80 text-[10px] font-semibold tracking-wide leading-none">
-                — {String((profile as Record<string,unknown>).branch_name)} Branch
+                {String((profile as Record<string,unknown>).branch_name).replace(/^GetSuitel\s*[—–-]\s*/i, '')}
               </span>
             ) : (
               <span className="text-white/40 text-[10px] tracking-widest">SMART RE</span>
