@@ -38,7 +38,7 @@ export default function BranchFormModal({
 }: {
   branch: Branch | null
   onClose: () => void
-  onSaved: (id: string, displayName: string) => void
+  onSaved: (id: string, displayName: string, inviteSent: boolean) => void
 }) {
   const [form, setForm] = useState({
     name:               branch?.name ?? '',
@@ -49,6 +49,7 @@ export default function BranchFormModal({
     revenue_share_pct:  branch?.revenue_share_pct?.toString() ?? '0',
     superadmin_id:      branch?.superadmin_id ?? '',
     logo_url:           branch?.logo_url ?? '',
+    superadmin_email:   '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -72,11 +73,12 @@ export default function BranchFormModal({
           revenue_share_pct:  parseFloat(form.revenue_share_pct) || 0,
           superadmin_id:      form.superadmin_id || null,
           logo_url:           form.logo_url || null,
+          superadmin_email:   form.superadmin_email.trim() || null,
         }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? 'Save failed') }
       const saved = await res.json()
-      onSaved(saved.id, saved.display_name ?? saved.name)
+      onSaved(saved.id, saved.display_name ?? saved.name, !!saved.invite_sent)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Save failed')
     } finally {
@@ -123,6 +125,12 @@ export default function BranchFormModal({
 
           <Field label="Superadmin User ID (optional)" k="superadmin_id" value={form.superadmin_id} onChange={set} placeholder="UUID of the superadmin" />
           <Field label="Logo URL (optional)" k="logo_url" value={form.logo_url} onChange={set} placeholder="https://..." />
+          {!branch && (
+            <div>
+              <Field label="Superadmin Email — send invite automatically (optional)" k="superadmin_email" value={form.superadmin_email} onChange={set} type="email" placeholder="superadmin@example.com" />
+              <p className="text-xs text-gray-400 mt-1">If provided, an invite code will be generated and emailed immediately after branch creation.</p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

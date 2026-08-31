@@ -157,10 +157,10 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
         <BranchFormModal
           branch={editing}
           onClose={() => setModal(false)}
-          onSaved={(savedId, savedName) => {
+          onSaved={(savedId, savedName, inviteSent) => {
             setModal(false)
-            if (!editing) {
-              // New branch — open invite dialog right away
+            if (!editing && !inviteSent) {
+              // New branch, no email sent — open invite dialog so HQ can copy the code manually
               setInvite({ id: savedId, name: savedName })
             } else {
               window.location.reload()
