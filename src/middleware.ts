@@ -72,11 +72,16 @@ export async function middleware(request: NextRequest) {
 
   // ── Logged in ───────────────────────────────────────────────────────────
 
-  // Redirect auth pages → role dashboard (carry cookies so token refresh isn't lost)
+  // Determine if this path needs a role check at all
+  const needsRole = isAuthPage || path === '/dashboard' || path.startsWith('/hq') || path.startsWith('/dashboard/')
+  if (!needsRole) return supabaseResponse
+
+  // Fetch role ONCE — reused by all guards below
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const role = profile?.role ?? 'owner'
+
+  // Redirect auth pages → role dashboard
   if (isAuthPage) {
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    const role = profile?.role ?? 'owner'
     const url = request.nextUrl.clone()
     url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
     return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
@@ -84,8 +89,6 @@ export async function middleware(request: NextRequest) {
 
   // Redirect /dashboard → role home
   if (path === '/dashboard') {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    const role = profile?.role ?? 'owner'
     const url = request.nextUrl.clone()
     url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
     return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
@@ -93,21 +96,16 @@ export async function middleware(request: NextRequest) {
 
   // Guard /hq/* — hq_admin only
   if (path.startsWith('/hq')) {
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    const role = profile?.role ?? 'owner'
     if (role !== 'hq_admin') {
       const url = request.nextUrl.clone()
       url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
       return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
     }
+    return supabaseResponse
   }
 
   // Role guard for /dashboard/*
   if (path.startsWith('/dashboard/')) {
-    const { data: profile } = await supabase
-      .from('profiles').select('role').eq('id', user.id).single()
-    const role = profile?.role ?? 'owner'
     // hq_admin doesn't belong in /dashboard — send them home
     if (role === 'hq_admin') {
       const url = request.nextUrl.clone()
