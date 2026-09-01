@@ -3,7 +3,7 @@ import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const HQ_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'hq_admin@getsuitel.com'
+const HQ_EMAIL = 'hq_admin@getsuitel.com'
 
 export async function POST(req: Request) {
   const { message, userEmail } = await req.json()
