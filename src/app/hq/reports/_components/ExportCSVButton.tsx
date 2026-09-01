@@ -12,7 +12,7 @@ export default function ExportCSVButton({
     const keys = Object.keys(data[0] ?? {})
     const rows = data.map(r => headers.map((_, i) => `"${String(r[keys[i]] ?? '').replace(/"/g, '""')}"`).join(','))
     const csv  = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href = url; a.download = filename; a.click()

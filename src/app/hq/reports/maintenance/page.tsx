@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { Wrench, AlertTriangle } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
+import StatusFilterSelect from '../_components/StatusFilterSelect'
 import ExportCSVButton from '../_components/ExportCSVButton'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -84,16 +85,7 @@ export default async function HQMaintenanceReportPage({
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/maintenance" />
-          <select
-            defaultValue={statusFilter ?? ''}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            onChange={undefined}
-          >
-            <option value="">All Status</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
+          <StatusFilterSelect selected={statusFilter ?? null} basePath="/hq/reports/maintenance" />
           <ExportCSVButton data={csvData} headers={csvHeaders} filename={`hq-maintenance-${new Date().toISOString().substring(0,10)}.csv`} />
         </div>
       </div>
