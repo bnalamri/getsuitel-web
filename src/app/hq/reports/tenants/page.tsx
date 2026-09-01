@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { Users } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
 import ExportCSVButton from '../_components/ExportCSVButton'
@@ -6,7 +6,7 @@ import ExportCSVButton from '../_components/ExportCSVButton'
 export default async function HQTenantsReportPage({
   searchParams,
 }: { searchParams: Promise<{ branch?: string }> }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { branch: branchId } = await searchParams
 
   const { data: branches } = await supabase

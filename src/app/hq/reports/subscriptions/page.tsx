@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { CreditCard } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
 import ExportCSVButton from '../_components/ExportCSVButton'
@@ -13,7 +13,7 @@ const PLAN_COLORS: Record<string, string> = {
 export default async function HQSubscriptionsReportPage({
   searchParams,
 }: { searchParams: Promise<{ branch?: string }> }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { branch: branchId } = await searchParams
 
   const [{ data: branches }, { data: orgs }] = await Promise.all([

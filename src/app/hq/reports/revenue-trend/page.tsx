@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import ExportCSVButton from '../_components/ExportCSVButton'
 
@@ -7,7 +7,7 @@ function MonthLabel(m: string) {
 }
 
 export default async function HQRevenueTrendPage() {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Last 12 months of billing data
   const twelveMonthsAgo = new Date()

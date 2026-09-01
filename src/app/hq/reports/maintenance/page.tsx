@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { Wrench, AlertTriangle } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
 import ExportCSVButton from '../_components/ExportCSVButton'
@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function HQMaintenanceReportPage({
   searchParams,
 }: { searchParams: Promise<{ branch?: string; status?: string }> }) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { branch: branchId, status: statusFilter } = await searchParams
 
   const { data: branches } = await supabase

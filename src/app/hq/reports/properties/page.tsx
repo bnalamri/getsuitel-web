@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { Building2 } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
 import ExportCSVButton from '../_components/ExportCSVButton'
@@ -6,7 +6,7 @@ import ExportCSVButton from '../_components/ExportCSVButton'
 export default async function HQPropertiesReportPage({
   searchParams,
 }: { searchParams: Promise<{ branch?: string }> }) {
-  const supabase  = await createClient()
+  const supabase  = createAdminClient()
   const { branch: branchId } = await searchParams
 
   const [{ data: branches }, { data: rawProps }] = await Promise.all([
@@ -26,7 +26,7 @@ export default async function HQPropertiesReportPage({
   // If no branch filter, re-fetch without status filter (we used status as a dummy eq above)
   const { data: properties } = branchId
     ? { data: rawProps }
-    : await supabase
+    : await createAdminClient()
         .from('properties')
         .select(`id, name, property_type, city, status, branch_id, units ( id, status ), branches ( display_name )`)
         .not('status', 'eq', 'deleted')
