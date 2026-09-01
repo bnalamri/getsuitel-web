@@ -17,7 +17,7 @@ export default async function HQMaintenanceReportPage({
   const { branch: branchId, status: statusFilter } = await searchParams
 
   // Fetch branches, requests, and orgs in parallel (avoid embedded join — FK may not be in cache)
-  const [{ data: branches }, { data: requests }, { data: orgs }] = await Promise.all([
+  const [{ data: branches }, { data: requests, error: reqErr }, { data: orgs }] = await Promise.all([
     supabase.from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name'),
     supabase
       .from('maintenance_requests')
@@ -28,6 +28,18 @@ export default async function HQMaintenanceReportPage({
       .from('organizations')
       .select('id, name, branch_id, branches ( display_name )'),
   ])
+
+  // DEBUG — remove after fix
+  if (reqErr || !requests?.length) {
+    return (
+      <div className="p-6 space-y-4">
+        <h1 className="text-2xl font-bold">Maintenance Report — Debug</h1>
+        <pre className="bg-red-50 border border-red-200 rounded p-4 text-xs overflow-auto">
+          {JSON.stringify({ error: reqErr, count: requests?.length ?? 0, sample: requests?.[0] ?? null }, null, 2)}
+        </pre>
+      </div>
+    )
+  }
 
   // Build org lookup map
   type OrgLookup = { name: string; branch_id: string | null; branch_name: string }
