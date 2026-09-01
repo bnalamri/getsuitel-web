@@ -21,25 +21,13 @@ export default async function HQMaintenanceReportPage({
     supabase.from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name'),
     supabase
       .from('maintenance_requests')
-      .select('id, title, status, priority, created_at, assigned_to_name, organization_id')
+      .select('id, title, status, priority, created_at, organization_id, technician_id, profiles ( full_name )')
       .order('created_at', { ascending: false })
       .limit(300),
     supabase
       .from('organizations')
       .select('id, name, branch_id, branches ( display_name )'),
   ])
-
-  // DEBUG — remove after fix
-  if (reqErr || !requests?.length) {
-    return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-bold">Maintenance Report — Debug</h1>
-        <pre className="bg-red-50 border border-red-200 rounded p-4 text-xs overflow-auto">
-          {JSON.stringify({ error: reqErr, count: requests?.length ?? 0, sample: requests?.[0] ?? null }, null, 2)}
-        </pre>
-      </div>
-    )
-  }
 
   // Build org lookup map
   type OrgLookup = { name: string; branch_id: string | null; branch_name: string }
@@ -56,7 +44,8 @@ export default async function HQMaintenanceReportPage({
 
   let rows = ((requests ?? []) as {
     id: string; title: string; status: string; priority: string; created_at: string
-    assigned_to_name: string | null; organization_id: string | null
+    organization_id: string | null; technician_id: string | null
+    profiles: { full_name: string } | null
   }[]).map(r => {
     const org      = r.organization_id ? orgMap[r.organization_id] : null
     const daysOpen = Math.floor((now - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24))
@@ -69,7 +58,7 @@ export default async function HQMaintenanceReportPage({
       org:        org?.name ?? '—',
       status:     r.status,
       priority:   r.priority ?? '—',
-      assigned:   r.assigned_to_name ?? 'Unassigned',
+      assigned:   r.profiles?.full_name ?? 'Unassigned',
       days_open:  daysOpen,
       overdue,
       date:       new Date(r.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' }),
