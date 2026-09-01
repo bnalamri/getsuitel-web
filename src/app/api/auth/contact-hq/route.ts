@@ -3,7 +3,7 @@ import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const HQ_EMAIL = process.env.HQ_ADMIN_EMAIL || 'hq_admin@getsuitel.com'
+const HQ_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'hq_admin@getsuitel.com'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -57,13 +57,18 @@ export async function POST(req: Request) {
 </table>
 </body></html>`
 
-  await resend.emails.send({
-    from: 'GetSuitel <noreply@getsuitel.com>',
-    to: HQ_EMAIL,
-    reply_to: user.email,
-    subject: `Branch Contact: ${branchName} — Suspension Enquiry`,
-    html,
-  })
+  try {
+    await resend.emails.send({
+      from: 'GetSuitel <noreply@getsuitel.com>',
+      to: HQ_EMAIL,
+      replyTo: user.email,
+      subject: `Branch Contact: ${branchName} — Suspension Enquiry`,
+      html,
+    })
+  } catch (err) {
+    console.error('contact-hq email error:', err)
+    return NextResponse.json({ error: 'Email failed' }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }
