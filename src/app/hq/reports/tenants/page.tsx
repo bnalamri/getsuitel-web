@@ -12,43 +12,39 @@ export default async function HQTenantsReportPage({
   const { data: branches } = await supabase
     .from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name')
 
-  // Get all active contracts with nested tenant + unit + property + org + branch
-  let query = supabase
+  // Join through organizations (guaranteed FK) to get branch info
+  const { data: contracts } = await supabase
     .from('contracts')
     .select(`
       id, status, rent_amount, start_date, end_date,
       tenants ( full_name, email, phone ),
-      units ( unit_number, properties ( name, branch_id, branches ( display_name ) ) )
+      units ( unit_number, properties ( name ) ),
+      organizations ( branch_id, branches ( display_name ) )
     `)
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (branchId) {
-    // Filter through the nested path — fetch all then filter client-side
-  }
-
-  const { data: contracts } = await query
-
   type ContractRow = {
     id: string; status: string; rent_amount: number; start_date: string; end_date: string
     tenants: { full_name: string; email: string; phone: string | null } | null
-    units: { unit_number: string; properties: { name: string; branch_id: string | null; branches: { display_name: string } | null } | null } | null
+    units: { unit_number: string; properties: { name: string } | null } | null
+    organizations: { branch_id: string | null; branches: { display_name: string } | null } | null
   }
 
   let rows = ((contracts ?? []) as ContractRow[]).map(c => ({
-    id:           c.id,
-    tenant:       c.tenants?.full_name ?? '—',
-    email:        c.tenants?.email ?? '—',
-    phone:        c.tenants?.phone ?? '—',
-    unit:         c.units?.unit_number ?? '—',
-    property:     c.units?.properties?.name ?? '—',
-    branch:       c.units?.properties?.branches?.display_name ?? '—',
-    branch_id:    c.units?.properties?.branch_id ?? null,
-    rent:         Number(c.rent_amount).toFixed(3),
-    status:       c.status,
-    start:        c.start_date ? new Date(c.start_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
-    end:          c.end_date   ? new Date(c.end_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
-    expiring:     c.end_date ? (new Date(c.end_date) < new Date(Date.now() + 30*24*60*60*1000)) : false,
+    id:        c.id,
+    tenant:    c.tenants?.full_name ?? '—',
+    email:     c.tenants?.email ?? '—',
+    phone:     c.tenants?.phone ?? '—',
+    unit:      c.units?.unit_number ?? '—',
+    property:  c.units?.properties?.name ?? '—',
+    branch:    c.organizations?.branches?.display_name ?? '—',
+    branch_id: c.organizations?.branch_id ?? null,
+    rent:      Number(c.rent_amount).toFixed(3),
+    status:    c.status,
+    start:     c.start_date ? new Date(c.start_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
+    end:       c.end_date   ? new Date(c.end_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
+    expiring:  c.end_date ? (new Date(c.end_date) < new Date(Date.now() + 30*24*60*60*1000)) : false,
   }))
 
   if (branchId) rows = rows.filter(r => r.branch_id === branchId)

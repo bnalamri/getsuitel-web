@@ -12,32 +12,43 @@ export default async function HQPropertiesReportPage({
   const { data: branches } = await supabase
     .from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name')
 
-  let propertiesQuery = supabase
+  // Join through organizations (guaranteed FK) to get branch info
+  const { data: properties } = await supabase
     .from('properties')
-    .select(`id, name, type, city, branch_id, units ( id, status ), branches ( display_name )`)
+    .select(`
+      id, name, type, city, organization_id,
+      organizations ( branch_id, branches ( display_name ) ),
+      units ( id, status )
+    `)
     .order('name')
 
-  if (branchId) propertiesQuery = propertiesQuery.eq('branch_id', branchId)
+  type PropRow = {
+    id: string; name: string; type: string; city: string; organization_id: string
+    organizations: { branch_id: string | null; branches: { display_name: string } | null } | null
+    units: { id: string; status: string }[]
+  }
 
-  const { data: properties } = await propertiesQuery
-
-  const rows = (properties ?? []).map(p => {
+  let rows = ((properties ?? []) as PropRow[]).map(p => {
+    const org      = p.organizations
     const units    = (p.units as { id: string; status: string }[]) ?? []
     const total    = units.length
     const occupied = units.filter(u => u.status === 'occupied').length
     const occ      = total > 0 ? Math.round((occupied / total) * 100) : 0
     return {
-      branch:  (p.branches as { display_name: string } | null)?.display_name ?? '—',
-      name:    p.name,
-      type:    (p.type as string) ?? '—',
-      city:    p.city ?? '—',
-      units:   total,
+      branch_id: org?.branch_id ?? null,
+      branch:    org?.branches?.display_name ?? '—',
+      name:      p.name,
+      type:      p.type ?? '—',
+      city:      p.city ?? '—',
+      units:     total,
       occupied,
-      occ_pct: `${occ}%`,
+      occ_pct:   `${occ}%`,
     }
   })
 
-  const csvData    = rows.map(r => ({ ...r }))
+  if (branchId) rows = rows.filter(r => r.branch_id === branchId)
+
+  const csvData    = rows.map(({ branch_id: _, ...r }) => r)
   const csvHeaders = ['Branch', 'Property', 'Type', 'City', 'Total Units', 'Occupied', 'Occupancy %']
 
   return (
