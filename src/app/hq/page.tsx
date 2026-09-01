@@ -27,6 +27,11 @@ async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
 
 export default async function HQDashboardPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const role = profile?.role ?? ''
+  const isFinance = role === 'hq_admin' || role === 'hq_finance'
+
   const stats = await getHQStats(supabase)
 
   const { data: recentBranches } = await supabase
@@ -50,15 +55,17 @@ export default async function HQDashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isFinance ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
         <StatCard icon={Building2} label="Active Branches" value={stats.activeBranches}
           sub={`${stats.totalBranches} total`} color="yellow" />
         <StatCard icon={Users} label="Total Orgs" value={stats.totalOrgs}
           sub="across all branches" color="blue" />
-        <StatCard icon={OmrIcon} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
-          sub="all billing records" color="green" />
-        <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
-          sub="branch billing" color="red" />
+        {isFinance && <>
+          <StatCard icon={OmrIcon} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
+            sub="all billing records" color="green" />
+          <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
+            sub="branch billing" color="red" />
+        </>}
       </div>
 
       {/* Branch health */}
@@ -86,8 +93,10 @@ export default async function HQDashboardPage() {
                   <th className="px-5 py-3 text-left">Branch</th>
                   <th className="px-5 py-3 text-left">City</th>
                   <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License Fee <OmrSymbol variant="dark" size={13} /></span></th>
-                  <th className="px-5 py-3 text-right">Rev Share %</th>
+                  {isFinance && <>
+                    <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License Fee <OmrSymbol variant="dark" size={13} /></span></th>
+                    <th className="px-5 py-3 text-right">Rev Share %</th>
+                  </>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -104,8 +113,10 @@ export default async function HQDashboardPage() {
                         {b.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right text-gray-700">{Number(b.license_fee_omr).toFixed(3)}</td>
-                    <td className="px-5 py-3 text-right text-gray-700">{b.revenue_share_pct}%</td>
+                    {isFinance && <>
+                      <td className="px-5 py-3 text-right text-gray-700">{Number(b.license_fee_omr).toFixed(3)}</td>
+                      <td className="px-5 py-3 text-right text-gray-700">{b.revenue_share_pct}%</td>
+                    </>}
                   </tr>
                 ))}
               </tbody>
