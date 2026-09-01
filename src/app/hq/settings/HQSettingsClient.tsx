@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
-type Profile = { id: string; full_name: string | null; email: string; role: string; avatar_url?: string | null }
+type Profile = { id: string; full_name: string | null; email: string; phone?: string | null; role: string; avatar_url?: string | null }
 type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
 type Flag    = { feature_key: string; label: string; description: string | null; enabled_globally: boolean; branch_overrides: Record<string, boolean> }
 type Branch  = { id: string; display_name: string }
@@ -52,6 +52,7 @@ export default function HQSettingsClient({
 
   // ── Profile ──────────────────────────────────────────────────────────────
   const [name,        setName]        = useState(profile?.full_name ?? '')
+  const [phone,       setPhone]       = useState(profile?.phone ?? '')
   const [profLoading, setProfLoading] = useState(false)
   const [profMsg,     setProfMsg]     = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -59,7 +60,7 @@ export default function HQSettingsClient({
     e.preventDefault()
     setProfLoading(true); setProfMsg(null)
     const supabase = createClient()
-    const { error } = await supabase.from('profiles').update({ full_name: name }).eq('id', profile!.id)
+    const { error } = await supabase.from('profiles').update({ full_name: name, phone: phone || null }).eq('id', profile!.id)
     setProfLoading(false)
     setProfMsg(error ? { ok: false, text: error.message } : { ok: true, text: 'Profile saved!' })
     if (!error) { setTimeout(() => setProfMsg(null), 3000); router.refresh() }
@@ -203,12 +204,16 @@ export default function HQSettingsClient({
             <input className={input} value={name} onChange={e => setName(e.target.value)} placeholder="Your name" />
           </div>
           <div>
+            <label className={label}>Phone</label>
+            <input className={input} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+968 XXXX XXXX" type="tel" />
+          </div>
+          <div>
             <label className={label}>Email</label>
             <input className={`${input} bg-gray-50 text-gray-400 cursor-not-allowed`} value={profile?.email ?? ''} disabled />
           </div>
           <div>
             <label className={label}>Role</label>
-            <input className={`${input} bg-gray-50 text-gray-400 cursor-not-allowed`} value={profile?.role === 'hq_admin' ? 'HQ Admin (Layer 0)' : 'HQ Staff (Layer 0)'} disabled />
+            <input className={`${input} bg-gray-50 text-gray-400 cursor-not-allowed`} value={profile?.role === 'hq_admin' ? 'HQ Admin (Layer 0)' : profile?.role === 'hq_finance' ? 'HQ Finance (Layer 0)' : 'HQ Staff (Layer 0)'} disabled />
           </div>
           {profMsg && <Msg ok={profMsg.ok} text={profMsg.text} />}
           <button type="submit" disabled={profLoading} className={btn}>
