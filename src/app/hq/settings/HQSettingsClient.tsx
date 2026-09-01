@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
-type Profile = { id: string; full_name: string | null; email: string; avatar_url?: string | null }
+type Profile = { id: string; full_name: string | null; email: string; role: string; avatar_url?: string | null }
 type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
 type Flag    = { feature_key: string; label: string; description: string | null; enabled_globally: boolean; branch_overrides: Record<string, boolean> }
 type Branch  = { id: string; display_name: string }
@@ -207,7 +207,7 @@ export default function HQSettingsClient({
           </div>
           <div>
             <label className={label}>Role</label>
-            <input className={`${input} bg-gray-50 text-gray-400 cursor-not-allowed`} value="HQ Admin (Layer 0)" disabled />
+            <input className={`${input} bg-gray-50 text-gray-400 cursor-not-allowed`} value={profile?.role === 'hq_admin' ? 'HQ Admin (Layer 0)' : 'HQ Staff (Layer 0)'} disabled />
           </div>
           {profMsg && <Msg ok={profMsg.ok} text={profMsg.text} />}
           <button type="submit" disabled={profLoading} className={btn}>
@@ -491,11 +491,15 @@ export default function HQSettingsClient({
           </div>
           <div className="flex items-center justify-between py-3">
             <span className="text-sm text-gray-500">Role</span>
-            <span className="text-sm font-semibold text-gray-800">HQ Admin · Layer 0</span>
+            <span className="text-sm font-semibold text-gray-800">
+              {profile?.role === 'hq_admin' ? 'HQ Admin' : 'HQ Staff'} · Layer 0
+            </span>
           </div>
           <div className="flex items-center justify-between py-3">
             <span className="text-sm text-gray-500">Access Level</span>
-            <span className="text-sm text-gray-600">Global read/write across all branches</span>
+            <span className="text-sm text-gray-600">
+              {profile?.role === 'hq_admin' ? 'Global read/write across all branches' : 'Global read access across all branches'}
+            </span>
           </div>
           <div className="flex items-center justify-between py-3">
             <span className="text-sm text-gray-500">Version</span>

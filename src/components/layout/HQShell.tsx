@@ -180,7 +180,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden sm:inline-block text-xs bg-yellow-100 text-yellow-800 font-semibold px-2 py-1 rounded-full">
-              Layer 0 · hq_admin
+              Layer 0 · {profile.role === 'hq_admin' ? 'HQ Admin' : 'HQ Staff'}
             </span>
           </div>
         </header>
