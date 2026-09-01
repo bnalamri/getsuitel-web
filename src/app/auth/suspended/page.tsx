@@ -2,25 +2,37 @@
 
 import Link from 'next/link'
 import { ShieldOff, Send, CheckCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 
 export default function SuspendedPage() {
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) setUserEmail(data.user.email)
+    })
+  }, [])
 
   async function handleSend() {
-    if (!message.trim()) return
+    if (!message.trim() || !userEmail) return
     setSending(true)
     setError('')
     try {
       const res = await fetch('/api/auth/contact-hq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, userEmail }),
       })
-      if (!res.ok) throw new Error('Failed to send')
+      if (!res.ok) throw new Error('Failed')
       setSent(true)
     } catch {
       setError('Could not send message. Please try again.')
@@ -60,7 +72,7 @@ export default function SuspendedPage() {
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
             <button
               onClick={handleSend}
-              disabled={sending || !message.trim()}
+              disabled={sending || !message.trim() || !userEmail}
               className="mt-3 w-full flex items-center justify-center gap-2 bg-navy-700 hover:bg-navy-800 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors"
             >
               <Send size={14} />

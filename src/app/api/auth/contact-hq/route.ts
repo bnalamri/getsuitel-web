@@ -1,25 +1,25 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const HQ_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'hq_admin@getsuitel.com'
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { message, userEmail } = await req.json()
+  if (!message?.trim() || !userEmail) {
+    return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  }
 
-  const { message } = await req.json()
-  if (!message?.trim()) return NextResponse.json({ error: 'Message required' }, { status: 400 })
-
+  // Use admin client (no cookie dependency) to look up the sender
+  const supabase = createAdminClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, branch_name')
-    .eq('id', user.id)
+    .eq('email', userEmail)
     .single()
 
-  const senderName = profile?.full_name || user.email
+  const senderName = profile?.full_name || userEmail
   const branchName = profile?.branch_name || 'Unknown Branch'
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
@@ -46,27 +46,27 @@ export async function POST(req: Request) {
     </tr>
     <tr>
       <td style="padding:10px 0;color:#64748b">Email</td>
-      <td style="font-weight:600;color:#0f172a"><a href="mailto:${user.email}" style="color:#1B3A6B">${user.email}</a></td>
+      <td style="font-weight:600;color:#0f172a"><a href="mailto:${userEmail}" style="color:#1B3A6B">${userEmail}</a></td>
     </tr>
   </table>
   <div style="background:#f8fafc;border-radius:12px;padding:20px;font-size:14px;color:#334155;line-height:1.8;white-space:pre-wrap">${message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-  <div style="margin-top:24px;font-size:12px;color:#94a3b8">Reply directly to this email to reach the superadmin at ${user.email}</div>
+  <div style="margin-top:24px;font-size:12px;color:#94a3b8">Reply directly to this email to reach the superadmin at ${userEmail}</div>
 </td></tr>
 </table>
 </td></tr>
 </table>
 </body></html>`
 
-  try {
-    await resend.emails.send({
-      from: 'GetSuitel <noreply@getsuitel.com>',
-      to: HQ_EMAIL,
-      replyTo: user.email,
-      subject: `Branch Contact: ${branchName} — Suspension Enquiry`,
-      html,
-    })
-  } catch (err) {
-    console.error('contact-hq email error:', err)
+  const { error } = await resend.emails.send({
+    from: 'GetSuitel <noreply@getsuitel.com>',
+    to: [HQ_EMAIL],
+    replyTo: userEmail,
+    subject: `Branch Contact: ${branchName} — Suspension Enquiry`,
+    html,
+  })
+
+  if (error) {
+    console.error('contact-hq resend error:', JSON.stringify(error))
     return NextResponse.json({ error: 'Email failed' }, { status: 500 })
   }
 
