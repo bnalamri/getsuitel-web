@@ -16,35 +16,45 @@ export default async function HQMaintenanceReportPage({
   const supabase = createAdminClient()
   const { branch: branchId, status: statusFilter } = await searchParams
 
-  const { data: branches } = await supabase
-    .from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name')
+  // Fetch branches, requests, and orgs in parallel (avoid embedded join — FK may not be in cache)
+  const [{ data: branches }, { data: requests }, { data: orgs }] = await Promise.all([
+    supabase.from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name'),
+    supabase
+      .from('maintenance_requests')
+      .select('id, title, status, priority, created_at, assigned_to_name, organization_id')
+      .order('created_at', { ascending: false })
+      .limit(300),
+    supabase
+      .from('organizations')
+      .select('id, name, branch_id, branches ( display_name )'),
+  ])
 
-  // Get maintenance requests via org→branch join
-  const { data: requests } = await supabase
-    .from('maintenance_requests')
-    .select(`
-      id, title, status, priority, created_at, assigned_to_name,
-      organizations ( name, branch_id, branches ( display_name ) )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(300)
+  // Build org lookup map
+  type OrgLookup = { name: string; branch_id: string | null; branch_name: string }
+  const orgMap: Record<string, OrgLookup> = {}
+  ;(orgs ?? []).forEach((o: { id: string; name: string; branch_id: string | null; branches: { display_name: string } | null }) => {
+    orgMap[o.id] = {
+      name: o.name,
+      branch_id: o.branch_id,
+      branch_name: (o.branches as { display_name: string } | null)?.display_name ?? '—',
+    }
+  })
 
   const now = Date.now()
 
-  type ReqRow = {
-    id: string; title: string; status: string; priority: string; created_at: string; assigned_to_name: string | null
-    organizations: { name: string; branch_id: string | null; branches: { display_name: string } | null } | null
-  }
-
-  let rows = ((requests ?? []) as ReqRow[]).map(r => {
+  let rows = ((requests ?? []) as {
+    id: string; title: string; status: string; priority: string; created_at: string
+    assigned_to_name: string | null; organization_id: string | null
+  }[]).map(r => {
+    const org      = r.organization_id ? orgMap[r.organization_id] : null
     const daysOpen = Math.floor((now - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24))
     const overdue  = r.status !== 'completed' && r.status !== 'cancelled' && daysOpen > 7
     return {
       id:         r.id,
       title:      r.title,
-      branch:     r.organizations?.branches?.display_name ?? '—',
-      branch_id:  r.organizations?.branch_id ?? null,
-      org:        r.organizations?.name ?? '—',
+      branch:     org?.branch_name ?? '—',
+      branch_id:  org?.branch_id ?? null,
+      org:        org?.name ?? '—',
       status:     r.status,
       priority:   r.priority ?? '—',
       assigned:   r.assigned_to_name ?? 'Unassigned',
