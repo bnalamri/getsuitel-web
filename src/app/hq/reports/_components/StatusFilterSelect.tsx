@@ -6,7 +6,7 @@ const STATUSES = [
   { value: 'open',       label: 'Open' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed',  label: 'Completed' },
-  { value: 'cancelled',  label: 'Cancelled' },
+  { value: 'canceled',   label: 'Canceled' },
 ]
 
 export default function StatusFilterSelect({

@@ -50,7 +50,7 @@ export default async function HQMaintenanceReportPage({
   }[]).map(r => {
     const org      = r.organization_id ? orgMap[r.organization_id] : null
     const daysOpen = Math.floor((now - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24))
-    const overdue  = r.status !== 'completed' && r.status !== 'cancelled' && daysOpen > 7
+    const overdue  = r.status !== 'completed' && r.status !== 'canceled' && daysOpen > 7
     return {
       id:         r.id,
       title:      r.title,
