@@ -117,7 +117,8 @@ export async function PATCH(req: NextRequest) {
   if (!await requireHQ(supabase)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { id, ...updates } = body
+  // Strip superadmin_email — it's used only for invite sending, not a DB column
+  const { id, superadmin_email: _ignored, ...updates } = body
   if (!id) return NextResponse.json({ error: 'Branch ID required' }, { status: 400 })
 
   const { data, error } = await supabase

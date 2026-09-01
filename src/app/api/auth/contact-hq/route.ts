@@ -12,14 +12,19 @@ export async function POST(req: Request) {
   // Use admin client (no cookie dependency) to look up sender + HQ contact email
   const supabase = createAdminClient()
   const [{ data: profile }, { data: config }] = await Promise.all([
-    supabase.from('profiles').select('full_name, branch_name').eq('email', userEmail).single(),
+    supabase.from('profiles').select('id, full_name').eq('email', userEmail).single(),
     supabase.from('platform_config').select('hq_contact_email').eq('id', 1).single(),
   ])
 
   const HQ_EMAIL = config?.hq_contact_email || 'hq_admin@getsuitel.com'
 
   const senderName = profile?.full_name || userEmail
-  const branchName = profile?.branch_name || 'Unknown Branch'
+
+  // Look up branch via superadmin_id
+  const { data: branch } = profile?.id
+    ? await supabase.from('branches').select('display_name, name').eq('superadmin_id', profile.id).single()
+    : { data: null }
+  const branchName = branch?.display_name || branch?.name || 'Unknown Branch'
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
