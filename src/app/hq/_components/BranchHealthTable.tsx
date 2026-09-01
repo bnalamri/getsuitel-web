@@ -25,8 +25,13 @@ function OccupancyBar({ pct }: { pct: number }) {
   )
 }
 
+const FINANCE_ROLES = ['hq_admin', 'hq_finance']
+
 export default async function BranchHealthTable() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isFinance = FINANCE_ROLES.includes(profile?.role ?? '')
 
   // All active branches
   const { data: branches } = await supabase
@@ -108,9 +113,11 @@ export default async function BranchHealthTable() {
               <th className="px-5 py-3 text-center">Units</th>
               <th className="px-5 py-3 text-left" style={{ minWidth: 140 }}>Occupancy</th>
               <th className="px-5 py-3 text-center">Open Maint.</th>
-              <th className="px-5 py-3 text-right">
-                <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={12} /></span>
-              </th>
+              {isFinance && (
+                <th className="px-5 py-3 text-right">
+                  <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={12} /></span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -143,12 +150,14 @@ export default async function BranchHealthTable() {
                       <span className="text-green-600 font-semibold">0</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    <span className="flex items-center justify-end gap-1 text-gray-800 font-semibold">
-                      <OmrSymbol variant="dark" size={12} />
-                      {r.revenue_omr.toFixed(3)}
-                    </span>
-                  </td>
+                  {isFinance && (
+                    <td className="px-5 py-3 text-right">
+                      <span className="flex items-center justify-end gap-1 text-gray-800 font-semibold">
+                        <OmrSymbol variant="dark" size={12} />
+                        {r.revenue_omr.toFixed(3)}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               )
             })}

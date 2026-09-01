@@ -1,16 +1,25 @@
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Building2, Users, Wrench, TrendingUp, CreditCard, BarChart2 } from 'lucide-react'
 
-const REPORTS = [
-  { href: '/hq/reports/properties',     icon: Building2,  label: 'Properties',             desc: 'All properties across branches — filter by branch, type, status' },
-  { href: '/hq/reports/tenants',        icon: Users,      label: 'Tenants',                 desc: 'All tenants + contract status, filterable by branch' },
-  { href: '/hq/reports/maintenance',    icon: Wrench,     label: 'Maintenance',             desc: 'Open / closed jobs per branch — highlights overdue' },
-  { href: '/hq/reports/revenue-trend',  icon: TrendingUp, label: 'Revenue Trend',           desc: 'Monthly revenue per branch over the last 12 months' },
-  { href: '/hq/reports/subscriptions',  icon: CreditCard, label: 'Subscription Plans',      desc: 'Organisations per plan tier, grouped by branch' },
-  { href: '/hq/reports/growth',         icon: BarChart2,  label: 'Growth Metrics',          desc: 'Branch growth — new orgs, properties, tenants over time' },
+const ALL_REPORTS = [
+  { href: '/hq/reports/properties',     icon: Building2,  label: 'Properties',             desc: 'All properties across branches — filter by branch, type, status', financeOnly: false },
+  { href: '/hq/reports/tenants',        icon: Users,      label: 'Tenants',                 desc: 'All tenants + contract status, filterable by branch', financeOnly: false },
+  { href: '/hq/reports/maintenance',    icon: Wrench,     label: 'Maintenance',             desc: 'Open / closed jobs per branch — highlights overdue', financeOnly: false },
+  { href: '/hq/reports/revenue-trend',  icon: TrendingUp, label: 'Revenue Trend',           desc: 'Monthly revenue per branch over the last 12 months', financeOnly: true },
+  { href: '/hq/reports/subscriptions',  icon: CreditCard, label: 'Subscription Plans',      desc: 'Organisations per plan tier, grouped by branch', financeOnly: false },
+  { href: '/hq/reports/growth',         icon: BarChart2,  label: 'Growth Metrics',          desc: 'Branch growth — new orgs, properties, tenants over time', financeOnly: false },
 ]
 
-export default function HQReportsPage() {
+const FINANCE_ROLES = ['hq_admin', 'hq_finance']
+
+export default async function HQReportsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isFinance = FINANCE_ROLES.includes(profile?.role ?? '')
+  const REPORTS = ALL_REPORTS.filter(r => !r.financeOnly || isFinance)
+
   return (
     <div className="p-6 space-y-6">
       <div>
