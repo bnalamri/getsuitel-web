@@ -9,48 +9,36 @@ export default async function HQPropertiesReportPage({
   const supabase  = createAdminClient()
   const { branch: branchId } = await searchParams
 
-  const [{ data: branches }, { data: rawProps }] = await Promise.all([
-    supabase.from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name'),
-    supabase
-      .from('properties')
-      .select(`
-        id, name, property_type, city, status, branch_id,
-        units ( id, status ),
-        branches ( display_name )
-      `)
-      .eq(branchId ? 'branch_id' : 'status', branchId ?? 'active')
-      .not('status', 'eq', 'deleted')
-      .order('name'),
-  ])
+  const { data: branches } = await supabase
+    .from('branches').select('id, display_name').in('status', ['active', 'suspended']).order('display_name')
 
-  // If no branch filter, re-fetch without status filter (we used status as a dummy eq above)
-  const { data: properties } = branchId
-    ? { data: rawProps }
-    : await createAdminClient()
-        .from('properties')
-        .select(`id, name, property_type, city, status, branch_id, units ( id, status ), branches ( display_name )`)
-        .not('status', 'eq', 'deleted')
-        .order('name')
+  let propertiesQuery = supabase
+    .from('properties')
+    .select(`id, name, type, city, branch_id, units ( id, status ), branches ( display_name )`)
+    .order('name')
+
+  if (branchId) propertiesQuery = propertiesQuery.eq('branch_id', branchId)
+
+  const { data: properties } = await propertiesQuery
 
   const rows = (properties ?? []).map(p => {
-    const units   = (p.units as { id: string; status: string }[]) ?? []
-    const total   = units.length
+    const units    = (p.units as { id: string; status: string }[]) ?? []
+    const total    = units.length
     const occupied = units.filter(u => u.status === 'occupied').length
-    const occ = total > 0 ? Math.round((occupied / total) * 100) : 0
+    const occ      = total > 0 ? Math.round((occupied / total) * 100) : 0
     return {
-      branch:   (p.branches as { display_name: string } | null)?.display_name ?? '—',
-      name:     p.name,
-      type:     p.property_type ?? '—',
-      city:     p.city ?? '—',
-      units:    total,
+      branch:  (p.branches as { display_name: string } | null)?.display_name ?? '—',
+      name:    p.name,
+      type:    (p.type as string) ?? '—',
+      city:    p.city ?? '—',
+      units:   total,
       occupied,
-      occ_pct:  `${occ}%`,
-      status:   p.status,
+      occ_pct: `${occ}%`,
     }
   })
 
-  const csvData   = rows.map(r => ({ ...r }))
-  const csvHeaders = ['Branch', 'Property', 'Type', 'City', 'Total Units', 'Occupied', 'Occupancy %', 'Status']
+  const csvData    = rows.map(r => ({ ...r }))
+  const csvHeaders = ['Branch', 'Property', 'Type', 'City', 'Total Units', 'Occupied', 'Occupancy %']
 
   return (
     <div className="p-6 space-y-6">
@@ -80,14 +68,13 @@ export default async function HQPropertiesReportPage({
                 <th className="px-5 py-3 text-left">City</th>
                 <th className="px-5 py-3 text-right">Units</th>
                 <th className="px-5 py-3 text-left">Occupancy</th>
-                <th className="px-5 py-3 text-left">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!rows.length ? (
-                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">No properties found</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No properties found</td></tr>
               ) : rows.map((r, i) => {
-                const pct = parseInt(r.occ_pct)
+                const pct      = parseInt(r.occ_pct)
                 const barColor = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-400' : 'bg-red-400'
                 return (
                   <tr key={i} className="hover:bg-gray-50">
@@ -103,11 +90,6 @@ export default async function HQPropertiesReportPage({
                         </div>
                         <span className="text-xs text-gray-600">{r.occ_pct}</span>
                       </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                        r.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>{r.status}</span>
                     </td>
                   </tr>
                 )

@@ -21,7 +21,7 @@ export default async function HQSubscriptionsReportPage({
     supabase
       .from('organizations')
       .select('id, name, subscription_plan, subscription_status, branch_id, branches ( display_name )')
-      .not('status', 'eq', 'canceled')
+      .not('subscription_status', 'eq', 'canceled')
       .order('subscription_plan'),
   ])
 

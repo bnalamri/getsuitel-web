@@ -16,7 +16,7 @@ export default async function HQTenantsReportPage({
   let query = supabase
     .from('contracts')
     .select(`
-      id, status, monthly_rent, start_date, end_date,
+      id, status, rent_amount, start_date, end_date,
       tenants ( full_name, email, phone ),
       units ( unit_number, properties ( name, branch_id, branches ( display_name ) ) )
     `)
@@ -30,7 +30,7 @@ export default async function HQTenantsReportPage({
   const { data: contracts } = await query
 
   type ContractRow = {
-    id: string; status: string; monthly_rent: number; start_date: string; end_date: string
+    id: string; status: string; rent_amount: number; start_date: string; end_date: string
     tenants: { full_name: string; email: string; phone: string | null } | null
     units: { unit_number: string; properties: { name: string; branch_id: string | null; branches: { display_name: string } | null } | null } | null
   }
@@ -44,7 +44,7 @@ export default async function HQTenantsReportPage({
     property:     c.units?.properties?.name ?? '—',
     branch:       c.units?.properties?.branches?.display_name ?? '—',
     branch_id:    c.units?.properties?.branch_id ?? null,
-    rent:         Number(c.monthly_rent).toFixed(3),
+    rent:         Number(c.rent_amount).toFixed(3),
     status:       c.status,
     start:        c.start_date ? new Date(c.start_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
     end:          c.end_date   ? new Date(c.end_date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '—',
