@@ -3,21 +3,20 @@ import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const HQ_EMAIL = 'hq_admin@getsuitel.com'
-
 export async function POST(req: Request) {
   const { message, userEmail } = await req.json()
   if (!message?.trim() || !userEmail) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  // Use admin client (no cookie dependency) to look up the sender
+  // Use admin client (no cookie dependency) to look up sender + HQ contact email
   const supabase = createAdminClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, branch_name')
-    .eq('email', userEmail)
-    .single()
+  const [{ data: profile }, { data: config }] = await Promise.all([
+    supabase.from('profiles').select('full_name, branch_name').eq('email', userEmail).single(),
+    supabase.from('platform_config').select('hq_contact_email').eq('id', 1).single(),
+  ])
+
+  const HQ_EMAIL = config?.hq_contact_email || 'hq_admin@getsuitel.com'
 
   const senderName = profile?.full_name || userEmail
   const branchName = profile?.branch_name || 'Unknown Branch'

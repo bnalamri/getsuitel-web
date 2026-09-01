@@ -28,14 +28,15 @@ export async function PATCH(req: NextRequest) {
   if (!await requireHQ(supabase)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { date_format, default_currency, currency_symbol } = body
+  const { date_format, default_currency, currency_symbol, hq_contact_email } = body
 
   const { data, error } = await supabase
     .from('platform_config')
     .update({
-      ...(date_format      && { date_format }),
-      ...(default_currency && { default_currency }),
-      ...(currency_symbol  && { currency_symbol }),
+      ...(date_format        && { date_format }),
+      ...(default_currency   && { default_currency }),
+      ...(currency_symbol    && { currency_symbol }),
+      ...(hq_contact_email   && { hq_contact_email }),
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1)

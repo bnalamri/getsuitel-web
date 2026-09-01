@@ -9,7 +9,7 @@ import {
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Profile = { id: string; full_name: string | null; email: string; avatar_url?: string | null }
-type Config  = { date_format: string; default_currency: string; currency_symbol: string }
+type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
 type Flag    = { feature_key: string; label: string; description: string | null; enabled_globally: boolean; branch_overrides: Record<string, boolean> }
 type Branch  = { id: string; display_name: string }
 
@@ -96,8 +96,9 @@ export default function HQSettingsClient({
   }
 
   // ── Platform Defaults ─────────────────────────────────────────────────────
-  const [dateFormat,   setDateFormat]   = useState(config?.date_format      ?? 'DD/MM/YYYY')
-  const [currency,     setCurrency]     = useState(config?.default_currency  ?? 'OMR')
+  const [dateFormat,      setDateFormat]      = useState(config?.date_format       ?? 'DD/MM/YYYY')
+  const [currency,        setCurrency]        = useState(config?.default_currency   ?? 'OMR')
+  const [hqContactEmail,  setHqContactEmail]  = useState(config?.hq_contact_email  ?? 'hq_admin@getsuitel.com')
   const [cfgLoading,   setCfgLoading]   = useState(false)
   const [cfgMsg,       setCfgMsg]       = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -108,9 +109,10 @@ export default function HQSettingsClient({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        date_format:      dateFormat,
-        default_currency: currency,
-        currency_symbol:  currencyObj?.symbol ?? currency,
+        date_format:       dateFormat,
+        default_currency:  currency,
+        currency_symbol:   currencyObj?.symbol ?? currency,
+        hq_contact_email:  hqContactEmail,
       }),
     })
     setCfgLoading(false)
@@ -267,6 +269,17 @@ export default function HQSettingsClient({
                 <OmrSymbol variant="dark" size={18} />
               </div>
             )}
+          </div>
+          <div>
+            <label className={label}>HQ Contact Email</label>
+            <input
+              type="email"
+              className={input}
+              value={hqContactEmail}
+              onChange={e => setHqContactEmail(e.target.value)}
+              placeholder="hq_admin@getsuitel.com"
+            />
+            <p className="text-xs text-gray-400 mt-1">Branch suspension messages are sent to this address.</p>
           </div>
           {cfgMsg && <Msg ok={cfgMsg.ok} text={cfgMsg.text} />}
           <button type="submit" disabled={cfgLoading} className={btn}>
