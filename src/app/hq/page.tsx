@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, Users, TrendingUp, AlertCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchHealthTable from './_components/BranchHealthTable'
@@ -9,9 +9,10 @@ import RegionalChart from './_components/RegionalChart'
 const OmrIcon = (_: { className?: string }) => <OmrSymbol variant="dark" size={24} />
 
 async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const adminClient = createAdminClient()
   const [branches, orgs, billing] = await Promise.all([
     supabase.from('branches').select('id, name, status, license_fee_omr, revenue_share_pct', { count: 'exact' }),
-    supabase.from('organizations').select('id, status', { count: 'exact' }),
+    adminClient.from('organizations').select('id', { count: 'exact', head: true }),
     supabase.from('branch_billing').select('total_revenue_omr, share_amount_omr, license_fee_omr, status'),
   ])
 
