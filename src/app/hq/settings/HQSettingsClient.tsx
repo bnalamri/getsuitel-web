@@ -48,6 +48,7 @@ export default function HQSettingsClient({
   branches: Branch[]
 }) {
   const router = useRouter()
+  const isAdmin = profile?.role === 'hq_admin'
 
   // ── Profile ──────────────────────────────────────────────────────────────
   const [name,        setName]        = useState(profile?.full_name ?? '')
@@ -281,11 +282,18 @@ export default function HQSettingsClient({
             />
             <p className="text-xs text-gray-400 mt-1">Branch suspension messages are sent to this address.</p>
           </div>
+          {!isAdmin && (
+            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+              Read-only — only HQ Admin can change platform defaults.
+            </p>
+          )}
           {cfgMsg && <Msg ok={cfgMsg.ok} text={cfgMsg.text} />}
-          <button type="submit" disabled={cfgLoading} className={btn}>
-            {cfgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <OmrSymbol variant="dark" size={16} />}
-            {cfgMsg?.ok ? 'Saved!' : 'Save Defaults'}
-          </button>
+          {isAdmin && (
+            <button type="submit" disabled={cfgLoading} className={btn}>
+              {cfgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <OmrSymbol variant="dark" size={16} />}
+              {cfgMsg?.ok ? 'Saved!' : 'Save Defaults'}
+            </button>
+          )}
         </form>
       </div>
 
@@ -400,10 +408,10 @@ export default function HQSettingsClient({
                   <div className="flex items-center gap-3 py-3">
                     {/* Global toggle */}
                     <button
-                      onClick={() => toggleGlobal(f.feature_key, f.enabled_globally)}
-                      disabled={flagSaving === f.feature_key}
+                      onClick={() => isAdmin && toggleGlobal(f.feature_key, f.enabled_globally)}
+                      disabled={!isAdmin || flagSaving === f.feature_key}
                       className="flex-shrink-0 text-gray-400 disabled:opacity-50 transition-colors"
-                      title={f.enabled_globally ? 'Disable globally' : 'Enable globally'}
+                      title={!isAdmin ? 'Only HQ Admin can change feature flags' : f.enabled_globally ? 'Disable globally' : 'Enable globally'}
                     >
                       {f.enabled_globally
                         ? <ToggleRight className="w-6 h-6 text-green-500" />
@@ -448,8 +456,8 @@ export default function HQSettingsClient({
                                 return (
                                   <button
                                     key={opt}
-                                    disabled={isSaving}
-                                    onClick={() => setBranchOverride(f.feature_key, b.id, val)}
+                                    disabled={!isAdmin || isSaving}
+                                    onClick={() => isAdmin && setBranchOverride(f.feature_key, b.id, val)}
                                     className={`px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50 ${
                                       active
                                         ? opt === 'On'  ? 'bg-green-500 text-white'
