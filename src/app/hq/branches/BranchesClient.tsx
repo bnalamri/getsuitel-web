@@ -91,8 +91,8 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
                 <th className="px-5 py-3 text-left">Superadmin</th>
                 <th className="px-5 py-3 text-left">Location</th>
                 <th className="px-5 py-3 text-center">Orgs</th>
-                <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span></th>
-                <th className="px-5 py-3 text-right">Rev Share</th>
+                {isAdmin && <th className="px-5 py-3 text-right"><span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span></th>}
+                {isAdmin && <th className="px-5 py-3 text-right">Rev Share</th>}
                 <th className="px-5 py-3 text-left">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -100,7 +100,7 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
             <tbody className="divide-y divide-gray-100">
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                  <td colSpan={isAdmin ? 8 : 6} className="px-5 py-12 text-center text-gray-400">
                     <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
                     <p className="font-medium">No branches found</p>
                   </td>
@@ -123,8 +123,8 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
                   </td>
                   <td className="px-5 py-3 text-gray-600">{[b.city, b.region].filter(Boolean).join(', ') || '—'}</td>
                   <td className="px-5 py-3 text-center font-semibold text-gray-700">{b.org_count}</td>
-                  <td className="px-5 py-3 text-right text-gray-700">{Number(b.license_fee_omr).toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-gray-700">{b.revenue_share_pct}%</td>
+                  {isAdmin && <td className="px-5 py-3 text-right text-gray-700">{Number(b.license_fee_omr).toFixed(3)}</td>}
+                  {isAdmin && <td className="px-5 py-3 text-right text-gray-700">{b.revenue_share_pct}%</td>}
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLES[b.status] ?? ''}`}>
                       {b.status}
