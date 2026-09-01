@@ -10,6 +10,7 @@ const ALWAYS_PUBLIC = ['/auth/logout', '/auth/suspended']
 const ROLE_HOME: Record<string, string> = {
   hq_admin:          '/hq',
   hq_staff:          '/hq',
+  hq_finance:        '/hq',
   superadmin:        '/dashboard/admin',
   owner:             '/dashboard/owner',
   tenant:            '/dashboard/tenant',
@@ -109,9 +110,9 @@ export async function middleware(request: NextRequest) {
     return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
   }
 
-  // Guard /hq/* — hq_admin and hq_staff only
+  // Guard /hq/* — hq_admin, hq_staff, hq_finance only
   if (path.startsWith('/hq')) {
-    if (role !== 'hq_admin' && role !== 'hq_staff') {
+    if (role !== 'hq_admin' && role !== 'hq_staff' && role !== 'hq_finance') {
       const url = request.nextUrl.clone()
       url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
       return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
@@ -122,7 +123,7 @@ export async function middleware(request: NextRequest) {
   // Role guard for /dashboard/*
   if (path.startsWith('/dashboard/')) {
     // hq_admin and hq_staff don't belong in /dashboard — send them home
-    if (role === 'hq_admin' || role === 'hq_staff') {
+    if (role === 'hq_admin' || role === 'hq_staff' || role === 'hq_finance') {
       const url = request.nextUrl.clone()
       url.pathname = '/hq'
       return withSupaCookies(NextResponse.redirect(url), supabaseResponse)

@@ -17,34 +17,39 @@ const OmrNavIcon = ({ className }: { className?: string }) => (
 
 type Profile = { id: string; full_name: string | null; email: string; role: string; avatar_url?: string | null }
 
-type NavItem = { href: string; icon: React.ElementType; label: string }
-type NavGroup = { label: string; items: NavItem[] }
+// roles: undefined = all HQ roles; specified array = only those roles
+type NavItem = { href: string; icon: React.ElementType; label: string; roles?: string[] }
+type NavGroup = { label: string; roles?: string[]; items: NavItem[] }
+
+const FINANCE_ROLES = ['hq_admin', 'hq_finance']
 
 const NAV: NavGroup[] = [
   { label: 'HQ Overview', items: [
-    { href: '/hq',           icon: LayoutDashboard, label: 'Dashboard'     },
-    { href: '/hq/branches',  icon: Building2,       label: 'Branches'      },
-    { href: '/hq/users',     icon: Users,           label: 'HQ Users'      },
+    { href: '/hq',           icon: LayoutDashboard, label: 'Dashboard'  },
+    { href: '/hq/branches',  icon: Building2,       label: 'Branches'   },
+    { href: '/hq/users',     icon: Users,           label: 'HQ Users'   },
   ]},
-  { label: 'Finance', items: [
+  { label: 'Finance', roles: FINANCE_ROLES, items: [
     { href: '/hq/billing',          icon: CreditCard,  label: 'Branch Billing'   },
     { href: '/hq/billing/revenue',  icon: OmrNavIcon,  label: 'Revenue Overview' },
   ]},
   { label: 'Reports', items: [
-    { href: '/hq/reports',                   icon: BarChart2,   label: 'Platform Reports'    },
-    { href: '/hq/reports/properties',         icon: Building2,   label: 'Properties'          },
-    { href: '/hq/reports/tenants',            icon: Users,       label: 'Tenants'             },
-    { href: '/hq/reports/maintenance',        icon: Wrench,      label: 'Maintenance'         },
-    { href: '/hq/reports/revenue-trend',      icon: TrendingUp,  label: 'Revenue Trend'       },
-    { href: '/hq/reports/subscriptions',      icon: CreditCard,  label: 'Subscriptions'       },
+    { href: '/hq/reports',                   icon: BarChart2,   label: 'Platform Reports' },
+    { href: '/hq/reports/properties',         icon: Building2,   label: 'Properties'       },
+    { href: '/hq/reports/tenants',            icon: Users,       label: 'Tenants'          },
+    { href: '/hq/reports/maintenance',        icon: Wrench,      label: 'Maintenance'      },
+    { href: '/hq/reports/revenue-trend',      icon: TrendingUp,  label: 'Revenue Trend',   roles: FINANCE_ROLES },
+    { href: '/hq/reports/subscriptions',      icon: CreditCard,  label: 'Subscriptions'    },
   ]},
   { label: 'System', items: [
-    { href: '/hq/notices',   icon: Bell,     label: 'Notices'   },
-    { href: '/hq/settings',  icon: Settings, label: 'Settings'  },
+    { href: '/hq/notices',   icon: Bell,     label: 'Notices'  },
+    { href: '/hq/settings',  icon: Settings, label: 'Settings' },
   ]},
 ]
 
 export default function HQShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+  const role = profile.role
+  const isAdmin = role === 'hq_admin'
   const pathname   = usePathname()
   const router     = useRouter()
   const [open, setOpen]       = useState(true)
@@ -75,7 +80,10 @@ export default function HQShell({ profile, children }: { profile: Profile; child
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 space-y-6 px-2">
-        {NAV.map(group => (
+        {NAV.filter(group => !group.roles || group.roles.includes(role)).map(group => {
+          const visibleItems = group.items.filter(item => !item.roles || item.roles.includes(role))
+          if (visibleItems.length === 0) return null
+          return (
           <div key={group.label}>
             {open && (
               <p className="px-2 mb-1 text-xs font-semibold uppercase tracking-wider text-yellow-500/70">
@@ -83,7 +91,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
               </p>
             )}
             <div className="space-y-0.5">
-              {group.items.map(item => {
+              {visibleItems.map(item => {
                 const allHrefs = NAV.flatMap(g => g.items.map(i => i.href))
                 const exactMatch = allHrefs.includes(pathname)
                 const active = pathname === item.href || (!exactMatch && item.href.length > 4 && pathname.startsWith(item.href + '/'))
@@ -106,7 +114,8 @@ export default function HQShell({ profile, children }: { profile: Profile; child
               })}
             </div>
           </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* Footer */}
@@ -180,7 +189,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden sm:inline-block text-xs bg-yellow-100 text-yellow-800 font-semibold px-2 py-1 rounded-full">
-              Layer 0 · {profile.role === 'hq_admin' ? 'HQ Admin' : 'HQ Staff'}
+              Layer 0 · {role === 'hq_admin' ? 'HQ Admin' : role === 'hq_finance' ? 'HQ Finance' : 'HQ Staff'}
             </span>
           </div>
         </header>

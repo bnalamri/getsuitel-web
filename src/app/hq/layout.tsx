@@ -14,7 +14,7 @@ export default async function HQLayout({ children }: { children: React.ReactNode
     .eq('id', user.id)
     .single()
 
-  if (!profile || (profile.role !== 'hq_admin' && profile.role !== 'hq_staff')) redirect('/auth/login')
+  if (!profile || !['hq_admin', 'hq_staff', 'hq_finance'].includes(profile.role)) redirect('/auth/login')
 
   return <HQShell profile={profile}>{children}</HQShell>
 }

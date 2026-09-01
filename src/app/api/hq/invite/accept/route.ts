@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   // Validate token
   const { data: invitation } = await admin
     .from('hq_invitations')
-    .select('id, email, expires_at, accepted_at')
+    .select('id, email, expires_at, accepted_at, invited_role')
     .eq('token', token)
     .single()
 
@@ -37,12 +37,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: authError?.message || 'Failed to create user' }, { status: 500 })
   }
 
-  // Upsert profile with hq_staff role
+  // Upsert profile with the invited role (hq_staff or hq_finance)
+  const assignedRole = ['hq_staff', 'hq_finance'].includes(invitation.invited_role ?? '') ? invitation.invited_role : 'hq_staff'
   const { error: profileError } = await admin.from('profiles').upsert({
     id: authData.user.id,
     email: invitation.email,
     full_name: name.trim(),
-    role: 'hq_staff',
+    role: assignedRole,
   })
 
   if (profileError) {

@@ -9,7 +9,7 @@ async function getHQUser(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'hq_admin' && profile?.role !== 'hq_staff') return null
+  if (!['hq_admin', 'hq_staff', 'hq_finance'].includes(profile?.role ?? '')) return null
   return { user, role: profile.role as string }
 }
 
@@ -24,8 +24,8 @@ export async function GET() {
   const [{ data: users }, { data: invitations }] = await Promise.all([
     admin
       .from('profiles')
-      .select('id, full_name, email, role, created_at, avatar_url')
-      .in('role', ['hq_admin', 'hq_staff'])
+      .select('id, full_name, email, role, phone, created_at, avatar_url')
+      .in('role', ['hq_admin', 'hq_staff', 'hq_finance'])
       .order('created_at'),
     admin
       .from('hq_invitations')
@@ -44,8 +44,9 @@ export async function POST(req: NextRequest) {
   const hq = await getHQUser(supabase)
   if (!hq || hq.role !== 'hq_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { email } = await req.json()
+  const { email, invited_role } = await req.json()
   if (!email?.trim()) return NextResponse.json({ error: 'Missing email' }, { status: 400 })
+  const roleToAssign = ['hq_staff', 'hq_finance'].includes(invited_role) ? invited_role : 'hq_staff'
 
   const admin = createAdminClient()
 
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     .from('profiles')
     .select('id')
     .eq('email', email.toLowerCase())
-    .in('role', ['hq_admin', 'hq_staff'])
+    .in('role', ['hq_admin', 'hq_staff', 'hq_finance'])
     .maybeSingle()
   if (existing) return NextResponse.json({ error: 'Already an HQ user' }, { status: 409 })
 
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
   // Create invitation
   const { data: invitation, error } = await admin
     .from('hq_invitations')
-    .insert({ email: email.toLowerCase(), invited_by: hq.user.id })
+    .insert({ email: email.toLowerCase(), invited_by: hq.user.id, invited_role: roleToAssign })
     .select('token, expires_at')
     .single()
 
