@@ -5,7 +5,7 @@ const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-passwo
   '/auth/verify-email', '/auth/reset-password', '/auth/invite']
 
 // Always let logout through regardless of auth state
-const ALWAYS_PUBLIC = ['/auth/logout']
+const ALWAYS_PUBLIC = ['/auth/logout', '/auth/suspended']
 
 const ROLE_HOME: Record<string, string> = {
   hq_admin:          '/hq',
@@ -79,6 +79,20 @@ export async function middleware(request: NextRequest) {
   // Fetch role ONCE — reused by all guards below
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const role = profile?.role ?? 'owner'
+
+  // Branch suspension check — redirect suspended branch superadmins
+  if (role === 'superadmin' && path.startsWith('/dashboard/admin')) {
+    const { data: branch } = await supabase
+      .from('branches')
+      .select('status')
+      .eq('superadmin_id', user.id)
+      .single()
+    if (branch?.status === 'suspended') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/suspended'
+      return withSupaCookies(NextResponse.redirect(url), supabaseResponse)
+    }
+  }
 
   // Redirect auth pages → role dashboard
   if (isAuthPage) {
