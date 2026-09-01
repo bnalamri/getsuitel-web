@@ -19,7 +19,7 @@ const STATUS_STYLES: Record<string, string> = {
   archived:  'bg-gray-100 text-gray-500',
 }
 
-export default function BranchesClient({ branches }: { branches: Branch[] }) {
+export default function BranchesClient({ branches, isAdmin }: { branches: Branch[]; isAdmin: boolean }) {
   const [q, setQ]               = useState('')
   const [filter, setFilter]     = useState<'all'|'active'|'suspended'|'archived'>('all')
   const [showModal, setModal]   = useState(false)
@@ -44,13 +44,15 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
           <h1 className="text-2xl font-bold text-gray-900">Branches</h1>
           <p className="text-sm text-gray-500">{branches.length} branches registered</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg text-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Branch
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Branch
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -129,22 +131,24 @@ export default function BranchesClient({ branches }: { branches: Branch[] }) {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => setInvite({ id: b.id, name: b.display_name })}
-                        className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
-                        title="Generate invite code"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openEdit(b)}
-                        className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
-                        title="Edit branch"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setInvite({ id: b.id, name: b.display_name })}
+                          className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
+                          title="Generate invite code"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEdit(b)}
+                          className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
+                          title="Edit branch"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

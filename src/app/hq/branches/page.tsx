@@ -4,6 +4,10 @@ import BranchesClient from './BranchesClient'
 export default async function HQBranchesPage() {
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isAdmin = profile?.role === 'hq_admin'
+
   const { data: branches } = await supabase
     .from('branches')
     .select(`
@@ -29,5 +33,5 @@ export default async function HQBranchesPage() {
     org_count: countMap[b.id] ?? 0,
   }))
 
-  return <BranchesClient branches={enriched} />
+  return <BranchesClient branches={enriched} isAdmin={isAdmin} />
 }
