@@ -213,10 +213,20 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed')
 
-      // 2 — Trigger download directly (Content-Disposition: attachment keeps page alive)
+      // 2 — Fetch blob and trigger download (avoids browser "ask what to do" prompt)
+      const exportRes = await fetch(`/api/hq/branches/${branchId}/agreement/export`)
+      if (!exportRes.ok) throw new Error('Export failed')
+      const blob = await exportRes.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved ✓')
-      window.location.href = `/api/hq/branches/${branchId}/agreement/export`
     } catch (err) {
       setSaveMsg('Error saving')
       console.error(err)
