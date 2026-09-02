@@ -146,6 +146,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [signedAt, setSignedAt] = useState(d?.signed_at ?? null)
   const [activating, setActivating] = useState(false)
   const [activated, setActivated] = useState(false)
+  const [readyToDownload, setReadyToDownload] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function buildPayload() {
@@ -204,18 +205,14 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   async function handleExport() {
     setExporting(true)
     try {
-      // Save latest form data to DB first
       const saveRes = await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSavePayload()),
       })
       if (!saveRes.ok) throw new Error('Save failed before export')
-
-      // Content-Disposition: attachment on the GET response triggers download in all browsers.
-      // window.location.href is a true browser navigation — bypasses Next.js client router.
-      window.location.href = `/api/hq/branches/${branchId}/agreement/export`
       setExportedAt(new Date().toISOString())
+      setReadyToDownload(true)
     } finally {
       setExporting(false)
     }
@@ -473,14 +470,26 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             <p className="text-xs text-gray-500 mb-3">
               Generates a professional .docx agreement from the form. Send to both parties for review and signature.
             </p>
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
-            >
-              <FileDown className="h-4 w-4" />
-              {exporting ? 'Generating…' : 'Export Agreement (.docx)'}
-            </button>
+            {readyToDownload ? (
+              <a
+                href={`/api/hq/branches/${branchId}/agreement/export`}
+                download={`Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`}
+                onClick={() => setReadyToDownload(false)}
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700"
+              >
+                <FileDown className="h-4 w-4" />
+                Click to Download .docx
+              </a>
+            ) : (
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
+              >
+                <FileDown className="h-4 w-4" />
+                {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
+              </button>
+            )}
           </div>
 
           {/* Upload signed */}
