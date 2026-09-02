@@ -221,8 +221,10 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       const a = document.createElement('a')
       a.href = url
       a.download = `Branch_Agreement_${branchName.replace(/\s+/g, '_')}.docx`
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
       setExportedAt(new Date().toISOString())
     } finally {
       setExporting(false)
