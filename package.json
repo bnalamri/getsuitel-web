@@ -26,6 +26,7 @@
     "stripe": "^22.3.0",
     "tailwind-merge": "^2.5.4",
     "xlsx": "^0.18.5",
+    "docx": "^8.5.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

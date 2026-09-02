@@ -1,10 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Building2, Users, Home, TrendingUp, AlertTriangle,
   Activity, DollarSign, ShieldAlert, Settings2, FileText, ExternalLink,
   ClipboardList, Loader2, SlidersHorizontal, Download,
-  CheckCircle2, XCircle, PauseCircle, Archive, BarChart2,
+  CheckCircle2, XCircle, PauseCircle, Archive, BarChart2, ScrollText,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchActions from './BranchActions'
@@ -508,6 +509,26 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
 
       {/* Utilisation Card */}
       <UtilisationCard branchId={branch.id} refreshKey={utilRefresh} />
+
+      {/* Legal Agreement */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ScrollText className="h-5 w-5 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">Legal Agreement</h2>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Draft, export, and manage the signed franchise agreement between HQ and this branch.
+        </p>
+        <Link
+          href={`/hq/branches/${branch.id}/agreement`}
+          className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-blue-700"
+        >
+          <FileText className="h-4 w-4" />
+          Open Agreement
+        </Link>
+      </div>
 
       {/* Commercial terms (read-only here — edit via BranchFormModal on the list page) */}
       {branch.status !== 'archived' && (
