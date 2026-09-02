@@ -147,6 +147,8 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [activating, setActivating] = useState(false)
   const [activated, setActivated] = useState(false)
   const [readyToDownload, setReadyToDownload] = useState(false)
+  const [exportError, setExportError] = useState('')
+  const [downloading, setDownloading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function buildPayload() {
@@ -215,6 +217,42 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       setReadyToDownload(true)
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleDownload() {
+    setDownloading(true)
+    setExportError('')
+    try {
+      const res = await fetch(`/api/hq/branches/${branchId}/agreement/export`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!res.ok || !contentType.includes('wordprocessingml')) {
+        // Show the error from the server
+        const text = await res.text()
+        let msg = `Error ${res.status}`
+        try { msg = `Error ${res.status}: ${JSON.parse(text).error}` } catch { msg = `Error ${res.status}: ${text.slice(0, 200)}` }
+        setExportError(msg)
+        return
+      }
+      // Download via blob — avoids Next.js router interception
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      // Revoke after a long delay so the download can complete
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      setReadyToDownload(false)
+    } catch (e) {
+      setExportError(String(e))
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -471,15 +509,14 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
               Generates a professional .docx agreement from the form. Send to both parties for review and signature.
             </p>
             {readyToDownload ? (
-              <a
-                href={`/api/hq/branches/${branchId}/agreement/export`}
-                download={`Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`}
-                onClick={() => setReadyToDownload(false)}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700"
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700 disabled:opacity-60"
               >
                 <FileDown className="h-4 w-4" />
-                Click to Download .docx
-              </a>
+                {downloading ? 'Downloading…' : 'Click to Download .docx'}
+              </button>
             ) : (
               <button
                 onClick={handleExport}
@@ -489,6 +526,12 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
                 <FileDown className="h-4 w-4" />
                 {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
               </button>
+            )}
+            {exportError && (
+              <div className="mt-2 flex items-start gap-1.5 text-red-600 text-xs bg-red-50 border border-red-200 rounded-md p-2">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                <span className="break-all">{exportError}</span>
+              </div>
             )}
           </div>
 
