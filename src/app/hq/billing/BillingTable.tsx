@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, Download, Loader2 } from 'lucide-react'
+import { CheckCircle, Download, Loader2, Mail } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type BillingRow = {
@@ -45,8 +45,10 @@ function exportCSV(rows: BillingRow[]) {
 
 export default function BillingTable({ billing }: { billing: BillingRow[] }) {
   const router = useRouter()
-  const [paying, setPaying] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [paying, setPaying]       = useState<string | null>(null)
+  const [reminding, setReminding] = useState<string | null>(null)
+  const [error, setError]         = useState<string | null>(null)
+  const [reminded, setReminded]   = useState<Set<string>>(new Set())
 
   async function markPaid(id: string) {
     setPaying(id)
@@ -65,6 +67,26 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
       router.refresh()
     } finally {
       setPaying(null)
+    }
+  }
+
+  async function sendReminder(id: string) {
+    setReminding(id)
+    setError(null)
+    try {
+      const res = await fetch('/api/hq/billing/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingId: id }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setError(d.error ?? 'Failed to send reminder')
+        return
+      }
+      setReminded(prev => new Set(prev).add(id))
+    } finally {
+      setReminding(null)
     }
   }
 
@@ -115,9 +137,9 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                 <td colSpan={8} className="px-5 py-10 text-center text-gray-400">No billing records yet</td>
               </tr>
             ) : billing.map(r => {
-              const totalDue = Number(r.share_amount_omr) + Number(r.license_fee_omr)
-              const isPending = r.status === 'pending'
-              const isThisRow = paying === r.id
+              const totalDue    = Number(r.share_amount_omr) + Number(r.license_fee_omr)
+              const isPending   = r.status === 'pending'
+              const isThisRow   = paying === r.id
               return (
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-900">
@@ -142,16 +164,33 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                   </td>
                   <td className="px-5 py-3">
                     {isPending ? (
-                      <button
-                        onClick={() => markPaid(r.id)}
-                        disabled={!!paying}
-                        className="flex items-center gap-1.5 text-xs bg-green-600 text-white rounded-lg px-3 py-1.5 hover:bg-green-700 disabled:opacity-50 transition-colors"
-                      >
-                        {isThisRow
-                          ? <Loader2 className="w-3 h-3 animate-spin" />
-                          : <CheckCircle className="w-3 h-3" />}
-                        Mark Paid
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => markPaid(r.id)}
+                          disabled={!!paying || !!reminding}
+                          className="flex items-center gap-1.5 text-xs bg-green-600 text-white rounded-lg px-3 py-1.5 hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                          {isThisRow
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <CheckCircle className="w-3 h-3" />}
+                          Mark Paid
+                        </button>
+                        <button
+                          onClick={() => sendReminder(r.id)}
+                          disabled={!!paying || !!reminding || reminded.has(r.id)}
+                          title="Send email reminder to branch superadmin"
+                          className={`flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 ${
+                            reminded.has(r.id)
+                              ? 'bg-gray-100 text-gray-400 cursor-default'
+                              : 'border border-gray-200 text-gray-600 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300'
+                          }`}
+                        >
+                          {reminding === r.id
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <Mail className="w-3 h-3" />}
+                          {reminded.has(r.id) ? 'Sent' : 'Remind'}
+                        </button>
+                      </div>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
