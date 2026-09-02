@@ -176,6 +176,12 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
     }
   }
 
+  function buildSavePayload() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { max_units, max_staff, max_tenants, max_orgs, ...rest } = buildPayload()
+    return rest
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveMsg('')
@@ -183,7 +189,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       const res = await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify(buildSavePayload()),
       })
       if (!res.ok) throw new Error('Save failed')
       setSaveMsg('Saved')
@@ -202,7 +208,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
+        body: JSON.stringify(buildSavePayload()),
       })
       const res = await fetch(`/api/hq/branches/${branchId}/agreement/export`, {
         method: 'POST',
