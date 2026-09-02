@@ -204,27 +204,16 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   async function handleExport() {
     setExporting(true)
     try {
-      // Save first to ensure latest data is in DB
-      await fetch(`/api/hq/branches/${branchId}/agreement`, {
+      // Save latest form data to DB first
+      const saveRes = await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSavePayload()),
       })
-      const res = await fetch(`/api/hq/branches/${branchId}/agreement/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPayload()),
-      })
-      if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Branch_Agreement_${branchName.replace(/\s+/g, '_')}.docx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 10000)
+      if (!saveRes.ok) throw new Error('Save failed before export')
+
+      // Trigger download via GET — browser treats window.open as user gesture
+      window.open(`/api/hq/branches/${branchId}/agreement/export`, '_blank')
       setExportedAt(new Date().toISOString())
     } finally {
       setExporting(false)

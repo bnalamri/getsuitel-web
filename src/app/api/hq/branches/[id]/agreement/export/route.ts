@@ -93,16 +93,22 @@ function signatureTable() {
   })
 }
 
-export async function POST(
-  req: NextRequest,
+export async function GET(
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient()
   const user = await requireHQ(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body_data = await req.json()
-  const d = body_data // agreement data
+  // Load saved agreement data from DB
+  const { data: d } = await supabase
+    .from('branch_agreements')
+    .select('*')
+    .eq('branch_id', params.id)
+    .maybeSingle()
+
+  if (!d) return NextResponse.json({ error: 'No agreement found. Save the draft first.' }, { status: 404 })
 
   const effectiveDate = d.effective_date
     ? new Date(d.effective_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
