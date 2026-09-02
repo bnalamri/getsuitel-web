@@ -212,8 +212,14 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed before export')
 
-      // Trigger download via GET — browser treats window.open as user gesture
-      window.open(`/api/hq/branches/${branchId}/agreement/export`, '_blank')
+      // Trigger download via hidden anchor pointing to GET endpoint.
+      // Content-Disposition: attachment on the response causes all browsers to download.
+      const a = document.createElement('a')
+      a.href = `/api/hq/branches/${branchId}/agreement/export`
+      a.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
       setExportedAt(new Date().toISOString())
     } finally {
       setExporting(false)
