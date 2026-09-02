@@ -224,7 +224,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      setTimeout(() => URL.revokeObjectURL(url), 30000)
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved ✓')
     } catch (err) {
