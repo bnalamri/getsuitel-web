@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Plus, Trash2, Loader2, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Bell, Plus, Trash2, Loader2, ChevronDown, ChevronUp, X, Megaphone, CheckCircle2 } from 'lucide-react'
 
 type Branch  = { id: string; display_name: string }
 type Notice  = {
@@ -27,6 +27,48 @@ export default function NoticesClient({
   const router = useRouter()
   const [notices, setNotices]   = useState<Notice[]>(initialNotices)
   const [showForm, setShowForm] = useState(false)
+
+  // ── Platform Banner state ────────────────────────────────────────────────
+  const [activeBanner, setActiveBanner]       = useState<{ text: string; severity: string } | null>(null)
+  const [bannerText,   setBannerText]         = useState('')
+  const [bannerSev,    setBannerSev]          = useState<'info' | 'warning' | 'critical'>('info')
+  const [bannerSaving, setBannerSaving]       = useState(false)
+  const [bannerMsg,    setBannerMsg]          = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/hq/announcement')
+      .then(r => r.json())
+      .then(d => { if (d.text) setActiveBanner({ text: d.text, severity: d.severity }) })
+      .catch(() => {})
+  }, [])
+
+  async function setBanner() {
+    if (!bannerText.trim()) return
+    setBannerSaving(true); setBannerMsg(null)
+    const res = await fetch('/api/hq/announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: bannerText.trim(), severity: bannerSev }),
+    })
+    setBannerSaving(false)
+    if (!res.ok) { setBannerMsg('Failed to set banner'); return }
+    setActiveBanner({ text: bannerText.trim(), severity: bannerSev })
+    setBannerText(''); setBannerMsg('Banner is now live on all superadmin dashboards')
+    setTimeout(() => setBannerMsg(null), 3000)
+  }
+
+  async function clearBanner() {
+    setBannerSaving(true)
+    await fetch('/api/hq/announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: null }),
+    })
+    setBannerSaving(false)
+    setActiveBanner(null)
+    setBannerMsg('Banner cleared')
+    setTimeout(() => setBannerMsg(null), 2000)
+  }
 
   // Form state
   const [title,          setTitle]          = useState('')
@@ -84,8 +126,82 @@ export default function NoticesClient({
   const select  = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white'
   const label   = 'block text-sm font-medium text-gray-700 mb-1'
 
+  const SEV_BANNER = {
+    info:     { bg: 'bg-blue-50 border-blue-200',   text: 'text-blue-800',  dot: 'bg-blue-400'  },
+    warning:  { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-800', dot: 'bg-amber-400' },
+    critical: { bg: 'bg-red-50 border-red-200',     text: 'text-red-800',   dot: 'bg-red-500'   },
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-3xl">
+
+      {/* ── Platform-Wide Banner ── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Megaphone className="w-4 h-4 text-yellow-600" />
+          <h2 className="font-semibold text-gray-900">Platform-Wide Banner</h2>
+          <span className="text-xs text-gray-400 ml-1">Shows on all superadmin dashboards</span>
+        </div>
+
+        {/* Active banner preview */}
+        {activeBanner && (
+          <div className={`flex items-start gap-3 p-3 rounded-lg border mb-4 ${SEV_BANNER[activeBanner.severity as keyof typeof SEV_BANNER]?.bg ?? SEV_BANNER.info.bg}`}>
+            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${SEV_BANNER[activeBanner.severity as keyof typeof SEV_BANNER]?.dot ?? SEV_BANNER.info.dot}`} />
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${SEV_BANNER[activeBanner.severity as keyof typeof SEV_BANNER]?.text ?? SEV_BANNER.info.text}`}>
+                {activeBanner.text}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5 capitalize">Severity: {activeBanner.severity}</p>
+            </div>
+            <button
+              onClick={clearBanner}
+              disabled={bannerSaving}
+              className="flex-shrink-0 text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded-lg px-2 py-1 hover:border-red-200 transition-colors disabled:opacity-50"
+            >
+              {bannerSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Clear'}
+            </button>
+          </div>
+        )}
+
+        {!activeBanner && (
+          <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
+            <CheckCircle2 className="w-4 h-4 text-gray-300" />
+            No active banner
+          </div>
+        )}
+
+        {/* Set banner form */}
+        <div className="flex gap-2">
+          <input
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            placeholder="Type your announcement…"
+            value={bannerText}
+            onChange={e => setBannerText(e.target.value)}
+            maxLength={200}
+          />
+          <select
+            value={bannerSev}
+            onChange={e => setBannerSev(e.target.value as 'info' | 'warning' | 'critical')}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white"
+          >
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+          </select>
+          <button
+            onClick={setBanner}
+            disabled={bannerSaving || !bannerText.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg text-sm disabled:opacity-50 transition-colors"
+          >
+            {bannerSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
+            Set Banner
+          </button>
+        </div>
+        {bannerMsg && (
+          <p className="text-xs text-green-600 mt-2">{bannerMsg}</p>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

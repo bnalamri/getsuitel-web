@@ -1,5 +1,5 @@
 'use client'
-import { useState, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
 import { DateFormatContext, type DateFormat } from '@/contexts/DateFormatContext'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -389,6 +389,18 @@ export default function DashboardShell({
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
   const org = profile.organizations as Record<string, unknown> | null
   const [dateFormat, setDateFormat] = useState<DateFormat>((org?.date_format as DateFormat) ?? 'dd/mm/yyyy')
+  const [hqBanner, setHqBanner] = useState<{ text: string; severity: string } | null>(null)
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+
+  // Fetch HQ platform-wide announcement for superadmins
+  useEffect(() => {
+    if (profile.role === 'superadmin') {
+      fetch('/api/hq/announcement')
+        .then(r => r.json())
+        .then(d => { if (d.text) setHqBanner({ text: d.text, severity: d.severity }) })
+        .catch(() => {})
+    }
+  }, [])
 
   return (
     <DateFormatContext.Provider value={{ dateFormat, setDateFormat }}>
@@ -418,6 +430,25 @@ export default function DashboardShell({
         {/* Main */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:overflow-visible">
           <Topbar profile={profile} lang={lang} setLang={setLang} onMobileOpen={() => setMobileOpen(true)}/>
+
+          {/* HQ Platform-wide announcement banner */}
+          {hqBanner && !bannerDismissed && (
+            <div className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium print:hidden ${
+              hqBanner.severity === 'critical' ? 'bg-red-600 text-white' :
+              hqBanner.severity === 'warning'  ? 'bg-amber-500 text-gray-900' :
+                                                  'bg-blue-600 text-white'
+            }`}>
+              <span className="flex-1">{hqBanner.text}</span>
+              <button
+                onClick={() => setBannerDismissed(true)}
+                className="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity p-0.5"
+                aria-label="Dismiss"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+
           <main className="flex-1 overflow-y-auto print:overflow-visible">
             <div className="p-4 md:p-6 max-w-screen-2xl mx-auto">
               {children}
