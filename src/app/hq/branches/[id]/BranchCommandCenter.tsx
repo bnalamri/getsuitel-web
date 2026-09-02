@@ -4,7 +4,7 @@ import {
   Building2, Users, Home, TrendingUp, AlertTriangle,
   Activity, DollarSign, ShieldAlert, Settings2, FileText, ExternalLink,
   ClipboardList, Loader2, SlidersHorizontal, Download,
-  CheckCircle2, XCircle, PauseCircle, Archive,
+  CheckCircle2, XCircle, PauseCircle, Archive, BarChart2,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchActions from './BranchActions'
@@ -41,6 +41,7 @@ type BranchData = {
   max_units:   number | null
   max_staff:   number | null
   max_tenants: number | null
+  max_orgs:    number | null
 }
 
 type Stats = {
@@ -503,6 +504,9 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
         <BranchLimitsPanel branch={branch} />
       )}
 
+      {/* Utilisation Card */}
+      <UtilisationCard branchId={branch.id} />
+
       {/* Commercial terms (read-only here — edit via BranchFormModal on the list page) */}
       {branch.status !== 'archived' && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -538,6 +542,7 @@ function BranchLimitsPanel({ branch }: { branch: BranchData }) {
   const [units,   setUnits]   = useState<string>(branch.max_units   != null ? String(branch.max_units)   : '')
   const [staff,   setStaff]   = useState<string>(branch.max_staff   != null ? String(branch.max_staff)   : '')
   const [tenants, setTenants] = useState<string>(branch.max_tenants != null ? String(branch.max_tenants) : '')
+  const [orgs,    setOrgs]    = useState<string>(branch.max_orgs    != null ? String(branch.max_orgs)    : '')
   const [saving,  setSaving]  = useState(false)
   const [msg,     setMsg]     = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -547,6 +552,7 @@ function BranchLimitsPanel({ branch }: { branch: BranchData }) {
       max_units:   units.trim()   === '' ? null : parseInt(units,   10),
       max_staff:   staff.trim()   === '' ? null : parseInt(staff,   10),
       max_tenants: tenants.trim() === '' ? null : parseInt(tenants, 10),
+      max_orgs:    orgs.trim()    === '' ? null : parseInt(orgs,    10),
     }
     const res = await fetch(`/api/hq/branches/${branch.id}/limits`, {
       method: 'PATCH',
@@ -572,8 +578,9 @@ function BranchLimitsPanel({ branch }: { branch: BranchData }) {
       <p className="text-sm text-gray-400 mb-5">
         Maximum allowable counts for this branch. Leave blank for no limit.
       </p>
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         {[
+          { label: 'Max Orgs',    value: orgs,    set: setOrgs,    placeholder: 'Unlimited' },
           { label: 'Max Units',   value: units,   set: setUnits,   placeholder: 'Unlimited' },
           { label: 'Max Staff',   value: staff,   set: setStaff,   placeholder: 'Unlimited' },
           { label: 'Max Tenants', value: tenants, set: setTenants, placeholder: 'Unlimited' },
@@ -611,6 +618,80 @@ function BranchLimitsPanel({ branch }: { branch: BranchData }) {
   )
 }
 
+// ─── Utilisation Card ─────────────────────────────────────────────────────────
+
+type UtilRow = { current: number; limit: number | null }
+type UtilData = { orgs: UtilRow; units: UtilRow; staff: UtilRow; tenants: UtilRow }
+
+function UtilBar({ current, limit }: { current: number; limit: number | null }) {
+  if (limit == null) return <span className="text-xs text-gray-400 italic">Unlimited</span>
+  const pct = Math.min(100, Math.round((current / limit) * 100))
+  const color = pct >= 85 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-green-500'
+  return (
+    <div className="w-full">
+      <div className="flex justify-between text-xs text-gray-500 mb-1">
+        <span>{current} / {limit}</span>
+        <span className={pct >= 85 ? 'text-red-600 font-semibold' : pct >= 70 ? 'text-amber-600 font-semibold' : 'text-gray-400'}>
+          {pct}%
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function UtilisationCard({ branchId }: { branchId: string }) {
+  const [data,    setData]    = useState<UtilData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/hq/branches/${branchId}/utilisation`)
+      .then(r => r.json())
+      .then(d => { if (!d.error) setData(d) })
+      .finally(() => setLoading(false))
+  }, [branchId])
+
+  const rows = data ? [
+    { label: 'Organisations', ...data.orgs,    icon: Building2 },
+    { label: 'Units',         ...data.units,   icon: Home      },
+    { label: 'Staff Members', ...data.staff,   icon: Users     },
+    { label: 'Tenants',       ...data.tenants, icon: Users     },
+  ] : []
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <BarChart2 className="w-4 h-4 text-gray-500" />
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Branch Utilisation</h2>
+      </div>
+      <p className="text-sm text-gray-400 mb-5">Current usage vs. branch limits.</p>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {rows.map(({ label, current, limit }) => (
+            <div key={label}>
+              <div className="text-xs font-medium text-gray-700 mb-1.5">{label}</div>
+              <UtilBar current={current} limit={limit} />
+            </div>
+          ))}
+          {rows.some(r => r.limit != null && r.current / r.limit! >= 0.85) && (
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              One or more limits are above 85% — consider increasing them.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Audit Tab (Item 124) ─────────────────────────────────────────────────────
 
 const ACTION_LABELS: Record<string, { label: string; color: string; Icon: React.FC<{ className?: string }> }> = {
@@ -633,7 +714,7 @@ function auditDescription(log: AuditLog): string {
       const before = d.before as Record<string, number | null> ?? {}
       const after  = d.after  as Record<string, number | null> ?? {}
       const parts: string[] = []
-      for (const k of ['max_units', 'max_staff', 'max_tenants']) {
+      for (const k of ['max_units', 'max_staff', 'max_tenants', 'max_orgs']) {
         if (k in after) {
           const label = k.replace('max_', 'Max ').replace('_', ' ')
           const bVal = before[k] != null ? String(before[k]) : 'Unlimited'

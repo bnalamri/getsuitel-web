@@ -23,7 +23,7 @@ export async function PATCH(
   const body = await req.json()
 
   const update: Record<string, number | null> = {}
-  for (const key of ['max_units', 'max_staff', 'max_tenants'] as const) {
+  for (const key of ['max_units', 'max_staff', 'max_tenants', 'max_orgs'] as const) {
     if (key in body) {
       const v = body[key]
       if (v !== null && (typeof v !== 'number' || v < 0 || !Number.isInteger(v))) {
@@ -40,7 +40,7 @@ export async function PATCH(
   // Fetch current limits for audit diff
   const { data: current } = await supabase
     .from('branches')
-    .select('max_units, max_staff, max_tenants')
+    .select('max_units, max_staff, max_tenants, max_orgs')
     .eq('id', id)
     .single()
 

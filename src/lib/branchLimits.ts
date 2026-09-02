@@ -4,7 +4,7 @@
  */
 import { SupabaseClient } from '@supabase/supabase-js'
 
-type LimitKey = 'max_units' | 'max_staff' | 'max_tenants'
+type LimitKey = 'max_units' | 'max_staff' | 'max_tenants' | 'max_orgs'
 
 /**
  * Returns { allowed: true } or { allowed: false, current, limit, label }
@@ -48,9 +48,17 @@ export async function checkBranchLimit(
     max_units:   'units',
     max_staff:   'staff members',
     max_tenants: 'tenants',
+    max_orgs:    'organisations',
   }
 
-  if (limitKey === 'max_units') {
+  if (limitKey === 'max_orgs') {
+    // Count all orgs in the branch (not filtered by branch org IDs — count at branch level)
+    const { count } = await supabase
+      .from('organizations')
+      .select('id', { count: 'exact', head: true })
+      .eq('branch_id', org.branch_id)
+    current = count ?? 0
+  } else if (limitKey === 'max_units') {
     const { count } = await supabase
       .from('units')
       .select('id', { count: 'exact', head: true })

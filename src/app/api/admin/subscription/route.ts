@@ -97,11 +97,30 @@ export async function POST(req: Request) {
     .eq('id', orgId)
     .single()
 
-  // Plan limits map
-  const PLAN_LIMITS: Record<string, { maxProperties: number; maxUnits: number; maxTenants: number }> = {
-    basic:      { maxProperties: 2,    maxUnits: 10,   maxTenants: 15 },
-    pro:        { maxProperties: 10,   maxUnits: 50,   maxTenants: 75 },
+  // Plan limits — fetch from DB, fallback to hardcoded defaults
+  type PlanLimit = { maxProperties: number; maxUnits: number; maxTenants: number }
+  let PLAN_LIMITS: Record<string, PlanLimit> = {
+    basic:      { maxProperties: 2,    maxUnits: 10,   maxTenants: 15   },
+    pro:        { maxProperties: 10,   maxUnits: 50,   maxTenants: 75   },
     enterprise: { maxProperties: 20,   maxUnits: 9999, maxTenants: 9999 },
+  }
+  try {
+    const { data: plans } = await admin
+      .from('subscription_plans')
+      .select('name, max_properties, max_units, max_tenants')
+      .eq('is_active', true)
+    if (plans && plans.length > 0) {
+      PLAN_LIMITS = {}
+      for (const p of plans) {
+        PLAN_LIMITS[p.name] = {
+          maxProperties: p.max_properties ?? 999,
+          maxUnits:      p.max_units      ?? 999,
+          maxTenants:    p.max_tenants    ?? 999,
+        }
+      }
+    }
+  } catch {
+    // keep hardcoded fallback
   }
 
   // Downgrade check
