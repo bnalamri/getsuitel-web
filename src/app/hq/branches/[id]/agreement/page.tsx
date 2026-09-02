@@ -26,7 +26,7 @@ export default async function AgreementPage({ params }: Props) {
   // Load branch details
   const { data: branch } = await supabase
     .from('branches')
-    .select('id, name, city, country, max_units, max_staff, max_tenants, max_orgs')
+    .select('id, name, display_name, city, region, max_units, max_staff, max_tenants, max_orgs')
     .eq('id', params.id)
     .single()
 
@@ -42,9 +42,9 @@ export default async function AgreementPage({ params }: Props) {
   return (
     <AgreementClient
       branchId={params.id}
-      branchName={branch.name}
+      branchName={branch.display_name ?? branch.name}
       branchCity={branch.city}
-      branchCountry={branch.country}
+      branchCountry={branch.region}
       limits={{
         max_units: branch.max_units,
         max_staff: branch.max_staff,

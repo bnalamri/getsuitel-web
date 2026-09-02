@@ -23,7 +23,7 @@ export default async function AgreementsPage() {
   // Load all branches with their agreement status
   const { data: branches } = await supabase
     .from('branches')
-    .select('id, name, city, country, status')
+    .select('id, name, display_name, city, region, status')
     .order('name')
 
   const { data: agreements } = await supabase
@@ -34,6 +34,7 @@ export default async function AgreementsPage() {
 
   const rows = (branches ?? []).map(b => ({
     ...b,
+    displayName: b.display_name ?? b.name,
     agreement: agreementMap.get(b.id) ?? null,
   }))
 
@@ -95,9 +96,9 @@ export default async function AgreementsPage() {
                 return (
                   <tr key={row.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 text-sm">{row.name}</div>
-                      {(row.city || row.country) && (
-                        <div className="text-xs text-gray-400">{[row.city, row.country].filter(Boolean).join(', ')}</div>
+                      <div className="font-medium text-gray-900 text-sm">{row.displayName}</div>
+                      {(row.city || row.region) && (
+                        <div className="text-xs text-gray-400">{[row.city, row.region].filter(Boolean).join(', ')}</div>
                       )}
                     </td>
                     <td className="px-4 py-3">
