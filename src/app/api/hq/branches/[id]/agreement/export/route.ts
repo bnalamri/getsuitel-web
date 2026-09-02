@@ -186,7 +186,11 @@ export async function POST(
           heading('2. COMMERCIAL TERMS', HeadingLevel.HEADING_1),
           field('Effective Date', effectiveDate),
           field('Agreement Duration', `${d.duration_years ?? 1} year(s)`),
-          field('Payment Due Day (each month)', d.payment_due_day ? `${d.payment_due_day}th` : '___________________'),
+          field('Payment Due Day (each month)', d.payment_due_day ? (() => {
+            const n = Number(d.payment_due_day)
+            const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'
+            return `${n}${suffix} of each month`
+          })() : '___________________'),
           field('Notice Period', `${d.notice_period_days ?? 30} days`),
           field('Auto-Renewal', d.auto_renewal ? 'Yes — agreement renews automatically unless terminated' : 'No — must be renewed manually'),
 
