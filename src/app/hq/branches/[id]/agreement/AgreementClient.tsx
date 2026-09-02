@@ -193,8 +193,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
         body: JSON.stringify(buildSavePayload()),
       })
       if (!res.ok) throw new Error('Save failed')
-      setSaveMsg('Saved')
-      setTimeout(() => setSaveMsg(''), 3000)
+      setSaveMsg('Saved ✓')
     } catch {
       setSaveMsg('Error saving')
     } finally {
@@ -217,8 +216,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       // 2 — Show a direct download link (most reliable across all browsers)
       setDownloadUrl(`/api/hq/branches/${branchId}/agreement/export`)
       setExportedAt(new Date().toISOString())
-      setSaveMsg('Saved')
-      setTimeout(() => setSaveMsg(''), 3000)
+      setSaveMsg('Saved ✓')
     } catch (err) {
       setSaveMsg('Error saving')
       console.error(err)
