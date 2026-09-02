@@ -6,11 +6,6 @@ import {
   ArrowLeft, Save, FileDown, Upload, CheckCircle2,
   FileText, Clock, AlertCircle, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react'
-import {
-  Document, Packer, Paragraph, TextRun, HeadingLevel,
-  Table, TableRow, TableCell, WidthType, AlignmentType,
-  BorderStyle, PageNumber, Footer, Header,
-} from 'docx'
 
 interface Limits {
   max_units: number | null
@@ -218,102 +213,13 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed')
 
-      // 2 — Build docx client-side (same pattern as Excel export)
-      const effDate = effectiveDate
-        ? new Date(effectiveDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-        : '___________________'
-      const dur = Number(durationYears) || 1
-      const day = Number(paymentDueDay) || 1
-      const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'
-
-      const f = (label: string, value: string | null | undefined) => new Paragraph({
-        spacing: { after: 80 },
-        children: [
-          new TextRun({ text: `${label}: `, bold: true }),
-          new TextRun({ text: value || '___________________' }),
-        ],
-      })
-      const h = (text: string, level: HeadingLevel = HeadingLevel.HEADING_2) => new Paragraph({
-        text, heading: level, spacing: { before: 400, after: 120 },
-        border: level === HeadingLevel.HEADING_2
-          ? { bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a56db' } }
-          : undefined,
-      })
-      const b = (text: string | null | undefined) => new Paragraph({
-        text: text || '', spacing: { after: 160 }, style: 'Normal',
-      })
-      const blank = () => new Paragraph({ text: '', spacing: { after: 80 } })
-
-      const sigCell = (lines: string[]) => new TableCell({
-        width: { size: 50, type: WidthType.PERCENTAGE },
-        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
-        children: lines.map(l => new Paragraph({ text: l, spacing: { after: 60 } })),
-      })
-
-      const doc = new Document({
-        title: 'Branch Franchise Agreement',
-        creator: 'GetSuitel Platform',
-        styles: {
-          paragraphStyles: [{
-            id: 'Normal', name: 'Normal',
-            run: { font: 'Calibri', size: 22 },
-            paragraph: { spacing: { line: 276 } },
-          }],
-        },
-        sections: [{
-          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', italics: true, color: '888888', size: 18 })] })] }) },
-          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Page ', size: 18, color: '888888' }), new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }), new TextRun({ text: ' of ', size: 18, color: '888888' }), new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' })] })] }) },
-          children: [
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 200 }, children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', bold: true, size: 48, color: '1a56db' })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: `Effective Date: ${effDate}`, size: 26, italics: true })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: `Duration: ${dur} Year(s)`, size: 22, color: '555555' })] }),
-            h('1. PARTIES', HeadingLevel.HEADING_1), h('1.1 HQ (Franchisor)'),
-            f('Legal Name', hqLegalName), f('Address', hqAddress), f('Commercial Registration', hqRegistration), f('Authorised Representative', hqRep),
-            blank(), h('1.2 Branch (Franchisee)'),
-            f('Legal Name', branchLegalName), f('Address', branchAddress), f('Commercial Registration', branchRegistration), f('Authorised Representative', branchRep),
-            h('2. COMMERCIAL TERMS', HeadingLevel.HEADING_1),
-            f('Effective Date', effDate), f('Agreement Duration', `${dur} year(s)`),
-            f('Payment Due Day (each month)', `${day}${suffix} of each month`),
-            f('Notice Period', `${noticeDays} days`),
-            f('Auto-Renewal', autoRenewal ? 'Yes — agreement renews automatically unless terminated' : 'No — must be renewed manually'),
-            h('3. CAPACITY LIMITS', HeadingLevel.HEADING_1),
-            ...(['Organisations', 'Units', 'Staff Members', 'Tenants'] as const).map((label, i) => {
-              const vals = [limits.max_orgs, limits.max_units, limits.max_staff, limits.max_tenants]
-              return new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: `Maximum ${label}: `, bold: true }), new TextRun({ text: vals[i] != null ? String(vals[i]) : 'Unlimited' })] })
-            }),
-            h('4. HQ OBLIGATIONS', HeadingLevel.HEADING_1), b(hqObligations),
-            h('5. BRANCH OBLIGATIONS', HeadingLevel.HEADING_1), b(branchObligations),
-            h('6. TERM AND TERMINATION', HeadingLevel.HEADING_1),
-            b(`This Agreement commences on the Effective Date and remains in force for ${dur} year(s)${autoRenewal ? `, automatically renewing for successive terms unless either party gives written notice at least ${noticeDays} days before end of term` : ''}. Either party may terminate by providing ${noticeDays} days' written notice.`),
-            h('7. GOVERNING LAW AND DISPUTE RESOLUTION', HeadingLevel.HEADING_1),
-            f('Jurisdiction', jurisdiction), f('Governing Law', governingLaw), f('Dispute Resolution', disputeRes), blank(),
-            b(`This Agreement shall be governed by the ${governingLaw}. Disputes shall be submitted to the ${disputeRes}.`),
-            ...(customClauses ? [h('8. ADDITIONAL CLAUSES', HeadingLevel.HEADING_1), b(customClauses)] : []),
-            h(customClauses ? '9. SIGNATURES' : '8. SIGNATURES', HeadingLevel.HEADING_1),
-            b('IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date first written above.'),
-            blank(),
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE } },
-              rows: [new TableRow({ children: [
-                sigCell(['For and on behalf of HQ:', '', '', '____________________________', 'Authorised Signatory', 'Name: ___________________', 'Title: ___________________', 'Date:  ___________________']),
-                sigCell(['For and on behalf of Branch:', '', '', '____________________________', 'Authorised Signatory', 'Name: ___________________', 'Title: ___________________', 'Date:  ___________________']),
-              ] })],
-            }),
-          ],
-        }],
-      })
-
-      // 3 — Download blob (same as Excel export pattern)
-      const blob = await Packer.toBlob(doc)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      // 2 — Trigger download via hidden iframe
+      // Iframes bypass Next.js router + require no user gesture + send session cookies automatically
+      const iframe = document.createElement('iframe')
+      iframe.style.display = 'none'
+      iframe.src = `/api/hq/branches/${branchId}/agreement/export`
+      document.body.appendChild(iframe)
+      setTimeout(() => document.body.removeChild(iframe), 60_000)
 
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved')
