@@ -483,6 +483,8 @@ function StaffTab({ orgs }: { orgs: Org[] }) {
 // ─── Actions Tab ──────────────────────────────────────────────────────────────
 
 function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number }) {
+  const [utilRefresh, setUtilRefresh] = useState(0)
+
   return (
     <div className="space-y-6 max-w-xl">
       {/* Status controls */}
@@ -501,11 +503,11 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
 
       {/* Branch Limits (Item 123) */}
       {branch.status !== 'archived' && (
-        <BranchLimitsPanel branch={branch} />
+        <BranchLimitsPanel branch={branch} onSaved={() => setUtilRefresh(n => n + 1)} />
       )}
 
       {/* Utilisation Card */}
-      <UtilisationCard branchId={branch.id} />
+      <UtilisationCard branchId={branch.id} refreshKey={utilRefresh} />
 
       {/* Commercial terms (read-only here — edit via BranchFormModal on the list page) */}
       {branch.status !== 'archived' && (
@@ -538,7 +540,7 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
 
 // ─── Branch Limits Panel (Item 123) ─────────────────────────────────────────
 
-function BranchLimitsPanel({ branch }: { branch: BranchData }) {
+function BranchLimitsPanel({ branch, onSaved }: { branch: BranchData; onSaved?: () => void }) {
   const [units,   setUnits]   = useState<string>(branch.max_units   != null ? String(branch.max_units)   : '')
   const [staff,   setStaff]   = useState<string>(branch.max_staff   != null ? String(branch.max_staff)   : '')
   const [tenants, setTenants] = useState<string>(branch.max_tenants != null ? String(branch.max_tenants) : '')
@@ -565,6 +567,7 @@ function BranchLimitsPanel({ branch }: { branch: BranchData }) {
       setMsg({ ok: false, text: j.error ?? 'Failed to save limits' })
     } else {
       setMsg({ ok: true, text: 'Limits saved' })
+      onSaved?.()
       setTimeout(() => setMsg(null), 2500)
     }
   }
@@ -642,16 +645,17 @@ function UtilBar({ current, limit }: { current: number; limit: number | null }) 
   )
 }
 
-function UtilisationCard({ branchId }: { branchId: string }) {
+function UtilisationCard({ branchId, refreshKey }: { branchId: string; refreshKey?: number }) {
   const [data,    setData]    = useState<UtilData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setLoading(true)
     fetch(`/api/hq/branches/${branchId}/utilisation`)
       .then(r => r.json())
       .then(d => { if (!d.error) setData(d) })
       .finally(() => setLoading(false))
-  }, [branchId])
+  }, [branchId, refreshKey])
 
   const rows = data ? [
     { label: 'Organisations', ...data.orgs,    icon: Building2 },
