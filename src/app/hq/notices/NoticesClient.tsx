@@ -260,15 +260,15 @@ export default function NoticesClient({
                 </label>
               </div>
               {!targetAll && (
-                <div className="border border-gray-200 rounded-lg p-3 grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-y-auto">
                   {branches.map(b => (
-                    <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <label key={b.id} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors">
                       <input type="checkbox" checked={selectedBranches.includes(b.id)}
-                        onChange={() => toggleBranch(b.id)} />
-                      {b.display_name}
+                        onChange={() => toggleBranch(b.id)} className="flex-shrink-0" />
+                      <span className="truncate">{b.display_name}</span>
                     </label>
                   ))}
-                  {!branches.length && <p className="text-xs text-gray-400 col-span-2">No active branches</p>}
+                  {!branches.length && <p className="text-xs text-gray-400 px-3 py-2">No active branches</p>}
                 </div>
               )}
             </div>
