@@ -6,6 +6,11 @@ import {
   ArrowLeft, Save, FileDown, Upload, CheckCircle2,
   FileText, Clock, AlertCircle, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react'
+import {
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  Table, TableRow, TableCell, WidthType, AlignmentType,
+  BorderStyle, PageNumber, Footer, Header,
+} from 'docx'
 
 interface Limits {
   max_units: number | null
@@ -146,9 +151,6 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [signedAt, setSignedAt] = useState(d?.signed_at ?? null)
   const [activating, setActivating] = useState(false)
   const [activated, setActivated] = useState(false)
-  const [readyToDownload, setReadyToDownload] = useState(false)
-  const [exportError, setExportError] = useState('')
-  const [downloading, setDownloading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function buildPayload() {
@@ -206,53 +208,121 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
 
   async function handleExport() {
     setExporting(true)
+    setSaveMsg('')
     try {
+      // 1 — Save draft to DB
       const saveRes = await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSavePayload()),
       })
-      if (!saveRes.ok) throw new Error('Save failed before export')
+      if (!saveRes.ok) throw new Error('Save failed')
+
+      // 2 — Build docx client-side (same pattern as Excel export)
+      const effDate = effectiveDate
+        ? new Date(effectiveDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '___________________'
+      const dur = Number(durationYears) || 1
+      const day = Number(paymentDueDay) || 1
+      const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'
+
+      const f = (label: string, value: string | null | undefined) => new Paragraph({
+        spacing: { after: 80 },
+        children: [
+          new TextRun({ text: `${label}: `, bold: true }),
+          new TextRun({ text: value || '___________________' }),
+        ],
+      })
+      const h = (text: string, level: HeadingLevel = HeadingLevel.HEADING_2) => new Paragraph({
+        text, heading: level, spacing: { before: 400, after: 120 },
+        border: level === HeadingLevel.HEADING_2
+          ? { bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a56db' } }
+          : undefined,
+      })
+      const b = (text: string | null | undefined) => new Paragraph({
+        text: text || '', spacing: { after: 160 }, style: 'Normal',
+      })
+      const blank = () => new Paragraph({ text: '', spacing: { after: 80 } })
+
+      const sigCell = (lines: string[]) => new TableCell({
+        width: { size: 50, type: WidthType.PERCENTAGE },
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+        children: lines.map(l => new Paragraph({ text: l, spacing: { after: 60 } })),
+      })
+
+      const doc = new Document({
+        title: 'Branch Franchise Agreement',
+        creator: 'GetSuitel Platform',
+        styles: {
+          paragraphStyles: [{
+            id: 'Normal', name: 'Normal',
+            run: { font: 'Calibri', size: 22 },
+            paragraph: { spacing: { line: 276 } },
+          }],
+        },
+        sections: [{
+          headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', italics: true, color: '888888', size: 18 })] })] }) },
+          footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Page ', size: 18, color: '888888' }), new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }), new TextRun({ text: ' of ', size: 18, color: '888888' }), new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' })] })] }) },
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 800, after: 200 }, children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', bold: true, size: 48, color: '1a56db' })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: `Effective Date: ${effDate}`, size: 26, italics: true })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: `Duration: ${dur} Year(s)`, size: 22, color: '555555' })] }),
+            h('1. PARTIES', HeadingLevel.HEADING_1), h('1.1 HQ (Franchisor)'),
+            f('Legal Name', hqLegalName), f('Address', hqAddress), f('Commercial Registration', hqRegistration), f('Authorised Representative', hqRep),
+            blank(), h('1.2 Branch (Franchisee)'),
+            f('Legal Name', branchLegalName), f('Address', branchAddress), f('Commercial Registration', branchRegistration), f('Authorised Representative', branchRep),
+            h('2. COMMERCIAL TERMS', HeadingLevel.HEADING_1),
+            f('Effective Date', effDate), f('Agreement Duration', `${dur} year(s)`),
+            f('Payment Due Day (each month)', `${day}${suffix} of each month`),
+            f('Notice Period', `${noticeDays} days`),
+            f('Auto-Renewal', autoRenewal ? 'Yes — agreement renews automatically unless terminated' : 'No — must be renewed manually'),
+            h('3. CAPACITY LIMITS', HeadingLevel.HEADING_1),
+            ...(['Organisations', 'Units', 'Staff Members', 'Tenants'] as const).map((label, i) => {
+              const vals = [limits.max_orgs, limits.max_units, limits.max_staff, limits.max_tenants]
+              return new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: `Maximum ${label}: `, bold: true }), new TextRun({ text: vals[i] != null ? String(vals[i]) : 'Unlimited' })] })
+            }),
+            h('4. HQ OBLIGATIONS', HeadingLevel.HEADING_1), b(hqObligations),
+            h('5. BRANCH OBLIGATIONS', HeadingLevel.HEADING_1), b(branchObligations),
+            h('6. TERM AND TERMINATION', HeadingLevel.HEADING_1),
+            b(`This Agreement commences on the Effective Date and remains in force for ${dur} year(s)${autoRenewal ? `, automatically renewing for successive terms unless either party gives written notice at least ${noticeDays} days before end of term` : ''}. Either party may terminate by providing ${noticeDays} days' written notice.`),
+            h('7. GOVERNING LAW AND DISPUTE RESOLUTION', HeadingLevel.HEADING_1),
+            f('Jurisdiction', jurisdiction), f('Governing Law', governingLaw), f('Dispute Resolution', disputeRes), blank(),
+            b(`This Agreement shall be governed by the ${governingLaw}. Disputes shall be submitted to the ${disputeRes}.`),
+            ...(customClauses ? [h('8. ADDITIONAL CLAUSES', HeadingLevel.HEADING_1), b(customClauses)] : []),
+            h(customClauses ? '9. SIGNATURES' : '8. SIGNATURES', HeadingLevel.HEADING_1),
+            b('IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date first written above.'),
+            blank(),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE } },
+              rows: [new TableRow({ children: [
+                sigCell(['For and on behalf of HQ:', '', '', '____________________________', 'Authorised Signatory', 'Name: ___________________', 'Title: ___________________', 'Date:  ___________________']),
+                sigCell(['For and on behalf of Branch:', '', '', '____________________________', 'Authorised Signatory', 'Name: ___________________', 'Title: ___________________', 'Date:  ___________________']),
+              ] })],
+            }),
+          ],
+        }],
+      })
+
+      // 3 — Download blob (same as Excel export pattern)
+      const blob = await Packer.toBlob(doc)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+
       setExportedAt(new Date().toISOString())
-      setReadyToDownload(true)
+      setSaveMsg('Saved')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (err) {
+      setSaveMsg('Error saving')
+      console.error(err)
     } finally {
       setExporting(false)
-    }
-  }
-
-  async function handleDownload() {
-    setDownloading(true)
-    setExportError('')
-    try {
-      const res = await fetch(`/api/hq/branches/${branchId}/agreement/export`, {
-        method: 'GET',
-        credentials: 'include',
-      })
-      const contentType = res.headers.get('content-type') ?? ''
-      if (!res.ok || !contentType.includes('wordprocessingml')) {
-        // Show the error from the server
-        const text = await res.text()
-        let msg = `Error ${res.status}`
-        try { msg = `Error ${res.status}: ${JSON.parse(text).error}` } catch { msg = `Error ${res.status}: ${text.slice(0, 200)}` }
-        setExportError(msg)
-        return
-      }
-      // Download via blob — avoids Next.js router interception
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      // Revoke after a long delay so the download can complete
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
-      setReadyToDownload(false)
-    } catch (e) {
-      setExportError(String(e))
-    } finally {
-      setDownloading(false)
     }
   }
 
@@ -508,31 +578,14 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             <p className="text-xs text-gray-500 mb-3">
               Generates a professional .docx agreement from the form. Send to both parties for review and signature.
             </p>
-            {readyToDownload ? (
-              <button
-                onClick={handleDownload}
-                disabled={downloading}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700 disabled:opacity-60"
-              >
-                <FileDown className="h-4 w-4" />
-                {downloading ? 'Downloading…' : 'Click to Download .docx'}
-              </button>
-            ) : (
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
-              >
-                <FileDown className="h-4 w-4" />
-                {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
-              </button>
-            )}
-            {exportError && (
-              <div className="mt-2 flex items-start gap-1.5 text-red-600 text-xs bg-red-50 border border-red-200 rounded-md p-2">
-                <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                <span className="break-all">{exportError}</span>
-              </div>
-            )}
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
+            >
+              <FileDown className="h-4 w-4" />
+              {exporting ? 'Saving & Generating…' : 'Export Agreement (.docx)'}
+            </button>
           </div>
 
           {/* Upload signed */}
