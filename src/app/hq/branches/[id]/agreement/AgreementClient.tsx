@@ -213,10 +213,10 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed')
 
-      // 2 — Show a direct download link (most reliable across all browsers)
-      setDownloadUrl(`/api/hq/branches/${branchId}/agreement/export`)
+      // 2 — Trigger download directly (Content-Disposition: attachment keeps page alive)
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved ✓')
+      window.location.href = `/api/hq/branches/${branchId}/agreement/export`
     } catch (err) {
       setSaveMsg('Error saving')
       console.error(err)
@@ -486,22 +486,6 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
               {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
             </button>
 
-            {downloadUrl && (
-              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
-                <p className="text-xs text-green-700 font-medium mb-2">
-                  ✓ Draft saved — your agreement is ready
-                </p>
-                <a
-                  href={downloadUrl}
-                  download={`Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`}
-                  onClick={() => setDownloadUrl(null)}
-                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700"
-                >
-                  <FileDown className="h-4 w-4" />
-                  Download .docx
-                </a>
-              </div>
-            )}
           </div>
 
           {/* Upload signed */}
