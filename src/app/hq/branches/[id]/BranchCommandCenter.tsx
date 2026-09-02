@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import {
   Building2, Users, Home, TrendingUp, AlertTriangle,
-  Activity, DollarSign, ShieldAlert, Settings2, FileText,
+  Activity, DollarSign, ShieldAlert, Settings2, FileText, ExternalLink,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchActions from './BranchActions'
@@ -499,9 +499,13 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
               <dd className="font-semibold text-gray-900">{branch.revenue_share_pct}%</dd>
             </div>
           </dl>
-          <p className="text-xs text-gray-400">
-            To update commercial terms, use the ✏️ Edit button on the Branches list page.
-          </p>
+          <a
+            href="/hq/branches"
+            className="inline-flex items-center gap-1.5 text-sm text-yellow-700 hover:text-yellow-900 font-medium"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Go to Branches list → click the ✏ pencil icon on this branch row to edit
+          </a>
         </div>
       )}
     </div>
