@@ -18,6 +18,7 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
     .select(`
       id, name, display_name, region, city, status,
       license_fee_omr, revenue_share_pct, logo_url, created_at, updated_at,
+      max_units, max_staff, max_tenants,
       superadmin_id,
       profiles!branches_superadmin_id_fkey ( full_name, email, phone )
     `)
@@ -121,6 +122,9 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
           updated_at:       branch.updated_at,
           city:             branch.city,
           region:           branch.region,
+          max_units:        branch.max_units   != null ? Number(branch.max_units)   : null,
+          max_staff:        branch.max_staff   != null ? Number(branch.max_staff)   : null,
+          max_tenants:      branch.max_tenants != null ? Number(branch.max_tenants) : null,
         }}
         profile={profile}
         stats={{

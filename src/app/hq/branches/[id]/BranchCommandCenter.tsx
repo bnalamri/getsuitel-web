@@ -1,8 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Building2, Users, Home, TrendingUp, AlertTriangle,
   Activity, DollarSign, ShieldAlert, Settings2, FileText, ExternalLink,
+  ClipboardList, Loader2, SlidersHorizontal, Download,
+  CheckCircle2, XCircle, PauseCircle, Archive,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchActions from './BranchActions'
@@ -36,6 +38,9 @@ type BranchData = {
   updated_at: string
   city: string | null
   region: string | null
+  max_units:   number | null
+  max_staff:   number | null
+  max_tenants: number | null
 }
 
 type Stats = {
@@ -50,6 +55,14 @@ type Stats = {
 
 type Profile = { full_name: string | null; email: string; phone?: string | null } | null
 
+type AuditLog = {
+  id: string
+  action: string
+  details: Record<string, unknown> | null
+  created_at: string
+  profiles: { full_name: string | null; email: string } | null
+}
+
 type Props = {
   branch:  BranchData
   profile: Profile
@@ -61,11 +74,12 @@ type Props = {
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: 'overview',  label: 'Overview',  icon: Activity   },
-  { key: 'financial', label: 'Financial', icon: DollarSign },
-  { key: 'health',    label: 'Health',    icon: ShieldAlert },
-  { key: 'staff',     label: 'Orgs',      icon: Building2  },
-  { key: 'actions',   label: 'Actions',   icon: Settings2  },
+  { key: 'overview',  label: 'Overview',  icon: Activity      },
+  { key: 'financial', label: 'Financial', icon: DollarSign    },
+  { key: 'health',    label: 'Health',    icon: ShieldAlert   },
+  { key: 'staff',     label: 'Orgs',      icon: Building2     },
+  { key: 'actions',   label: 'Actions',   icon: Settings2     },
+  { key: 'audit',     label: 'Audit',     icon: ClipboardList },
 ] as const
 
 type Tab = typeof TABS[number]['key']
@@ -101,6 +115,7 @@ export default function BranchCommandCenter({ branch, profile, stats, orgs, bill
       {tab === 'health'    && <HealthTab    stats={stats} orgs={orgs} />}
       {tab === 'staff'     && <StaffTab     orgs={orgs} />}
       {tab === 'actions'   && <ActionsTab   branch={branch} orgCount={stats.orgCount} />}
+      {tab === 'audit'     && <AuditTab     branchId={branch.id} />}
     </div>
   )
 }
@@ -483,6 +498,11 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
         />
       </div>
 
+      {/* Branch Limits (Item 123) */}
+      {branch.status !== 'archived' && (
+        <BranchLimitsPanel branch={branch} />
+      )}
+
       {/* Commercial terms (read-only here — edit via BranchFormModal on the list page) */}
       {branch.status !== 'archived' && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -508,6 +528,247 @@ function ActionsTab({ branch, orgCount }: { branch: BranchData; orgCount: number
           </a>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Branch Limits Panel (Item 123) ─────────────────────────────────────────
+
+function BranchLimitsPanel({ branch }: { branch: BranchData }) {
+  const [units,   setUnits]   = useState<string>(branch.max_units   != null ? String(branch.max_units)   : '')
+  const [staff,   setStaff]   = useState<string>(branch.max_staff   != null ? String(branch.max_staff)   : '')
+  const [tenants, setTenants] = useState<string>(branch.max_tenants != null ? String(branch.max_tenants) : '')
+  const [saving,  setSaving]  = useState(false)
+  const [msg,     setMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function save() {
+    setSaving(true); setMsg(null)
+    const body: Record<string, number | null> = {
+      max_units:   units.trim()   === '' ? null : parseInt(units,   10),
+      max_staff:   staff.trim()   === '' ? null : parseInt(staff,   10),
+      max_tenants: tenants.trim() === '' ? null : parseInt(tenants, 10),
+    }
+    const res = await fetch(`/api/hq/branches/${branch.id}/limits`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    setSaving(false)
+    if (!res.ok) {
+      const j = await res.json()
+      setMsg({ ok: false, text: j.error ?? 'Failed to save limits' })
+    } else {
+      setMsg({ ok: true, text: 'Limits saved' })
+      setTimeout(() => setMsg(null), 2500)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <SlidersHorizontal className="w-4 h-4 text-gray-500" />
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Branch Limits</h2>
+      </div>
+      <p className="text-sm text-gray-400 mb-5">
+        Maximum allowable counts for this branch. Leave blank for no limit.
+      </p>
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        {[
+          { label: 'Max Units',   value: units,   set: setUnits,   placeholder: 'Unlimited' },
+          { label: 'Max Staff',   value: staff,   set: setStaff,   placeholder: 'Unlimited' },
+          { label: 'Max Tenants', value: tenants, set: setTenants, placeholder: 'Unlimited' },
+        ].map(({ label, value, set, placeholder }) => (
+          <div key={label}>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+            <input
+              type="number"
+              min={0}
+              value={value}
+              onChange={e => set(e.target.value)}
+              placeholder={placeholder}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold rounded-lg text-sm disabled:opacity-50 transition-colors"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <SlidersHorizontal className="w-4 h-4" />}
+          Save Limits
+        </button>
+        {msg && (
+          <p className={`text-sm flex items-center gap-1 ${msg.ok ? 'text-green-600' : 'text-red-600'}`}>
+            {msg.ok ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+            {msg.text}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Audit Tab (Item 124) ─────────────────────────────────────────────────────
+
+const ACTION_LABELS: Record<string, { label: string; color: string; Icon: React.FC<{ className?: string }> }> = {
+  status_change:  { label: 'Status Changed',  color: 'blue',   Icon: ({ className }) => <PauseCircle className={className} /> },
+  limits_update:  { label: 'Limits Updated',  color: 'purple', Icon: ({ className }) => <SlidersHorizontal className={className} /> },
+  billing_paid:   { label: 'Billing Paid',    color: 'green',  Icon: ({ className }) => <CheckCircle2 className={className} /> },
+  billing_remind: { label: 'Reminder Sent',   color: 'amber',  Icon: ({ className }) => <ClipboardList className={className} /> },
+  archived:       { label: 'Archived',        color: 'red',    Icon: ({ className }) => <Archive className={className} /> },
+}
+
+function auditDescription(log: AuditLog): string {
+  const d = log.details ?? {}
+  switch (log.action) {
+    case 'status_change': {
+      const from = String(d.from ?? '?')
+      const to   = String(d.to   ?? '?')
+      return `Status changed from ${from} → ${to}`
+    }
+    case 'limits_update': {
+      const before = d.before as Record<string, number | null> ?? {}
+      const after  = d.after  as Record<string, number | null> ?? {}
+      const parts: string[] = []
+      for (const k of ['max_units', 'max_staff', 'max_tenants']) {
+        if (k in after) {
+          const label = k.replace('max_', 'Max ').replace('_', ' ')
+          const bVal = before[k] != null ? String(before[k]) : 'Unlimited'
+          const aVal = after[k]  != null ? String(after[k])  : 'Unlimited'
+          parts.push(`${label}: ${bVal} → ${aVal}`)
+        }
+      }
+      return parts.join(' · ') || 'Limits updated'
+    }
+    case 'billing_paid':   return `Billing marked as paid for ${String(d.month ?? 'unknown month')}`
+    case 'billing_remind': return `Payment reminder sent to branch superadmin`
+    default: return log.action.replace('_', ' ')
+  }
+}
+
+function exportAuditCSV(logs: AuditLog[], branchId: string) {
+  const rows = [
+    ['Date', 'Action', 'Description', 'Actor'],
+    ...logs.map(l => [
+      new Date(l.created_at).toLocaleString('en-GB'),
+      l.action,
+      auditDescription(l),
+      l.profiles?.full_name ?? l.profiles?.email ?? '—',
+    ]),
+  ]
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `branch-audit-${branchId}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+}
+
+function AuditTab({ branchId }: { branchId: string }) {
+  const [logs,       setLogs]       = useState<AuditLog[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState<string | null>(null)
+  const [filterAction, setFilter]  = useState('all')
+
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams({ limit: '200' })
+    if (filterAction !== 'all') params.set('action', filterAction)
+
+    fetch(`/api/hq/branches/${branchId}/audit?${params}`)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) setLogs(d)
+        else setError(d.error ?? 'Failed to load audit log')
+      })
+      .catch(() => setError('Network error'))
+      .finally(() => setLoading(false))
+  }, [branchId, filterAction])
+
+  const colorMap: Record<string, string> = {
+    blue:   'bg-blue-100 text-blue-700',
+    purple: 'bg-purple-100 text-purple-700',
+    green:  'bg-green-100 text-green-700',
+    amber:  'bg-amber-100 text-amber-700',
+    red:    'bg-red-100 text-red-700',
+    gray:   'bg-gray-100 text-gray-500',
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Controls */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <select
+            value={filterAction}
+            onChange={e => setFilter(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white"
+          >
+            <option value="all">All actions</option>
+            <option value="status_change">Status changes</option>
+            <option value="limits_update">Limits updates</option>
+            <option value="billing_paid">Billing paid</option>
+            <option value="billing_remind">Reminders sent</option>
+          </select>
+          <span className="text-xs text-gray-400">{logs.length} event{logs.length !== 1 ? 's' : ''}</span>
+        </div>
+        <button
+          onClick={() => exportAuditCSV(logs, branchId)}
+          disabled={logs.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </button>
+      </div>
+
+      {/* Timeline */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-gray-400 text-sm">
+            <Loader2 className="w-5 h-5 animate-spin" /> Loading audit log…
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-red-500 text-sm">
+            <AlertTriangle className="w-4 h-4" /> {error}
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-gray-400">
+            <ClipboardList className="w-10 h-10 opacity-30" />
+            <p className="text-sm">No audit events recorded yet</p>
+            <p className="text-xs text-gray-300">Events are logged when status or limits change</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {logs.map(log => {
+              const meta = ACTION_LABELS[log.action] ?? { label: log.action, color: 'gray', Icon: ClipboardList }
+              const colorCls = colorMap[meta.color] ?? colorMap.gray
+              return (
+                <div key={log.id} className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50">
+                  <div className={`mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${colorCls}`}>
+                    <meta.Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{auditDescription(log)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(log.created_at).toLocaleString('en-GB', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                      {log.profiles?.full_name ? ` · by ${log.profiles.full_name}` : ''}
+                    </p>
+                  </div>
+                  <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${colorCls}`}>
+                    {meta.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

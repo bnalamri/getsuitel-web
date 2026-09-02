@@ -43,6 +43,13 @@ export async function PATCH(
     }
   }
 
+  // Fetch current status for audit diff
+  const { data: current } = await supabase
+    .from('branches')
+    .select('status')
+    .eq('id', id)
+    .single()
+
   const { data, error } = await supabase
     .from('branches')
     .update({ status, updated_at: new Date().toISOString() })
@@ -51,5 +58,15 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Audit log
+  const { data: { user } } = await supabase.auth.getUser()
+  await supabase.from('hq_audit_logs').insert({
+    branch_id: id,
+    actor_id:  user?.id ?? null,
+    action:    'status_change',
+    details:   { from: current?.status ?? null, to: status },
+  }).throwOnError().catch(() => {}) // non-fatal if table not yet created
+
   return NextResponse.json(data)
 }
