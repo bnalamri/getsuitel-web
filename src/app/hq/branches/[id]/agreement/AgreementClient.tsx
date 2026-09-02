@@ -146,6 +146,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [signedAt, setSignedAt] = useState(d?.signed_at ?? null)
   const [activating, setActivating] = useState(false)
   const [activated, setActivated] = useState(false)
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function buildPayload() {
@@ -213,14 +214,8 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed')
 
-      // 2 — Trigger download via hidden iframe
-      // Iframes bypass Next.js router + require no user gesture + send session cookies automatically
-      const iframe = document.createElement('iframe')
-      iframe.style.display = 'none'
-      iframe.src = `/api/hq/branches/${branchId}/agreement/export`
-      document.body.appendChild(iframe)
-      setTimeout(() => document.body.removeChild(iframe), 60_000)
-
+      // 2 — Show a direct download link (most reliable across all browsers)
+      setDownloadUrl(`/api/hq/branches/${branchId}/agreement/export`)
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved')
       setTimeout(() => setSaveMsg(''), 3000)
@@ -490,8 +485,26 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
             >
               <FileDown className="h-4 w-4" />
-              {exporting ? 'Saving & Generating…' : 'Export Agreement (.docx)'}
+              {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
             </button>
+
+            {downloadUrl && (
+              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                <p className="text-xs text-green-700 font-medium mb-2">
+                  ✓ Draft saved — your agreement is ready
+                </p>
+                <a
+                  href={downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setDownloadUrl(null)}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Download .docx
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Upload signed */}
