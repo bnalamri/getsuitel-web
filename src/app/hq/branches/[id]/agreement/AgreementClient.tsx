@@ -296,7 +296,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             {statusConfig.label}
           </div>
           {saveMsg && (
-            <span className={`text-xs font-medium ${saveMsg === 'Saved' ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`text-xs font-medium ${saveMsg === 'Saved ✓' ? 'text-green-600' : 'text-red-600'}`}>
               {saveMsg}
             </span>
           )}
