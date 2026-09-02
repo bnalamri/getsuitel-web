@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
+import { checkBranchLimit } from '@/lib/branchLimits'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
@@ -28,6 +29,14 @@ export async function POST(req: Request) {
   if (!email || !role) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   if (!['property_manager', 'financial_manager'].includes(role)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+  }
+
+  // Branch limit check
+  const limitCheck = await checkBranchLimit(supabase, profile.organization_id, 'max_staff')
+  if (!limitCheck.allowed) {
+    return NextResponse.json({
+      error: `Branch limit reached: ${limitCheck.current} of ${limitCheck.limit} staff members used. Contact HQ to increase your limit.`,
+    }, { status: 403 })
   }
 
   const admin = createAdminClient()

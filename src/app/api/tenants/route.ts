@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { checkBranchLimit } from '@/lib/branchLimits'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -24,6 +25,14 @@ export async function POST(req: Request) {
 
   if (!full_name || !email || !phone) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  // Branch limit check
+  const limitCheck = await checkBranchLimit(supabase, profile.organization_id, 'max_tenants')
+  if (!limitCheck.allowed) {
+    return NextResponse.json({
+      error: `Branch limit reached: ${limitCheck.current} of ${limitCheck.limit} tenants used. Contact HQ to increase your limit.`,
+    }, { status: 403 })
   }
 
   const admin = createAdminClient()
