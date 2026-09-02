@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import RevenueCharts from './RevenueCharts'
+import RevenueExportButtons from './RevenueExportButtons'
 import Link from 'next/link'
 
 type BillingRecord = {
@@ -84,9 +85,20 @@ export default async function HQRevenueOverviewPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Revenue Overview</h1>
-        <p className="text-sm text-gray-500">Cross-branch P&amp;L summary and revenue trends</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Revenue Overview</h1>
+          <p className="text-sm text-gray-500">Cross-branch P&amp;L summary and revenue trends</p>
+        </div>
+        <RevenueExportButtons
+          branches={branches}
+          grandTotalRevenue={grandTotalRevenue}
+          grandTotalShare={grandTotalShare}
+          grandTotalLicense={grandTotalLicense}
+          grandCollected={grandCollected}
+          grandPending={grandPending}
+          chartData={chartData}
+        />
       </div>
 
       {/* Grand totals */}
