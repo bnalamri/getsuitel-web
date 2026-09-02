@@ -185,7 +185,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
 
   async function handleSave() {
     setSaving(true)
-    setSaveMsg('')
+    setSaveMsg('Saving…')
     try {
       const res = await fetch(`/api/hq/branches/${branchId}/agreement`, {
         method: 'POST',
@@ -306,7 +306,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             {statusConfig.label}
           </div>
           {saveMsg && (
-            <span className={`text-xs font-medium ${saveMsg === 'Saved ✓' ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`text-xs font-medium ${saveMsg === 'Saved ✓' ? 'text-green-600' : saveMsg === 'Saving…' ? 'text-gray-500' : 'text-red-600'}`}>
               {saveMsg}
             </span>
           )}
