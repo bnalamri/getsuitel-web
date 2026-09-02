@@ -495,8 +495,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
                 </p>
                 <a
                   href={downloadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  download={`Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`}
                   onClick={() => setDownloadUrl(null)}
                   className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700"
                 >
