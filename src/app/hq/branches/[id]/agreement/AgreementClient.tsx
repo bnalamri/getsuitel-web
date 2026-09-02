@@ -212,14 +212,9 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       })
       if (!saveRes.ok) throw new Error('Save failed before export')
 
-      // Trigger download via hidden anchor pointing to GET endpoint.
-      // Content-Disposition: attachment on the response causes all browsers to download.
-      const a = document.createElement('a')
-      a.href = `/api/hq/branches/${branchId}/agreement/export`
-      a.download = `Branch_Agreement_${branchName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      // Content-Disposition: attachment on the GET response triggers download in all browsers.
+      // window.location.href is a true browser navigation — bypasses Next.js client router.
+      window.location.href = `/api/hq/branches/${branchId}/agreement/export`
       setExportedAt(new Date().toISOString())
     } finally {
       setExporting(false)
