@@ -14,6 +14,7 @@ type Branch = {
 }
 
 const STATUS_STYLES: Record<string, string> = {
+  pending_agreement: 'bg-purple-100 text-purple-700',
   active:    'bg-green-100 text-green-700',
   suspended: 'bg-yellow-100 text-yellow-700',
   archived:  'bg-gray-100 text-gray-500',
@@ -21,7 +22,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function BranchesClient({ branches, isAdmin }: { branches: Branch[]; isAdmin: boolean }) {
   const [q, setQ]               = useState('')
-  const [filter, setFilter]     = useState<'all'|'active'|'suspended'|'archived'>('all')
+  const [filter, setFilter]     = useState<'all'|'pending_agreement'|'active'|'suspended'|'archived'>('all')
   const [showModal, setModal]   = useState(false)
   const [editing, setEditing]   = useState<Branch | null>(null)
   const [inviteBranch, setInvite] = useState<{ id: string; name: string } | null>(null)
@@ -67,7 +68,7 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
           />
         </div>
         <div className="flex gap-2">
-          {(['all','active','suspended','archived'] as const).map(s => (
+          {(['all','pending_agreement','active','suspended','archived'] as const).map(s => (
             <button
               key={s}
               onClick={() => setFilter(s)}

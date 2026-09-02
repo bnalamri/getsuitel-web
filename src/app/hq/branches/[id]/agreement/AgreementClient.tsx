@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Save, FileDown, Upload, CheckCircle2,
-  FileText, Clock, AlertCircle, ChevronDown, ChevronRight,
+  FileText, Clock, AlertCircle, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react'
 
 interface Limits {
@@ -144,6 +144,8 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [signedName, setSignedName] = useState(d?.signed_doc_name ?? null)
   const [exportedAt, setExportedAt] = useState(d?.exported_at ?? null)
   const [signedAt, setSignedAt] = useState(d?.signed_at ?? null)
+  const [activating, setActivating] = useState(false)
+  const [activated, setActivated] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function buildPayload() {
@@ -253,6 +255,21 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
     exported: { label: 'Exported', color: 'bg-blue-50 text-blue-700 border-blue-200',    Icon: FileText },
     signed:   { label: 'Signed',   color: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
   }[status]
+
+  async function handleActivate() {
+    setActivating(true)
+    try {
+      const res = await fetch(`/api/hq/branches/${branchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      })
+      if (!res.ok) throw new Error('Failed to activate branch')
+      setActivated(true)
+    } finally {
+      setActivating(false)
+    }
+  }
 
   function fmtDate(iso: string | null | undefined) {
     if (!iso) return ''
@@ -516,6 +533,33 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             </button>
             <p className="mt-2 text-xs text-gray-400 text-center">PDF, DOCX, or image · max 10MB</p>
           </div>
+
+          {/* Activate Branch */}
+          {signedAt && (
+            <div className={`rounded-xl border p-5 ${activated ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+              <h2 className="text-sm font-semibold text-gray-700 mb-2">Activate Branch</h2>
+              {activated ? (
+                <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Branch is now Active
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Agreement is signed. Mark the branch as active to allow it to start operations on the platform.
+                  </p>
+                  <button
+                    onClick={handleActivate}
+                    disabled={activating}
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700 disabled:opacity-60"
+                  >
+                    <Zap className="h-4 w-4" />
+                    {activating ? 'Activating…' : 'Activate Branch'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Back link */}
           <Link

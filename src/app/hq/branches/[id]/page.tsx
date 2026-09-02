@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import BranchCommandCenter from './BranchCommandCenter'
 
 const STATUS_STYLES: Record<string, string> = {
+  pending_agreement: 'bg-purple-100 text-purple-700',
   active:    'bg-green-100 text-green-700',
   suspended: 'bg-yellow-100 text-yellow-700',
   archived:  'bg-gray-100 text-gray-500',

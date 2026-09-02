@@ -44,7 +44,7 @@ export default function BranchFormModal({
     name:               branch?.name ?? '',
     region:             branch?.region ?? '',
     city:               branch?.city ?? '',
-    status:             branch?.status ?? 'active',
+    status:             branch?.status ?? 'pending_agreement',
     license_fee_omr:    branch?.license_fee_omr?.toString() ?? '0',
     revenue_share_pct:  branch?.revenue_share_pct?.toString() ?? '0',
     superadmin_id:      branch?.superadmin_id ?? '',
@@ -117,6 +117,7 @@ export default function BranchFormModal({
               onChange={e => set('status', e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
             >
+              <option value="pending_agreement">Pending Agreement</option>
               <option value="active">Active</option>
               <option value="suspended">Suspended</option>
               <option value="archived">Archived</option>
