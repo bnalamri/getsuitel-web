@@ -33,7 +33,21 @@ export default async function HQPnLPage({
   const supabase = createAdminClient()
   const year = parseInt(String(searchParams.year ?? new Date().getFullYear()), 10)
   const yearStart = `${year}-01-01`
-  const yearEnd   = `${year + 1}-01-01`
+  const today     = new Date().toISOString().split('T')[0]
+  const isCurrentYear = year === new Date().getFullYear()
+  // Cap at today for current year so HQ matches branch YTD view
+  const yearEnd   = isCurrentYear ? today : `${year + 1}-01-01`
+
+  // ── Step 1: get only active (non-canceled) org IDs per branch ────────────
+  const { data: activeOrgs } = await supabase
+    .from('organizations')
+    .select('id, branch_id')
+    .is('canceled_at', null)
+
+  const activeOrgIds = (activeOrgs ?? []).map(o => o.id)
+  // Map orgId → branchId for fast lookups
+  const orgBranch: Record<string, string> = {}
+  ;(activeOrgs ?? []).forEach(o => { if (o.branch_id) orgBranch[o.id] = o.branch_id })
 
   const [
     { data: invoices },
@@ -43,43 +57,54 @@ export default async function HQPnLPage({
     { data: branches },
     { data: units },
   ] = await Promise.all([
-    // ── Revenue: paid OMR invoices by due_date (matches branch P&L logic) ──
-    supabase
-      .from('invoices')
-      .select('amount, currency, due_date, organizations!inner(branch_id)')
-      .eq('status', 'paid')
-      .or('currency.is.null,currency.eq.OMR')
-      .gte('due_date', yearStart)
-      .lt('due_date', yearEnd),
+    // ── Revenue: paid OMR invoices by due_date (active orgs only) ──────────
+    activeOrgIds.length
+      ? supabase
+          .from('invoices')
+          .select('amount, organization_id')
+          .eq('status', 'paid')
+          .or('currency.is.null,currency.eq.OMR')
+          .gte('due_date', yearStart)
+          .lte('due_date', yearEnd)
+          .in('organization_id', activeOrgIds)
+      : Promise.resolve({ data: [] }),
 
-    // ── Expenses: by date ────────────────────────────────────────────────────
-    supabase
-      .from('expenses')
-      .select('amount, date, organizations!inner(branch_id)')
-      .gte('date', yearStart)
-      .lt('date', yearEnd),
+    // ── Expenses: by date (active orgs only) ────────────────────────────────
+    activeOrgIds.length
+      ? supabase
+          .from('expenses')
+          .select('amount, organization_id')
+          .gte('date', yearStart)
+          .lte('date', yearEnd)
+          .in('organization_id', activeOrgIds)
+      : Promise.resolve({ data: [] }),
 
-    // ── Maintenance billed to owner ─────────────────────────────────────────
-    supabase
-      .from('maintenance_requests')
-      .select('charge_amount, charge_payer, completed_at, organizations!inner(branch_id)')
-      .eq('charge_payer', 'owner')
-      .not('charge_amount', 'is', null)
-      .gte('completed_at', yearStart)
-      .lt('completed_at', yearEnd),
+    // ── Maintenance billed to owner (active orgs only) ──────────────────────
+    activeOrgIds.length
+      ? supabase
+          .from('maintenance_requests')
+          .select('charge_amount, organization_id')
+          .eq('charge_payer', 'owner')
+          .not('charge_amount', 'is', null)
+          .gte('completed_at', yearStart)
+          .lte('completed_at', yearEnd)
+          .in('organization_id', activeOrgIds)
+      : Promise.resolve({ data: [] }),
 
     // ── HQ share + license fee (from branch_billing, year-filtered) ─────────
     supabase
       .from('branch_billing')
       .select('branch_id, share_amount_omr, license_fee_omr')
       .gte('month', yearStart)
-      .lt('month', yearEnd),
+      .lte('month', yearEnd),
 
     // ── Branch list ─────────────────────────────────────────────────────────
     supabase.from('branches').select('id, display_name, status').order('display_name'),
 
-    // ── Units for occupancy ──────────────────────────────────────────────────
-    supabase.from('units').select('id, status, organizations(branch_id)'),
+    // ── Units for occupancy (active orgs only) ───────────────────────────────
+    activeOrgIds.length
+      ? supabase.from('units').select('id, status, organization_id').in('organization_id', activeOrgIds)
+      : Promise.resolve({ data: [] }),
   ])
 
   // ── Aggregate per branch ─────────────────────────────────────────────────
@@ -99,17 +124,17 @@ export default async function HQPnLPage({
   })
 
   ;(invoices ?? []).forEach(inv => {
-    const bid = (inv.organizations as { branch_id: string } | null)?.branch_id
+    const bid = orgBranch[(inv as any).organization_id]
     if (bid && stats[bid]) stats[bid].revenue += Number(inv.amount ?? 0)
   })
 
   ;(expenses ?? []).forEach(e => {
-    const bid = (e.organizations as { branch_id: string } | null)?.branch_id
+    const bid = orgBranch[(e as any).organization_id]
     if (bid && stats[bid]) stats[bid].expenses += Number(e.amount ?? 0)
   })
 
   ;(maintenance ?? []).forEach(m => {
-    const bid = (m.organizations as { branch_id: string } | null)?.branch_id
+    const bid = orgBranch[(m as any).organization_id]
     if (bid && stats[bid]) stats[bid].maintenance += Number(m.charge_amount ?? 0)
   })
 
@@ -120,7 +145,7 @@ export default async function HQPnLPage({
   })
 
   ;(units ?? []).forEach(u => {
-    const bid = (u.organizations as { branch_id: string } | null)?.branch_id
+    const bid = orgBranch[(u as any).organization_id]
     if (bid && stats[bid]) {
       stats[bid].units++
       if (u.status === 'occupied') stats[bid].occupied++
