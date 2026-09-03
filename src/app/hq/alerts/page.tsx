@@ -55,7 +55,7 @@ export default async function AlertCenterPage() {
     // Unpaid branch billing records
     supabase
       .from('branch_billing')
-      .select('id, branch_id, month, total_revenue_omr, branches!branch_billing_branch_id_fkey(display_name)')
+      .select('id, branch_id, month, total_revenue_omr, license_fee_omr, status, created_at, branches!branch_billing_branch_id_fkey(display_name)')
       .neq('status', 'paid')
       .order('month', { ascending: false }),
 
@@ -114,18 +114,32 @@ export default async function AlertCenterPage() {
     })
   }
 
-  // WARNING: unpaid billing
+  // CRITICAL (7+ days) / WARNING (<7 days): unpaid billing — license fee overdue
   for (const row of unpaidBilling ?? []) {
     const branchName = (row.branches as unknown as { display_name: string } | null)?.display_name ?? 'Unknown'
     const month = new Date(row.month).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-    alerts.push({
-      id:       `billing-${row.id}`,
-      severity: 'warning',
-      icon:     FileText,
-      title:    `Unpaid billing: ${branchName}`,
-      detail:   `${month} — OMR ${Number(row.total_revenue_omr).toFixed(3)} revenue not yet settled.`,
-      href:     `/hq/branches/${row.branch_id}`,
-    })
+    const daysOverdue = Math.floor((today.getTime() - new Date(row.created_at).getTime()) / 86400000)
+    const licenseFee = Number(row.license_fee_omr ?? 0).toFixed(3)
+
+    if (daysOverdue >= 7) {
+      alerts.push({
+        id:       `billing-${row.id}`,
+        severity: 'critical',
+        icon:     FileText,
+        title:    `License fee overdue: ${branchName}`,
+        detail:   `${month} — OMR ${licenseFee} license fee unpaid for ${daysOverdue} days. Reminder email sent to branch superadmin.`,
+        href:     `/hq/branches/${row.branch_id}`,
+      })
+    } else {
+      alerts.push({
+        id:       `billing-${row.id}`,
+        severity: 'warning',
+        icon:     FileText,
+        title:    `Unpaid billing: ${branchName}`,
+        detail:   `${month} — OMR ${Number(row.total_revenue_omr).toFixed(3)} revenue not yet settled (${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} ago).`,
+        href:     `/hq/branches/${row.branch_id}`,
+      })
+    }
   }
 
   // WARNING: expiring subscriptions
