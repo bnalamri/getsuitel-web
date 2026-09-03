@@ -142,7 +142,7 @@ async function exportToExcel(billing: BillingRow[], months: string[], monthLabel
   })]
 
   // Sheet 2: Per-Branch Breakdown
-  const sheet2Hdr: CellDef[] = ['Branch','Month','Revenue (OMR)','HQ Share (OMR)','License Fee (OMR)','Status'].map(h => ({ v: h, s: 1 }))
+  const sheet2Hdr: CellDef[] = ['Branch','Month','Revenue (OMR)','HQ Share (OMR)','License Fee (OMR)','License Status'].map(h => ({ v: h, s: 1 }))
   const sheet2Rows: CellDef[][] = [sheet2Hdr, ...billing.map((r, i) => {
     const alt = i % 2 === 1 ? 3 : 2
     return [
@@ -329,18 +329,20 @@ export default function RevenueTrendClient({
                 <th className="px-5 py-3 text-left">Month</th>
                 <th className="px-5 py-3 text-right">Revenue (OMR)</th>
                 <th className="px-5 py-3 text-right">HQ Share (OMR)</th>
-                <th className="px-5 py-3 text-left">Status</th>
+                <th className="px-5 py-3 text-right">License Fee (OMR)</th>
+                <th className="px-5 py-3 text-left">License Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!billing.length ? (
-                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No billing records in last 12 months</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No billing records in last 12 months</td></tr>
               ) : billing.map(r => (
                 <tr key={`${r.branch_id}-${r.month}`} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-900">{r.branch_name}</td>
                   <td className="px-5 py-3 text-gray-600">{monthLabel(r.month)}</td>
                   <td className="px-5 py-3 text-right text-gray-700">{r.revenue.toFixed(3)}</td>
                   <td className="px-5 py-3 text-right text-gray-700">{r.share.toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right text-purple-700 font-medium">{r.license.toFixed(3)}</td>
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
                       r.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
