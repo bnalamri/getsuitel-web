@@ -43,14 +43,14 @@ export default async function HQPnLPage({
     { data: branches },
     { data: units },
   ] = await Promise.all([
-    // ── Revenue: paid OMR invoices by paid_date ─────────────────────────────
+    // ── Revenue: paid OMR invoices by due_date (matches branch P&L logic) ──
     supabase
       .from('invoices')
-      .select('amount, currency, paid_date, organizations!inner(branch_id)')
+      .select('amount, currency, due_date, organizations!inner(branch_id)')
       .eq('status', 'paid')
       .or('currency.is.null,currency.eq.OMR')
-      .gte('paid_date', yearStart)
-      .lt('paid_date', yearEnd),
+      .gte('due_date', yearStart)
+      .lt('due_date', yearEnd),
 
     // ── Expenses: by date ────────────────────────────────────────────────────
     supabase
@@ -173,7 +173,7 @@ export default async function HQPnLPage({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cross-Branch P&amp;L</h1>
           <p className="text-sm text-gray-500">
-            Actual revenue &amp; expenses from invoices and records — {year}
+            Paid invoices by due date · recorded expenses — {year}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -302,7 +302,7 @@ export default async function HQPnLPage({
 
       {/* Data note */}
       <p className="text-xs text-gray-400">
-        Revenue = paid OMR invoices by paid date · Expenses = recorded expenses + owner-paid maintenance charges · HQ Share from billing records
+        Revenue = paid OMR invoices by due date · Expenses = recorded expenses + owner-paid maintenance charges · HQ Share from billing records
       </p>
     </div>
   )
