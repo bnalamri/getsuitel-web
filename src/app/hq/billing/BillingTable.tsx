@@ -22,7 +22,7 @@ function fmtMonth(m: string) {
 }
 
 function exportCSV(rows: BillingRow[]) {
-  const headers = ['Branch', 'Month', 'Revenue (OMR)', 'Rev Share (OMR)', 'License Fee (OMR)', 'Total Due (OMR)', 'Status', 'Paid At']
+  const headers = ['Branch', 'Month', 'Revenue (OMR)', 'Rev Share (OMR)', 'License Fee (OMR)', 'Total Amount (OMR)', 'Status', 'Paid At']
   const lines = rows.map(r => [
     r.branches?.display_name ?? '',
     fmtMonth(r.month),
@@ -125,7 +125,7 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                 <span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span>
               </th>
               <th className="px-5 py-3 text-right">
-                <span className="flex items-center justify-end gap-1">Total Due <OmrSymbol variant="dark" size={13} /></span>
+                <span className="flex items-center justify-end gap-1">Total Amount <OmrSymbol variant="dark" size={13} /></span>
               </th>
               <th className="px-5 py-3 text-left">Status</th>
               <th className="px-5 py-3 text-left">Action</th>
