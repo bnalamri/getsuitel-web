@@ -19,6 +19,7 @@ export type PnLSummary = {
   totExpenses: number
   totNet: number
   totShare: number
+  totLicense: number
   totUnits: number
   totOccupied: number
 }
@@ -133,6 +134,7 @@ async function exportExcel(rows: PnLRow[], summary: PnLSummary, dateStr: string)
     ['Total Expenses (OMR)', fmt3(summary.totExpenses)],
     ['Net Income (OMR)', fmt3(summary.totNet)],
     ['HQ Share (OMR)', fmt3(summary.totShare)],
+    ['License Fees (OMR)', fmt3(summary.totLicense)],
     ['Platform Occupancy', totOccPct],
     [`Units: ${summary.totOccupied} of ${summary.totUnits} occupied`, ''],
   ]
@@ -178,7 +180,7 @@ async function exportExcel(rows: PnLRow[], summary: PnLSummary, dateStr: string)
     nCell(4, summary.totExpenses, 10) +
     sCell(5, fmt3(summary.totNet), summary.totNet >= 0 ? 11 : 12) +
     nCell(6, summary.totShare, 10) +
-    eCell(7, 9) +
+    nCell(7, summary.totLicense, 10) +
     nCell(8, summary.totUnits, 10) +
     sCell(9, `${totOccRow}%`, 9) +
     `</row>`

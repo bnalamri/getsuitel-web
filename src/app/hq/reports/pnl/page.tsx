@@ -187,6 +187,7 @@ export default async function HQPnLPage({
     totExpenses: totExp,
     totNet,
     totShare,
+    totLicense,
     totUnits,
     totOccupied,
   }
@@ -210,12 +211,13 @@ export default async function HQPnLPage({
       </div>
 
       {/* Platform summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: 'Total Revenue',  value: totRev,     color: 'text-yellow-700', bg: 'bg-yellow-50'  },
           { label: 'Total Expenses', value: totExp,     color: 'text-red-600',   bg: 'bg-red-50'     },
           { label: 'Net Income',     value: totNet,     color: totNet >= 0 ? 'text-green-700' : 'text-red-600', bg: totNet >= 0 ? 'bg-green-50' : 'bg-red-50' },
           { label: 'HQ Share',       value: totShare,   color: 'text-blue-700',  bg: 'bg-blue-50'    },
+          { label: 'License Fees',   value: totLicense, color: 'text-purple-700', bg: 'bg-purple-50'  },
         ].map(c => (
           <div key={c.label} className={`${c.bg} rounded-xl border border-gray-200 p-4`}>
             <p className="text-xs text-gray-500 mb-1">{c.label}</p>
@@ -267,12 +269,15 @@ export default async function HQPnLPage({
                 <th className="px-5 py-3 text-right">
                   <span className="flex items-center justify-end gap-1">HQ Share <OmrSymbol variant="dark" size={12} /></span>
                 </th>
+                <th className="px-5 py-3 text-right">
+                  <span className="flex items-center justify-end gap-1">License Fee <OmrSymbol variant="dark" size={12} /></span>
+                </th>
                 <th className="px-5 py-3 text-right">Occupancy</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!(branches ?? []).length ? (
-                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No branches found</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">No branches found</td></tr>
               ) : (branches ?? []).map(b => {
                 const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
                 const exp = s.expenses + s.maintenance
@@ -292,6 +297,7 @@ export default async function HQPnLPage({
                     <td className="px-5 py-3 text-right text-gray-700">{fmt(exp)}</td>
                     <td className="px-5 py-3 text-right"><NetBadge net={net} /></td>
                     <td className="px-5 py-3 text-right text-blue-700 font-medium">{fmt(s.share)}</td>
+                    <td className="px-5 py-3 text-right text-purple-700 font-medium">{fmt(s.license)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -313,6 +319,7 @@ export default async function HQPnLPage({
                   <td className="px-5 py-3 text-right">{fmt(totExp)}</td>
                   <td className="px-5 py-3 text-right"><NetBadge net={totNet} /></td>
                   <td className="px-5 py-3 text-right text-blue-700">{fmt(totShare)}</td>
+                  <td className="px-5 py-3 text-right text-purple-700">{fmt(totLicense)}</td>
                   <td className="px-5 py-3 text-right">
                     <span className="text-xs font-medium text-gray-600">
                       {totUnits > 0 ? Math.round((totOccupied / totUnits) * 100) : 0}%
