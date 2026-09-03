@@ -350,6 +350,15 @@ export default function RevenueTrendClient({
                   </td>
                 </tr>
               ))}
+              {billing.length > 0 && (
+                <tr className="bg-gray-50 font-semibold text-gray-900">
+                  <td className="px-5 py-3" colSpan={2}>Total</td>
+                  <td className="px-5 py-3 text-right">{billing.reduce((s, r) => s + r.revenue, 0).toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right">{billing.reduce((s, r) => s + r.share, 0).toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right text-purple-700">{billing.reduce((s, r) => s + r.license, 0).toFixed(3)}</td>
+                  <td className="px-5 py-3"></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
