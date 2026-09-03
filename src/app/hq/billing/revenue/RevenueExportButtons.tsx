@@ -14,7 +14,7 @@ export type BranchSummary = {
   totalLicense: number
   collected: number
   pending: number
-  months: number
+  overdue: number
 }
 
 type Props = {
@@ -24,11 +24,12 @@ type Props = {
   grandTotalLicense: number
   grandCollected: number
   grandPending: number
+  grandOverdue: number
   chartData: Record<string, string | number>[]
 }
 
 export default function RevenueExportButtons({
-  branches, grandTotalRevenue, grandTotalShare, grandTotalLicense, grandCollected, grandPending, chartData,
+  branches, grandTotalRevenue, grandTotalShare, grandTotalLicense, grandCollected, grandPending, grandOverdue, chartData,
 }: Props) {
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null)
 
@@ -40,7 +41,7 @@ export default function RevenueExportButtons({
 
       // Sheet 1: P&L Summary
       const summaryRows = [
-        ['Branch', 'Total Revenue (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months Billed'],
+        ['Branch', 'Total Revenue (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Overdue 7d+ (OMR)'],
         ...branches.map(b => [
           b.name,
           b.totalRevenue.toFixed(3),
@@ -48,7 +49,7 @@ export default function RevenueExportButtons({
           b.totalLicense.toFixed(3),
           b.collected.toFixed(3),
           b.pending.toFixed(3),
-          b.months,
+          b.overdue.toFixed(3),
         ]),
         ['TOTAL',
           grandTotalRevenue.toFixed(3),
@@ -56,11 +57,11 @@ export default function RevenueExportButtons({
           grandTotalLicense.toFixed(3),
           grandCollected.toFixed(3),
           grandPending.toFixed(3),
-          '—',
+          grandOverdue.toFixed(3),
         ],
       ]
       const ws1 = XLSX.utils.aoa_to_sheet(summaryRows)
-      ws1['!cols'] = [{ wch: 36 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }]
+      ws1['!cols'] = [{ wch: 36 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }]
       XLSX.utils.book_append_sheet(wb, ws1, 'P&L Summary')
 
       // Sheet 2: Monthly Revenue Trend
@@ -112,25 +113,26 @@ export default function RevenueExportButtons({
         { label: 'License Fees',  value: grandTotalLicense.toFixed(3) + ' OMR' },
         { label: 'Collected',     value: grandCollected.toFixed(3) + ' OMR' },
         { label: 'Pending',       value: grandPending.toFixed(3) + ' OMR' },
+        { label: 'Overdue 7d+',   value: grandOverdue.toFixed(3) + ' OMR' },
       ]
       kpis.forEach((k, i) => {
-        const x = 14 + i * 57
+        const x = 14 + i * 47
         doc.setFillColor(249, 250, 251)
-        doc.roundedRect(x, 24, 53, 14, 2, 2, 'F')
+        doc.roundedRect(x, 24, 44, 14, 2, 2, 'F')
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.text(k.value, x + 26, 30, { align: 'center' })
+        doc.setFontSize(9)
+        doc.text(k.value, x + 22, 30, { align: 'center' })
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(7)
         doc.setTextColor(107, 114, 128)
-        doc.text(k.label, x + 26, 35, { align: 'center' })
+        doc.text(k.label, x + 22, 35, { align: 'center' })
         doc.setTextColor(31, 41, 55)
       })
 
       // P&L Table
       autoTable(doc, {
         startY: 44,
-        head: [['Branch', 'Revenue (OMR)', 'HQ Share (OMR)', 'License (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months Billed']],
+        head: [['Branch', 'Revenue (OMR)', 'HQ Share (OMR)', 'License (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Overdue 7d+ (OMR)']],
         body: [
           ...branches.map(b => [
             b.name,
@@ -139,7 +141,7 @@ export default function RevenueExportButtons({
             b.totalLicense.toFixed(3),
             b.collected.toFixed(3),
             b.pending.toFixed(3),
-            String(b.months),
+            b.overdue.toFixed(3),
           ]),
           ['TOTAL',
             grandTotalRevenue.toFixed(3),
@@ -147,7 +149,7 @@ export default function RevenueExportButtons({
             grandTotalLicense.toFixed(3),
             grandCollected.toFixed(3),
             grandPending.toFixed(3),
-            '—',
+            grandOverdue.toFixed(3),
           ],
         ],
         headStyles: { fillColor: [31, 41, 55], textColor: [251, 191, 36], fontStyle: 'bold', fontSize: 8 },
@@ -160,7 +162,7 @@ export default function RevenueExportButtons({
           3: { halign: 'right' },
           4: { halign: 'right', textColor: [22, 163, 74] },
           5: { halign: 'right', textColor: [220, 38, 38] },
-          6: { halign: 'center' },
+          6: { halign: 'right', textColor: [153, 27, 27] },
         },
         didParseCell: (data) => {
           // Bold totals row

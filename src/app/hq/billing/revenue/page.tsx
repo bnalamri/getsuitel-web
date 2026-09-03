@@ -12,6 +12,7 @@ type BillingRecord = {
   share_amount_omr: number
   license_fee_omr: number
   status: string
+  created_at: string
   branches: { display_name: string } | null
 }
 
@@ -21,12 +22,16 @@ export default async function HQRevenueOverviewPage() {
   const { data: billing } = await supabase
     .from('branch_billing')
     .select(`
-      id, branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status,
+      id, branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, created_at,
       branches!branch_billing_branch_id_fkey ( display_name )
     `)
     .order('month', { ascending: false })
 
   const rows = (billing ?? []) as unknown as BillingRecord[]
+
+  // Same 7-day overdue threshold used by the license-reminder cron and Alert Center
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // ── Per-branch P&L summary ────────────────────────────────────────────────
   const branchMap = new Map<string, {
@@ -36,22 +41,25 @@ export default async function HQRevenueOverviewPage() {
     totalLicense: number
     collected: number
     pending: number
-    months: number
+    overdue: number
   }>()
 
   for (const r of rows) {
     const name = r.branches?.display_name ?? r.branch_id
     if (!branchMap.has(r.branch_id)) {
-      branchMap.set(r.branch_id, { name, totalRevenue: 0, totalShare: 0, totalLicense: 0, collected: 0, pending: 0, months: 0 })
+      branchMap.set(r.branch_id, { name, totalRevenue: 0, totalShare: 0, totalLicense: 0, collected: 0, pending: 0, overdue: 0 })
     }
     const b = branchMap.get(r.branch_id)!
     b.totalRevenue += Number(r.total_revenue_omr)
     b.totalShare   += Number(r.share_amount_omr)
     b.totalLicense += Number(r.license_fee_omr)
-    b.months       += 1
     const due = Number(r.share_amount_omr) + Number(r.license_fee_omr)
-    if (r.status === 'paid') b.collected += due
-    else                     b.pending   += due
+    if (r.status === 'paid') {
+      b.collected += due
+    } else {
+      b.pending += due
+      if (new Date(r.created_at) < sevenDaysAgo) b.overdue += due
+    }
   }
 
   const branches = Array.from(branchMap.entries())
@@ -63,6 +71,7 @@ export default async function HQRevenueOverviewPage() {
   const grandTotalLicense  = branches.reduce((s, b) => s + b.totalLicense, 0)
   const grandCollected     = branches.reduce((s, b) => s + b.collected,    0)
   const grandPending       = branches.reduce((s, b) => s + b.pending,      0)
+  const grandOverdue       = branches.reduce((s, b) => s + b.overdue,      0)
 
   // ── Monthly totals for chart ───────────────────────────────────────────────
   // Last 12 months, each branch as a series
@@ -97,18 +106,20 @@ export default async function HQRevenueOverviewPage() {
           grandTotalLicense={grandTotalLicense}
           grandCollected={grandCollected}
           grandPending={grandPending}
+          grandOverdue={grandOverdue}
           chartData={chartData}
         />
       </div>
 
       {/* Grand totals */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { label: 'Total Revenue', value: grandTotalRevenue,  omr: true, color: 'amber'  },
-          { label: 'HQ Share',      value: grandTotalShare,    omr: true, color: 'blue'   },
-          { label: 'License Fees',  value: grandTotalLicense,  omr: true, color: 'purple' },
-          { label: 'Collected',     value: grandCollected,     omr: true, color: 'green'  },
-          { label: 'Pending',       value: grandPending,       omr: true, color: grandPending > 0 ? 'red' : 'gray' },
+          { label: 'Total Revenue', value: grandTotalRevenue,  color: 'amber'  },
+          { label: 'HQ Share',      value: grandTotalShare,    color: 'blue'   },
+          { label: 'License Fees',  value: grandTotalLicense,  color: 'purple' },
+          { label: 'Collected',     value: grandCollected,     color: 'green'  },
+          { label: 'Pending',       value: grandPending,       color: grandPending > 0 ? 'red' : 'gray' },
+          { label: 'Overdue (7d+)', value: grandOverdue,       color: grandOverdue > 0 ? 'red' : 'gray' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className={`text-lg font-bold flex items-center gap-1 mb-0.5 ${
@@ -161,7 +172,9 @@ export default async function HQRevenueOverviewPage() {
                   <th className="px-5 py-3 text-right">
                     <span className="flex items-center justify-end gap-1">Pending <OmrSymbol variant="dark" size={12} /></span>
                   </th>
-                  <th className="px-5 py-3 text-center" title="Number of monthly billing records included in this all-time total">Months Billed</th>
+                  <th className="px-5 py-3 text-right" title="Pending amount unpaid for 7+ days since billing">
+                    <span className="flex items-center justify-end gap-1">Overdue <OmrSymbol variant="dark" size={12} /></span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -181,7 +194,11 @@ export default async function HQRevenueOverviewPage() {
                         {b.pending.toFixed(3)}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-center text-gray-500">{b.months}</td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={b.overdue > 0 ? 'text-red-700 font-semibold' : 'text-gray-300'}>
+                        {b.overdue > 0 ? b.overdue.toFixed(3) : '—'}
+                      </span>
+                    </td>
                   </tr>
                 ))}
                 {/* Totals row */}
@@ -192,7 +209,7 @@ export default async function HQRevenueOverviewPage() {
                   <td className="px-5 py-3 text-right">{grandTotalLicense.toFixed(3)}</td>
                   <td className="px-5 py-3 text-right text-green-600">{grandCollected.toFixed(3)}</td>
                   <td className="px-5 py-3 text-right text-red-600">{grandPending.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-center text-gray-500">—</td>
+                  <td className="px-5 py-3 text-right text-red-700">{grandOverdue.toFixed(3)}</td>
                 </tr>
               </tbody>
             </table>
