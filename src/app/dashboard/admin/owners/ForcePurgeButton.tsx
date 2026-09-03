@@ -14,177 +14,226 @@ async function loadJSZip(): Promise<any> {
   })
 }
 
-function esc(v: string | number | null | undefined) {
+function esc(v: string | number | null | undefined): string {
   return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
-// Style indices: 0=normal 1=header 2=number 3=alt 4=alt-number
+function colLetter(n: number): string {
+  let s = ''
+  while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) }
+  return s
+}
+
+// Style indices: 0=normal 1=hdr-left 2=hdr-right 3=data-left 4=data-right 5=alt-left 6=alt-right
 const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <fonts count="3">
   <font><sz val="11"/><name val="Calibri"/></font>
-  <font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>
-  <font><sz val="11"/><name val="Calibri"/></font>
+  <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+  <font><b/><sz val="11"/><name val="Calibri"/></font>
 </fonts>
 <fills count="4">
   <fill><patternFill patternType="none"/></fill>
   <fill><patternFill patternType="gray125"/></fill>
-  <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/></patternFill></fill>
-  <fill><patternFill patternType="solid"><fgColor rgb="FFF0F4F8"/></patternFill></fill>
+  <fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/><bgColor indexed="64"/></patternFill></fill>
+  <fill><patternFill patternType="solid"><fgColor rgb="FFF0F4F8"/><bgColor indexed="64"/></patternFill></fill>
 </fills>
 <borders count="2">
   <border><left/><right/><top/><bottom/><diagonal/></border>
-  <border><left style="thin"><color rgb="FFCBD5E0"/></left><right style="thin"><color rgb="FFCBD5E0"/></right><top style="thin"><color rgb="FFCBD5E0"/></top><bottom style="thin"><color rgb="FFCBD5E0"/></bottom><diagonal/></border>
+  <border>
+    <left style="thin"><color rgb="FFCBD5E1"/></left>
+    <right style="thin"><color rgb="FFCBD5E1"/></right>
+    <top style="thin"><color rgb="FFCBD5E1"/></top>
+    <bottom style="thin"><color rgb="FFCBD5E1"/></bottom>
+    <diagonal/>
+  </border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="5">
-  <xf numFmtId="0"  fontId="0" fillId="0" borderId="1" xfId="0"/>
-  <xf numFmtId="0"  fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center"/></xf>
-  <xf numFmtId="2"  fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="right"/></xf>
-  <xf numFmtId="0"  fontId="0" fillId="3" borderId="1" xfId="0"/>
-  <xf numFmtId="2"  fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="right"/></xf>
+<cellXfs count="7">
+  <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+  <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+  <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>
+  <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+  <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>
+  <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"/>
+  <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>
 </cellXfs>
 </styleSheet>`
 
-function cell(v: string | number | null | undefined, styleIdx = 0) {
-  if (typeof v === 'number') {
-    return `<c s="${styleIdx}"><v>${v}</v></c>`
-  }
-  return `<c t="inlineStr" s="${styleIdx}"><is><t>${esc(v)}</t></is></c>`
-}
+type CellDef = { v: string | number | null; s: number }
 
-function buildSheet(headers: string[], rows: (string | number | null)[][], colWidths?: number[]): string {
-  const hdrRow = `<row>${headers.map(h => cell(h, 1)).join('')}</row>`
-  const dataRows = rows.map((r, ri) =>
-    `<row>${r.map(v => {
-      const isNum = typeof v === 'number'
-      const alt   = ri % 2 === 1
-      const s = isNum ? (alt ? 4 : 2) : (alt ? 3 : 0)
-      return cell(v, s)
-    }).join('')}</row>`
-  ).join('')
-
-  const cols = colWidths
-    ? `<cols>${colWidths.map((w,i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
-    : ''
-
+function buildWsXml(rows: CellDef[][], colWidths: number[], strIdx: Record<string, number>): string {
+  const colsXml = colWidths.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')
+  const lastCol = colLetter(Math.max(...rows.map(r => r.length), 1))
+  const lastRow = rows.length
+  const rowXml = rows.map((row, ri) => {
+    const rowNum = ri + 1
+    const cells = row.map((cell, ci) => {
+      const ref = `${colLetter(ci + 1)}${rowNum}`
+      if (cell.v === null || cell.v === undefined || cell.v === '') return `<c r="${ref}" s="${cell.s}"/>`
+      if (typeof cell.v === 'number') return `<c r="${ref}" s="${cell.s}"><v>${cell.v}</v></c>`
+      return `<c r="${ref}" t="s" s="${cell.s}"><v>${strIdx[String(cell.v)] ?? 0}</v></c>`
+    }).join('')
+    return `<row r="${rowNum}">${cells}</row>`
+  }).join('')
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<sheetViews><sheetView showGridLines="1" workbookViewId="0"/></sheetViews>
-${cols}<sheetData>${hdrRow}${dataRows}</sheetData>
+<dimension ref="A1:${lastCol}${lastRow}"/>
+<sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols>${colsXml}</cols>
+<sheetData>${rowXml}</sheetData>
 </worksheet>`
+}
+
+function makeRows(headers: string[], data: (string | number | null)[][]): CellDef[][] {
+  const hdr: CellDef[] = headers.map((h, i) => ({ v: h, s: i === headers.length - 1 ? 2 : 1 }))
+  const body: CellDef[][] = data.map((row, ri) =>
+    row.map((v, ci) => {
+      const isNum = typeof v === 'number'
+      const alt   = ri % 2 === 1
+      if (isNum) return { v, s: alt ? 6 : 4 }
+      return { v: v ?? '', s: alt ? 5 : 3 }
+    })
+  )
+  return [hdr, ...body]
 }
 
 async function exportOrgToExcel(orgId: string, orgName: string) {
   const res  = await fetch(`/api/admin/org-export?orgId=${orgId}`)
   const data = await res.json()
   const JSZip = await loadJSZip()
-  const zip   = new JSZip()
 
   const { org, invoices, expenses, proofs, maintenance, properties, units, tenants, exportedAt } = data
   const owner = org?.profiles
 
-  zip.file('xl/styles.xml', STYLES_XML)
-
-  // Sheet 1 — Summary
-  const summaryRows: (string | number | null)[][] = [
-    ['Organization', org?.name ?? ''],
-    ['Arabic Name',  org?.name_ar ?? ''],
-    ['Owner',        owner?.full_name ?? ''],
-    ['Email',        owner?.email ?? ''],
-    ['Phone',        owner?.phone ?? ''],
-    ['Plan',         org?.subscription_plan ?? ''],
-    ['Status',       org?.subscription_status ?? ''],
-    ['Country',      org?.country ?? ''],
-    ['Joined',       org?.created_at?.slice(0,10) ?? ''],
-    ['Canceled',     org?.canceled_at?.slice(0,10) ?? ''],
-    ['Exported At',  exportedAt?.slice(0,19).replace('T',' ') ?? ''],
-    [],
-    ['Properties', properties?.length ?? 0],
-    ['Units',      units?.length ?? 0],
-    ['Tenants',    tenants?.length ?? 0],
-    ['Invoices',   invoices?.length ?? 0],
-    ['Expenses',   expenses?.length ?? 0],
+  const sheetDefs: { name: string; headers: string[]; rows: (string | number | null)[][]; widths: number[] }[] = [
+    {
+      name: 'Summary',
+      headers: ['Field', 'Value'],
+      rows: [
+        ['Organization', org?.name ?? ''],
+        ['Arabic Name',  org?.name_ar ?? ''],
+        ['Owner',        owner?.full_name ?? ''],
+        ['Email',        owner?.email ?? ''],
+        ['Phone',        owner?.phone ?? ''],
+        ['Plan',         org?.subscription_plan ?? ''],
+        ['Status',       org?.subscription_status ?? ''],
+        ['Country',      org?.country ?? ''],
+        ['Joined',       org?.created_at?.slice(0,10) ?? ''],
+        ['Canceled',     org?.canceled_at?.slice(0,10) ?? ''],
+        ['Exported At',  exportedAt?.slice(0,19).replace('T',' ') ?? ''],
+        ['', ''],
+        ['Properties',   properties?.length ?? 0],
+        ['Units',        units?.length ?? 0],
+        ['Tenants',      tenants?.length ?? 0],
+        ['Invoices',     invoices?.length ?? 0],
+        ['Expenses',     expenses?.length ?? 0],
+      ],
+      widths: [28, 36],
+    },
+    {
+      name: 'Invoices',
+      headers: ['Type','Amount','Currency','Status','Due Date','Paid Date','Created'],
+      rows: (invoices ?? []).map((i: any) => [
+        i.type ?? '', Number(i.amount), i.currency ?? '', i.status ?? '',
+        i.due_date?.slice(0,10) ?? '', i.paid_date?.slice(0,10) ?? '', i.created_at?.slice(0,10) ?? '',
+      ]),
+      widths: [24, 14, 12, 12, 14, 14, 14],
+    },
+    {
+      name: 'Subscription Payments',
+      headers: ['Amount','Currency','Status','Submitted','Reviewed','Notes'],
+      rows: (proofs ?? []).map((p: any) => [
+        Number(p.amount), p.currency ?? '', p.status ?? '',
+        p.submitted_at?.slice(0,10) ?? '', p.reviewed_at?.slice(0,10) ?? '', p.notes ?? '',
+      ]),
+      widths: [14, 12, 12, 14, 14, 36],
+    },
+    {
+      name: 'Expenses',
+      headers: ['Category','Description','Amount','Currency','Date'],
+      rows: (expenses ?? []).map((e: any) => [
+        e.category ?? '', e.description ?? '', Number(e.amount), e.currency ?? '', e.date?.slice(0,10) ?? '',
+      ]),
+      widths: [18, 36, 14, 12, 14],
+    },
+    {
+      name: 'Maintenance',
+      headers: ['Title','Status','Charge (OMR)','Payer','Completed','Created'],
+      rows: (maintenance ?? []).map((m: any) => [
+        m.title ?? '', m.status ?? '', Number(m.charge_amount ?? 0), m.charge_payer ?? '',
+        m.completed_at?.slice(0,10) ?? '', m.created_at?.slice(0,10) ?? '',
+      ]),
+      widths: [36, 14, 16, 14, 14, 14],
+    },
   ]
-  zip.file('xl/worksheets/sheet1.xml', buildSheet(['Field','Value'], summaryRows, [28, 36]))
 
-  // Sheet 2 — Invoices
-  const invRows = (invoices ?? []).map((i: any) => [
-    i.type ?? '—', Number(i.amount), i.currency, i.status,
-    i.due_date?.slice(0,10) ?? '', i.paid_date?.slice(0,10) ?? '', i.created_at?.slice(0,10) ?? '',
-  ])
-  zip.file('xl/worksheets/sheet2.xml', buildSheet(
-    ['Type','Amount','Currency','Status','Due Date','Paid Date','Created'],
-    invRows, [32, 14, 12, 12, 14, 14, 14]
-  ))
+  // Build global shared string table
+  const allStrings: string[] = []
+  const allStrIdx: Record<string, number> = {}
+  const addStr = (v: string) => {
+    if (allStrIdx[v] === undefined) { allStrIdx[v] = allStrings.length; allStrings.push(v) }
+  }
+  sheetDefs.forEach(s => {
+    s.headers.forEach(h => addStr(h))
+    s.rows.forEach(row => row.forEach(v => { if (typeof v === 'string' && v !== '') addStr(v) }))
+  })
 
-  // Sheet 3 — Subscription Payments
-  const proofRows = (proofs ?? []).map((p: any) => [
-    Number(p.amount), p.currency, p.status,
-    p.submitted_at?.slice(0,10) ?? '', p.reviewed_at?.slice(0,10) ?? '', p.notes ?? '',
-  ])
-  zip.file('xl/worksheets/sheet3.xml', buildSheet(
-    ['Amount','Currency','Status','Submitted','Reviewed','Notes'],
-    proofRows, [14, 12, 12, 14, 14, 36]
-  ))
+  const sharedStringsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${allStrings.length}" uniqueCount="${allStrings.length}">
+${allStrings.map(s => `<si><t xml:space="preserve">${esc(s)}</t></si>`).join('')}
+</sst>`
 
-  // Sheet 4 — Expenses
-  const expRows = (expenses ?? []).map((e: any) => [
-    e.category, e.description ?? '—', Number(e.amount), e.currency, e.date?.slice(0,10) ?? '',
-  ])
-  zip.file('xl/worksheets/sheet4.xml', buildSheet(
-    ['Category','Description','Amount','Currency','Date'],
-    expRows, [18, 36, 14, 12, 14]
-  ))
+  const zip = new JSZip()
+  zip.file('xl/styles.xml', STYLES_XML)
+  zip.file('xl/sharedStrings.xml', sharedStringsXml)
 
-  // Sheet 5 — Maintenance
-  const mntRows = (maintenance ?? []).map((m: any) => [
-    m.title, m.status, Number(m.charge_amount ?? 0), m.charge_payer ?? '—',
-    m.completed_at?.slice(0,10) ?? '', m.created_at?.slice(0,10) ?? '',
-  ])
-  zip.file('xl/worksheets/sheet5.xml', buildSheet(
-    ['Title','Status','Charge (OMR)','Payer','Completed','Created'],
-    mntRows, [36, 14, 16, 14, 14, 14]
-  ))
+  sheetDefs.forEach((s, i) => {
+    const rows = makeRows(s.headers, s.rows)
+    zip.file(`xl/worksheets/sheet${i+1}.xml`, buildWsXml(rows, s.widths, allStrIdx))
+  })
 
-  // Workbook + relationships
-  const sheetNames = ['Summary','Invoices','Subscription Payments','Expenses','Maintenance']
-  const wbSheets = sheetNames.map((n,i) =>
-    `<sheet name="${esc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`
-  ).join('')
   zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets>${wbSheets}</sheets></workbook>`)
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    ${sheetDefs.map((s,i) => `<sheet name="${esc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('\n    ')}
+  </sheets>
+</workbook>`)
 
-  const wbRels = sheetNames.map((_,i) =>
-    `<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`
-  ).join('')
   zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${wbRels}</Relationships>`)
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${sheetDefs.map((_,i) => `<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('\n  ')}
+  <Relationship Id="rId${sheetDefs.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId${sheetDefs.length+2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+</Relationships>`)
 
   zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`)
 
   zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml"  ContentType="application/xml"/>
-${sheetNames.map((_,i) => `<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/styles.xml"   ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  ${sheetDefs.map((_,i) => `<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('\n  ')}
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
 </Types>`)
 
-  const blob = await zip.generateAsync({ type: 'blob' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    compression: 'DEFLATE',
+  })
   const safe = orgName.replace(/[^a-z0-9]/gi, '_')
-  a.href     = url
+  const a    = document.createElement('a')
+  a.href     = URL.createObjectURL(blob)
   a.download = `${safe}_export_${new Date().toISOString().slice(0,10)}.xlsx`
   a.click()
-  URL.revokeObjectURL(url)
+  URL.revokeObjectURL(a.href)
 }
 
 type FinancialSummary = {
