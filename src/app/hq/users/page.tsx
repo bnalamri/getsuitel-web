@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Users, UserPlus, Trash2, Loader2, Shield, UserCheck, Mail, Clock } from 'lucide-react'
+import { Users, UserPlus, Trash2, Loader2, Shield, UserCheck, Mail, Clock, Pencil, Check, X } from 'lucide-react'
 
 type HQUser = {
   id: string
@@ -47,6 +47,9 @@ export default function HQUsersPage() {
   const [inviting, setInviting] = useState(false)
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [revoking, setRevoking] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<{ full_name: string; phone: string; role: string }>({ full_name: '', phone: '', role: '' })
+  const [saving, setSaving] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -98,6 +101,26 @@ export default function HQUsersPage() {
       setInviteMsg({ ok: false, text: 'Something went wrong' })
     } finally {
       setInviting(false)
+    }
+  }
+
+  function startEdit(u: HQUser) {
+    setEditingId(u.id)
+    setEditForm({ full_name: u.full_name || '', phone: u.phone || '', role: u.role })
+  }
+
+  async function handleSaveEdit(userId: string) {
+    setSaving(true)
+    try {
+      await fetch('/api/hq/team', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, ...editForm }),
+      })
+      setEditingId(null)
+      load()
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -207,34 +230,59 @@ export default function HQUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-900">
-                    {u.full_name || '—'}
-                  </td>
-                  <td className="px-5 py-3 text-gray-600">{u.email}</td>
-                  <td className="px-5 py-3"><RoleBadge role={u.role} /></td>
-                  <td className="px-5 py-3 text-gray-500">
-                    {u.phone || <span className="text-gray-300 italic text-xs">—</span>}
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3 text-right">
-                      {u.role !== 'hq_admin' && (
-                        <button
-                          onClick={() => handleRevoke(u.id)}
-                          disabled={revoking === u.id}
-                          className="text-red-500 hover:text-red-700 disabled:opacity-40 transition-colors"
-                          title="Remove access"
-                        >
-                          {revoking === u.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <Trash2 className="w-4 h-4" />}
-                        </button>
-                      )}
+              {users.map(u => {
+                const isEditing = editingId === u.id
+                return (
+                  <tr key={u.id} className={isEditing ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
+                    <td className="px-5 py-3 font-medium text-gray-900">
+                      {isEditing
+                        ? <input value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} className="border border-gray-200 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                        : u.full_name || '—'}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="px-5 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-5 py-3">
+                      {isEditing && u.role !== 'hq_admin'
+                        ? <select value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} className="border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white">
+                            <option value="hq_staff">HQ Staff</option>
+                            <option value="hq_finance">HQ Finance</option>
+                          </select>
+                        : <RoleBadge role={u.role} />}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500">
+                      {isEditing
+                        ? <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone number" className="border border-gray-200 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                        : u.phone || <span className="text-gray-300 italic text-xs">—</span>}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isEditing ? (
+                            <>
+                              <button onClick={() => handleSaveEdit(u.id)} disabled={saving} className="text-green-600 hover:text-green-800 disabled:opacity-40" title="Save">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                              </button>
+                              <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600" title="Cancel">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => startEdit(u)} className="text-gray-400 hover:text-yellow-600 transition-colors" title="Edit">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              {u.role !== 'hq_admin' && (
+                                <button onClick={() => handleRevoke(u.id)} disabled={revoking === u.id} className="text-red-500 hover:text-red-700 disabled:opacity-40 transition-colors" title="Remove access">
+                                  {revoking === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

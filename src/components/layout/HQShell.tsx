@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Building2, CreditCard, BarChart2,
   Settings, LogOut, Menu, X, ChevronLeft, ChevronRight,
-  Globe, TrendingUp, Users, Bell, Wrench, ShieldAlert, ScrollText,
+  Globe, TrendingUp, Users, Bell, Wrench, ShieldAlert, ScrollText, DollarSign,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
@@ -41,6 +41,7 @@ const NAV: NavGroup[] = [
     { href: '/hq/reports/tenants',            icon: Users,       label: 'Tenants'          },
     { href: '/hq/reports/maintenance',        icon: Wrench,      label: 'Maintenance'      },
     { href: '/hq/reports/revenue-trend',      icon: TrendingUp,  label: 'Revenue Trend',   roles: FINANCE_ROLES },
+    { href: '/hq/reports/pnl',               icon: DollarSign,  label: 'P&L Summary',      roles: FINANCE_ROLES },
     { href: '/hq/reports/subscriptions',      icon: CreditCard,  label: 'Subscriptions'    },
   ]},
   { label: 'System', items: [

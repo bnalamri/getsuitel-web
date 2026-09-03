@@ -107,6 +107,34 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
+// PATCH — edit a member's name, phone, or role (hq_admin only)
+export async function PATCH(req: NextRequest) {
+  const supabase = await createClient()
+  const hq = await getHQUser(supabase)
+  if (!hq || hq.role !== 'hq_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { userId, full_name, phone, role } = await req.json()
+  if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+
+  const admin = createAdminClient()
+
+  // Cannot change hq_admin's role
+  const { data: target } = await admin.from('profiles').select('role').eq('id', userId).single()
+  if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+  const updates: Record<string, string> = {}
+  if (full_name !== undefined) updates.full_name = full_name.trim()
+  if (phone !== undefined) updates.phone = phone.trim()
+  if (role && target.role !== 'hq_admin') {
+    if (!['hq_staff', 'hq_finance'].includes(role)) return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    updates.role = role
+  }
+
+  const { error } = await admin.from('profiles').update(updates).eq('id', userId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // DELETE — revoke hq_staff or cancel pending invitation (hq_admin only)
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
