@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Building2, Users, Home, TrendingUp, AlertTriangle,
   Activity, DollarSign, ShieldAlert, Settings2, FileText, ExternalLink,
@@ -88,8 +89,21 @@ type Tab = typeof TABS[number]['key']
 
 // ─── Root Component ───────────────────────────────────────────────────────────
 
+const TAB_KEYS = TABS.map(t => t.key) as readonly string[]
+
 export default function BranchCommandCenter({ branch, profile, stats, orgs, billing }: Props) {
-  const [tab, setTab] = useState<Tab>('overview')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlTab = searchParams.get('tab')
+  const initialTab: Tab = urlTab && TAB_KEYS.includes(urlTab) ? (urlTab as Tab) : 'overview'
+  const [tab, setTabState] = useState<Tab>(initialTab)
+
+  function setTab(key: Tab) {
+    setTabState(key)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', key)
+    router.replace(`/hq/branches/${branch.id}?${params.toString()}`, { scroll: false })
+  }
 
   return (
     <div>

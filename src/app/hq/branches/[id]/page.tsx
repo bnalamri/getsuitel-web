@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -112,35 +113,37 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
         </p>
       </div>
 
-      <BranchCommandCenter
-        branch={{
-          id:               branch.id,
-          display_name:     branch.display_name,
-          status:           branch.status as 'active' | 'suspended' | 'archived',
-          license_fee_omr:  Number(branch.license_fee_omr),
-          revenue_share_pct: Number(branch.revenue_share_pct),
-          created_at:       branch.created_at,
-          updated_at:       branch.updated_at,
-          city:             branch.city,
-          region:           branch.region,
-          max_units:        branch.max_units   != null ? Number(branch.max_units)   : null,
-          max_staff:        branch.max_staff   != null ? Number(branch.max_staff)   : null,
-          max_tenants:      branch.max_tenants != null ? Number(branch.max_tenants) : null,
-          max_orgs:         branch.max_orgs    != null ? Number(branch.max_orgs)    : null,
-        }}
-        profile={profile}
-        stats={{
-          orgCount,
-          activeOrgCount,
-          propCount:              propCount ?? 0,
-          tenantCount:            (tenantResult as { count: number | null }).count ?? 0,
-          maintenanceOpen:        (maintenanceOpenResult as { count: number | null }).count ?? 0,
-          maintenanceInProgress:  (maintenanceInProgressResult as { count: number | null }).count ?? 0,
-          totalRevenue6mo,
-        }}
-        orgs={orgs}
-        billing={billing}
-      />
+      <Suspense fallback={<div className="text-gray-400 text-sm py-10">Loading…</div>}>
+        <BranchCommandCenter
+          branch={{
+            id:               branch.id,
+            display_name:     branch.display_name,
+            status:           branch.status as 'active' | 'suspended' | 'archived',
+            license_fee_omr:  Number(branch.license_fee_omr),
+            revenue_share_pct: Number(branch.revenue_share_pct),
+            created_at:       branch.created_at,
+            updated_at:       branch.updated_at,
+            city:             branch.city,
+            region:           branch.region,
+            max_units:        branch.max_units   != null ? Number(branch.max_units)   : null,
+            max_staff:        branch.max_staff   != null ? Number(branch.max_staff)   : null,
+            max_tenants:      branch.max_tenants != null ? Number(branch.max_tenants) : null,
+            max_orgs:         branch.max_orgs    != null ? Number(branch.max_orgs)    : null,
+          }}
+          profile={profile}
+          stats={{
+            orgCount,
+            activeOrgCount,
+            propCount:              propCount ?? 0,
+            tenantCount:            (tenantResult as { count: number | null }).count ?? 0,
+            maintenanceOpen:        (maintenanceOpenResult as { count: number | null }).count ?? 0,
+            maintenanceInProgress:  (maintenanceInProgressResult as { count: number | null }).count ?? 0,
+            totalRevenue6mo,
+          }}
+          orgs={orgs}
+          billing={billing}
+        />
+      </Suspense>
     </div>
   )
 }
