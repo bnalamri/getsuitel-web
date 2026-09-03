@@ -40,7 +40,7 @@ export default function RevenueExportButtons({
 
       // Sheet 1: P&L Summary
       const summaryRows = [
-        ['Branch', 'Total Revenue (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months'],
+        ['Branch', 'Total Revenue (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months Billed'],
         ...branches.map(b => [
           b.name,
           b.totalRevenue.toFixed(3),
@@ -130,7 +130,7 @@ export default function RevenueExportButtons({
       // P&L Table
       autoTable(doc, {
         startY: 44,
-        head: [['Branch', 'Revenue (OMR)', 'HQ Share (OMR)', 'License (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months']],
+        head: [['Branch', 'Revenue (OMR)', 'HQ Share (OMR)', 'License (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Months Billed']],
         body: [
           ...branches.map(b => [
             b.name,

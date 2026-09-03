@@ -161,7 +161,7 @@ export default async function HQRevenueOverviewPage() {
                   <th className="px-5 py-3 text-right">
                     <span className="flex items-center justify-end gap-1">Pending <OmrSymbol variant="dark" size={12} /></span>
                   </th>
-                  <th className="px-5 py-3 text-center">Months</th>
+                  <th className="px-5 py-3 text-center" title="Number of monthly billing records included in this all-time total">Months Billed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
