@@ -33,6 +33,7 @@ const NAV: Record<string, NavGroup[]> = {
     ]},
     { en:'Accounts', ar:'الحسابات', items:[
       { href:'/dashboard/admin/reports', icon:BarChart2, en:'Reports', ar:'التقارير' },
+      { href:'/dashboard/admin/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/admin/reports/platform-growth', icon:TrendingUp, en:'Platform Growth', ar:'نمو المنصة' },
       { href:'/dashboard/admin/reports/revenue-forecast', icon:DollarSign, en:'Revenue Forecast', ar:'توقعات الإيرادات' },
       { href:'/dashboard/admin/users', icon:Users, en:'Users', ar:'المستخدمون' },
