@@ -1,6 +1,8 @@
+import { Suspense } from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import ExportPnLButton from './ExportPnLButton'
+import YearSelector from './YearSelector'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 function fmt(n: number) { return n.toFixed(3) }
@@ -23,54 +25,98 @@ function NetBadge({ net }: { net: number }) {
   )
 }
 
-export default async function HQPnLPage() {
+export default async function HQPnLPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const supabase = createAdminClient()
+  const year = parseInt(String(searchParams.year ?? new Date().getFullYear()), 10)
+  const yearStart = `${year}-01-01`
+  const yearEnd   = `${year + 1}-01-01`
 
   const [
-    { data: billing },
+    { data: invoices },
     { data: expenses },
+    { data: maintenance },
+    { data: billing },
     { data: branches },
     { data: units },
   ] = await Promise.all([
-    // All-time billing totals per branch
+    // ── Revenue: paid OMR invoices by paid_date ─────────────────────────────
     supabase
-      .from('branch_billing')
-      .select('branch_id, total_revenue_omr, share_amount_omr, license_fee_omr, status'),
-    // Expenses via organizations (which belong to branches)
+      .from('invoices')
+      .select('amount, currency, paid_date, organizations!inner(branch_id)')
+      .eq('status', 'paid')
+      .or('currency.is.null,currency.eq.OMR')
+      .gte('paid_date', yearStart)
+      .lt('paid_date', yearEnd),
+
+    // ── Expenses: by date ────────────────────────────────────────────────────
     supabase
       .from('expenses')
-      .select('amount, organizations ( branch_id )'),
-    // Branches list
+      .select('amount, date, organizations!inner(branch_id)')
+      .gte('date', yearStart)
+      .lt('date', yearEnd),
+
+    // ── Maintenance billed to owner ─────────────────────────────────────────
+    supabase
+      .from('maintenance_requests')
+      .select('charge_amount, charge_payer, completed_at, organizations!inner(branch_id)')
+      .eq('charge_payer', 'owner')
+      .not('charge_amount', 'is', null)
+      .gte('completed_at', yearStart)
+      .lt('completed_at', yearEnd),
+
+    // ── HQ share + license fee (from branch_billing, year-filtered) ─────────
+    supabase
+      .from('branch_billing')
+      .select('branch_id, share_amount_omr, license_fee_omr')
+      .gte('month', yearStart)
+      .lt('month', yearEnd),
+
+    // ── Branch list ─────────────────────────────────────────────────────────
     supabase.from('branches').select('id, display_name, status').order('display_name'),
-    // Units for occupancy
-    supabase.from('units').select('id, status, organizations ( branch_id )'),
+
+    // ── Units for occupancy ──────────────────────────────────────────────────
+    supabase.from('units').select('id, status, organizations(branch_id)'),
   ])
 
-  // ── aggregate billing per branch ──────────────────────────────────────────
+  // ── Aggregate per branch ─────────────────────────────────────────────────
   type BranchStats = {
     revenue: number
+    expenses: number
+    maintenance: number
     share: number
     license: number
-    expenses: number
     units: number
     occupied: number
   }
-  const stats: Record<string, BranchStats> = {}
 
+  const stats: Record<string, BranchStats> = {}
   ;(branches ?? []).forEach(b => {
-    stats[b.id] = { revenue: 0, share: 0, license: 0, expenses: 0, units: 0, occupied: 0 }
+    stats[b.id] = { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
   })
 
-  ;(billing ?? []).forEach(r => {
-    if (!stats[r.branch_id]) return
-    stats[r.branch_id].revenue  += Number(r.total_revenue_omr)
-    stats[r.branch_id].share    += Number(r.share_amount_omr)
-    stats[r.branch_id].license  += Number(r.license_fee_omr)
+  ;(invoices ?? []).forEach(inv => {
+    const bid = (inv.organizations as { branch_id: string } | null)?.branch_id
+    if (bid && stats[bid]) stats[bid].revenue += Number(inv.amount ?? 0)
   })
 
   ;(expenses ?? []).forEach(e => {
     const bid = (e.organizations as { branch_id: string } | null)?.branch_id
     if (bid && stats[bid]) stats[bid].expenses += Number(e.amount ?? 0)
+  })
+
+  ;(maintenance ?? []).forEach(m => {
+    const bid = (m.organizations as { branch_id: string } | null)?.branch_id
+    if (bid && stats[bid]) stats[bid].maintenance += Number(m.charge_amount ?? 0)
+  })
+
+  ;(billing ?? []).forEach(r => {
+    if (!stats[r.branch_id]) return
+    stats[r.branch_id].share   += Number(r.share_amount_omr ?? 0)
+    stats[r.branch_id].license += Number(r.license_fee_omr ?? 0)
   })
 
   ;(units ?? []).forEach(u => {
@@ -81,12 +127,12 @@ export default async function HQPnLPage() {
     }
   })
 
-  // ── platform totals ───────────────────────────────────────────────────────
-  let totRev = 0, totExp = 0, totShare = 0, totLicense = 0
+  // ── Platform totals ──────────────────────────────────────────────────────
+  let totRev = 0, totExp = 0, totMaint = 0, totShare = 0, totLicense = 0
   let totUnits = 0, totOccupied = 0
   Object.values(stats).forEach(s => {
     totRev     += s.revenue
-    totExp     += s.expenses
+    totExp     += s.expenses + s.maintenance
     totShare   += s.share
     totLicense += s.license
     totUnits   += s.units
@@ -96,21 +142,29 @@ export default async function HQPnLPage() {
 
   // ── Excel export data ────────────────────────────────────────────────────
   const excelRows = (branches ?? []).map(b => {
-    const s = stats[b.id] ?? { revenue: 0, expenses: 0, share: 0, license: 0, units: 0, occupied: 0 }
+    const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
+    const exp = s.expenses + s.maintenance
     const occ = s.units > 0 ? Math.round((s.occupied / s.units) * 100) : 0
     return {
       branch: b.display_name,
       status: b.status,
       revenue: s.revenue,
-      expenses: s.expenses,
-      net: s.revenue - s.expenses,
+      expenses: exp,
+      net: s.revenue - exp,
       hqShare: s.share,
       licenseFee: s.license,
       units: s.units,
       occupancy: occ,
     }
   })
-  const excelSummary = { totRevenue: totRev, totExpenses: totExp, totNet: totNet, totShare: totShare, totUnits: totUnits, totOccupied: totOccupied }
+  const excelSummary = {
+    totRevenue: totRev,
+    totExpenses: totExp,
+    totNet,
+    totShare,
+    totUnits,
+    totOccupied,
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -118,9 +172,16 @@ export default async function HQPnLPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cross-Branch P&amp;L</h1>
-          <p className="text-sm text-gray-500">Aggregate revenue, expenses, and net income across all branches</p>
+          <p className="text-sm text-gray-500">
+            Actual revenue &amp; expenses from invoices and records — {year}
+          </p>
         </div>
-        <ExportPnLButton rows={excelRows} summary={excelSummary} />
+        <div className="flex items-center gap-2">
+          <Suspense>
+            <YearSelector year={year} />
+          </Suspense>
+          <ExportPnLButton rows={excelRows} summary={excelSummary} />
+        </div>
       </div>
 
       {/* Platform summary cards */}
@@ -160,8 +221,9 @@ export default async function HQPnLPage() {
 
       {/* Per-branch table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-800">Per-Branch Breakdown</h2>
+          <span className="text-xs text-gray-400">Revenue from invoices · Expenses include maintenance (owner-paid)</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -187,21 +249,22 @@ export default async function HQPnLPage() {
               {!(branches ?? []).length ? (
                 <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No branches found</td></tr>
               ) : (branches ?? []).map(b => {
-                const s = stats[b.id] ?? { revenue: 0, expenses: 0, share: 0, license: 0, units: 0, occupied: 0 }
-                const net = s.revenue - s.expenses
+                const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
+                const exp = s.expenses + s.maintenance
+                const net = s.revenue - exp
                 const occ = s.units > 0 ? Math.round((s.occupied / s.units) * 100) : 0
                 return (
                   <tr key={b.id} className="hover:bg-gray-50">
                     <td className="px-5 py-3 font-medium text-gray-900">
                       {b.display_name}
                       <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full font-medium capitalize ${
-                        b.status === 'active' ? 'bg-green-100 text-green-700' :
+                        b.status === 'active'    ? 'bg-green-100 text-green-700'  :
                         b.status === 'suspended' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-gray-100 text-gray-500'
                       }`}>{b.status}</span>
                     </td>
                     <td className="px-5 py-3 text-right text-gray-700">{fmt(s.revenue)}</td>
-                    <td className="px-5 py-3 text-right text-gray-700">{fmt(s.expenses)}</td>
+                    <td className="px-5 py-3 text-right text-gray-700">{fmt(exp)}</td>
                     <td className="px-5 py-3 text-right"><NetBadge net={net} /></td>
                     <td className="px-5 py-3 text-right text-blue-700 font-medium">{fmt(s.share)}</td>
                     <td className="px-5 py-3 text-right">
@@ -236,6 +299,11 @@ export default async function HQPnLPage() {
           </table>
         </div>
       </div>
+
+      {/* Data note */}
+      <p className="text-xs text-gray-400">
+        Revenue = paid OMR invoices by paid date · Expenses = recorded expenses + owner-paid maintenance charges · HQ Share from billing records
+      </p>
     </div>
   )
 }
