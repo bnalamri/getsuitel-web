@@ -38,7 +38,7 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
 <cellXfs count="5">
-  <xf numFmtId="0"  fontId="0" fillId="0" borderId="1" xfId="0"><alignment wrapText="0"/></xf>
+  <xf numFmtId="0"  fontId="0" fillId="0" borderId="1" xfId="0"/>
   <xf numFmtId="0"  fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center"/></xf>
   <xf numFmtId="2"  fontId="0" fillId="0" borderId="1" xfId="0"><alignment horizontal="right"/></xf>
   <xf numFmtId="0"  fontId="0" fillId="3" borderId="1" xfId="0"/>
@@ -70,8 +70,8 @@ function buildSheet(headers: string[], rows: (string | number | null)[][], colWi
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView showGridLines="1" workbookViewId="0"/></sheetViews>
 ${cols}<sheetData>${hdrRow}${dataRows}</sheetData>
-<sheetView showGridLines="1" workbookViewId="0"/>
 </worksheet>`
 }
 
@@ -110,11 +110,11 @@ async function exportOrgToExcel(orgId: string, orgName: string) {
 
   // Sheet 2 — Invoices
   const invRows = (invoices ?? []).map((i: any) => [
-    i.description ?? '—', Number(i.amount), i.currency, i.status,
+    i.type ?? '—', Number(i.amount), i.currency, i.status,
     i.due_date?.slice(0,10) ?? '', i.paid_date?.slice(0,10) ?? '', i.created_at?.slice(0,10) ?? '',
   ])
   zip.file('xl/worksheets/sheet2.xml', buildSheet(
-    ['Description','Amount','Currency','Status','Due Date','Paid Date','Created'],
+    ['Type','Amount','Currency','Status','Due Date','Paid Date','Created'],
     invRows, [32, 14, 12, 12, 14, 14, 14]
   ))
 

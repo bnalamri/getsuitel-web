@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       .select('*, profiles!organizations_owner_id_fkey(full_name, email, phone)')
       .eq('id', orgId).single(),
     admin.from('invoices')
-      .select('id, amount, currency, status, due_date, paid_date, created_at, description')
+      .select('id, amount, currency, status, type, due_date, paid_date, created_at')
       .eq('organization_id', orgId).order('due_date', { ascending: false }),
     admin.from('expenses')
       .select('id, amount, currency, category, description, date')
