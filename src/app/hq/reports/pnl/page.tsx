@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
-import ExportCSVButton from '../_components/ExportCSVButton'
+import ExportPnLButton from './ExportPnLButton'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 function fmt(n: number) { return n.toFixed(3) }
@@ -94,24 +94,23 @@ export default async function HQPnLPage() {
   })
   const totNet = totRev - totExp
 
-  // ── CSV ───────────────────────────────────────────────────────────────────
-  const csvData = (branches ?? []).map(b => {
+  // ── Excel export data ────────────────────────────────────────────────────
+  const excelRows = (branches ?? []).map(b => {
     const s = stats[b.id] ?? { revenue: 0, expenses: 0, share: 0, license: 0, units: 0, occupied: 0 }
-    const net = s.revenue - s.expenses
     const occ = s.units > 0 ? Math.round((s.occupied / s.units) * 100) : 0
     return {
       branch: b.display_name,
       status: b.status,
-      revenue: fmt(s.revenue),
-      expenses: fmt(s.expenses),
-      net_income: fmt(net),
-      hq_share: fmt(s.share),
-      license_fee: fmt(s.license),
+      revenue: s.revenue,
+      expenses: s.expenses,
+      net: s.revenue - s.expenses,
+      hqShare: s.share,
+      licenseFee: s.license,
       units: s.units,
-      occupancy_pct: `${occ}%`,
+      occupancy: occ,
     }
   })
-  const csvHeaders = ['Branch', 'Status', 'Revenue (OMR)', 'Expenses (OMR)', 'Net Income (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Units', 'Occupancy %']
+  const excelSummary = { totRevenue: totRev, totExpenses: totExp, totNet: totNet, totShare: totShare, totUnits: totUnits, totOccupied: totOccupied }
 
   return (
     <div className="p-6 space-y-6">
@@ -121,7 +120,7 @@ export default async function HQPnLPage() {
           <h1 className="text-2xl font-bold text-gray-900">Cross-Branch P&amp;L</h1>
           <p className="text-sm text-gray-500">Aggregate revenue, expenses, and net income across all branches</p>
         </div>
-        <ExportCSVButton data={csvData} headers={csvHeaders} filename={`hq-pnl-${new Date().toISOString().substring(0,10)}.csv`} />
+        <ExportPnLButton rows={excelRows} summary={excelSummary} />
       </div>
 
       {/* Platform summary cards */}
