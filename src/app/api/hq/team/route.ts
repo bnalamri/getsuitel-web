@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 </td></tr>
 <tr><td style="padding:32px">
   <p style="font-size:15px;color:#334155;line-height:1.7;margin:0 0 24px">
-    You've been invited to join the <strong>GetSuitel HQ team</strong> as an HQ Staff member.
+    You've been invited to join the <strong>GetSuitel HQ team</strong> as an ${roleToAssign === 'hq_finance' ? 'HQ Finance' : 'HQ Staff'} member.
     Click the button below to set up your account.
   </p>
   <div style="text-align:center;margin:32px 0">
