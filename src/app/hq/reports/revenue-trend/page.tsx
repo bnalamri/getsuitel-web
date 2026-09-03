@@ -37,10 +37,20 @@ export default async function HQRevenueTrendPage({
     supabase.from('branches').select('id, display_name').order('display_name'),
   ])
 
+
+
+  function cleanName(raw: string | undefined | null): string {
+    if (!raw) return '—'
+    return raw
+      .replace(/^GetSuitel\s*[—–-]\s*/i, '')  // strip "GetSuitel — " prefix
+      .replace(/ Branch$/, '')                 // strip hardcoded " Branch" suffix
+      .trim()
+  }
+
   // Normalize into a flat shape for the client
   const billing = (rawBilling ?? []).map(r => ({
     branch_id:   r.branch_id,
-    branch_name: (r.branches as { display_name: string } | null)?.display_name ?? '—',
+    branch_name: cleanName((r.branches as { display_name: string } | null)?.display_name),
     month:       r.month.substring(0, 10),
     revenue:     Number(r.total_revenue_omr),
     share:       Number(r.share_amount_omr),
@@ -52,7 +62,7 @@ export default async function HQRevenueTrendPage({
     <Suspense fallback={<div className="p-6 text-gray-400">Loading…</div>}>
       <RevenueTrendClient
         billing={billing}
-        branches={branches ?? []}
+        branches={(branches ?? []).map(b => ({ ...b, display_name: cleanName(b.display_name) }))}
         months={months}
         selectedBranch={selectedBranch}
       />

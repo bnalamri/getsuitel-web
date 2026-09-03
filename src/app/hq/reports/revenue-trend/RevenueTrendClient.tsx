@@ -44,21 +44,21 @@ function DonutChart({ slices }: { slices: { label: string; value: number; color:
     return { ...s, path, i }
   })
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-6">
-      <svg viewBox="0 0 200 200" className="w-44 h-44 flex-shrink-0">
+    <div className="flex flex-col items-center gap-4">
+      <svg viewBox="0 0 200 200" className="w-52 h-52">
         {paths.map(p => <path key={p.i} d={p.path} fill={p.color} />)}
-        <text x="100" y="96" textAnchor="middle" className="text-xs" style={{ fontSize: 11, fill: '#6b7280' }}>Total</text>
-        <text x="100" y="112" textAnchor="middle" style={{ fontSize: 13, fontWeight: 700, fill: '#111827' }}>
+        <text x="100" y="96" textAnchor="middle" style={{ fontSize: 11, fill: '#6b7280' }}>Total</text>
+        <text x="100" y="114" textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: '#111827' }}>
           {total.toFixed(0)}
         </text>
-        <text x="100" y="126" textAnchor="middle" style={{ fontSize: 9, fill: '#9ca3af' }}>OMR</text>
+        <text x="100" y="128" textAnchor="middle" style={{ fontSize: 9, fill: '#9ca3af' }}>OMR</text>
       </svg>
-      <div className="flex flex-col gap-2 flex-1 min-w-0">
+      <div className="w-full max-w-sm flex flex-col gap-2">
         {paths.map(p => (
           <div key={p.i} className="flex items-center gap-2 text-sm">
             <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: p.color }} />
             <span className="truncate text-gray-700 flex-1">{p.label}</span>
-            <span className="font-semibold text-gray-900 text-right">{p.value.toFixed(3)}</span>
+            <span className="font-semibold text-gray-900">{p.value.toFixed(3)}</span>
             <span className="text-gray-400 text-xs w-12 text-right">{((p.value / total) * 100).toFixed(1)}%</span>
           </div>
         ))}
