@@ -107,13 +107,23 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // Audit log
-    await admin.from('hq_audit_logs').insert({
-      branch_id: id,
-      actor_id:  actor.id,
-      action:    'status_change',
-      details:   { from: current?.status ?? null, to: status },
-    }).throwOnError().catch(() => {}) // non-fatal if table not yet created
+    // Audit log — never let a logging failure block a status change that
+    // already succeeded above. `.throwOnError()` doesn't return something
+    // with a `.catch` method on this supabase-js version, so the previous
+    // `.throwOnError().catch(() => {})` chain threw a raw TypeError that
+    // bubbled up through the outer try/catch — turning a *successful*
+    // reactivate into an "error" response, and skipping the email below
+    // entirely since it never got the chance to run.
+    try {
+      await admin.from('hq_audit_logs').insert({
+        branch_id: id,
+        actor_id:  actor.id,
+        action:    'status_change',
+        details:   { from: current?.status ?? null, to: status },
+      })
+    } catch {
+      // non-fatal if table not yet created
+    }
 
     // Notify the branch superadmin + HQ admin/finance team on suspend/
     // reactivate (not archive — see notifyBranchStatusChange). Awaited so it

@@ -51,13 +51,20 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Audit log
-  await supabase.from('hq_audit_logs').insert({
-    branch_id: id,
-    actor_id:  user.id,
-    action:    'limits_update',
-    details:   { before: current ?? {}, after: update },
-  }).throwOnError().catch(() => {})
+  // Audit log — `.throwOnError()` doesn't return something with a `.catch`
+  // method on this supabase-js version, so `.throwOnError().catch(() => {})`
+  // threw a raw TypeError instead of being swallowed (same bug found in the
+  // branch status route) — wrap in a real try/catch instead.
+  try {
+    await supabase.from('hq_audit_logs').insert({
+      branch_id: id,
+      actor_id:  user.id,
+      action:    'limits_update',
+      details:   { before: current ?? {}, after: update },
+    })
+  } catch {
+    // non-fatal if table not yet created
+  }
 
   return NextResponse.json({ ok: true })
 }
