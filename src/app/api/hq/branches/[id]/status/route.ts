@@ -9,7 +9,14 @@ import { notifyBranchStatusChange } from '@/lib/hq/branchStatusEmail'
 // Routing mobile through this same endpoint keeps status changes,
 // audit logging, and notification on one shared path regardless of which
 // client made the change (see hq_branch_detail.dart _ActionsTab).
-async function resolveHQAdmin(req: NextRequest, admin: ReturnType<typeof createAdminClient>) {
+// Returns either the resolved hq_admin actor, or a { reason } explaining
+// exactly why not — surfaced in the 401 body so a failed mobile test tells
+// us whether the token was missing, invalid/expired, or the profile's role
+// wasn't hq_admin, instead of a single opaque "Unauthorized" for all three.
+async function resolveHQAdmin(
+  req: NextRequest,
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<{ id: string; fullName: string | null } | { reason: string }> {
   const authHeader = req.headers.get('authorization')
   let userId: string | null = null
 
@@ -21,20 +28,24 @@ async function resolveHQAdmin(req: NextRequest, admin: ReturnType<typeof createA
   // caller always gets a real 401 JSON response instead of a silent crash.
   try {
     if (authHeader?.startsWith('Bearer ')) {
-      const { data: { user } } = await admin.auth.getUser(authHeader.slice(7))
+      const { data: { user }, error } = await admin.auth.getUser(authHeader.slice(7))
+      if (error) return { reason: `Bearer token rejected: ${error.message}` }
       userId = user?.id ?? null
+      if (!userId) return { reason: 'Bearer token valid but no user attached' }
     } else {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
       userId = user?.id ?? null
+      if (!userId) return { reason: 'No Authorization header and no valid session cookie' }
     }
-  } catch {
-    return null
+  } catch (e) {
+    return { reason: `Token verification threw: ${e instanceof Error ? e.message : String(e)}` }
   }
-  if (!userId) return null
+  if (!userId) return { reason: 'No user resolved from token/session' }
 
-  const { data: profile } = await admin.from('profiles').select('role, full_name').eq('id', userId).single()
-  if (profile?.role !== 'hq_admin') return null
+  const { data: profile, error: profileErr } = await admin.from('profiles').select('role, full_name').eq('id', userId).single()
+  if (profileErr) return { reason: `Profile lookup failed: ${profileErr.message}` }
+  if (profile?.role !== 'hq_admin') return { reason: `Role is '${profile?.role ?? 'none'}', hq_admin required` }
   return { id: userId, fullName: profile.full_name as string | null }
 }
 
@@ -51,8 +62,11 @@ export async function PATCH(
   // exit path below now guarantees a JSON body.
   try {
     const admin = createAdminClient()
-    const actor = await resolveHQAdmin(req, admin)
-    if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const resolved = await resolveHQAdmin(req, admin)
+    if ('reason' in resolved) {
+      return NextResponse.json({ error: `Unauthorized: ${resolved.reason}` }, { status: 401 })
+    }
+    const actor = resolved
 
     const { id } = params
     const body = await req.json()
