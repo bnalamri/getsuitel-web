@@ -62,9 +62,9 @@ export default async function AlertCenterPage() {
     // Subscriptions expiring within 30 days
     supabase
       .from('organizations')
-      .select('id, name, branch_id, subscription_end_date, branches!organizations_branch_id_fkey(display_name)')
-      .gte('subscription_end_date', todayISO)
-      .lte('subscription_end_date', in30)
+      .select('id, name, branch_id, subscription_ends_at, branches!organizations_branch_id_fkey(display_name)')
+      .gte('subscription_ends_at', todayISO)
+      .lte('subscription_ends_at', in30)
       .neq('subscription_status', 'canceled'),
 
     // All active branches (to compute empty-branch alert)
@@ -145,7 +145,7 @@ export default async function AlertCenterPage() {
   // WARNING: expiring subscriptions
   for (const o of expiringOrgs ?? []) {
     const branchName = (o.branches as unknown as { display_name: string } | null)?.display_name ?? 'Unknown'
-    const daysLeft = Math.ceil((new Date(o.subscription_end_date).getTime() - today.getTime()) / 86400000)
+    const daysLeft = Math.ceil((new Date(o.subscription_ends_at).getTime() - today.getTime()) / 86400000)
     alerts.push({
       id:       `expiring-${o.id}`,
       severity: 'warning',
