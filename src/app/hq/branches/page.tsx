@@ -18,14 +18,16 @@ export default async function HQBranchesPage() {
     `)
     .order('created_at', { ascending: false })
 
-  // Count orgs per branch
+  // Count orgs per branch (and how many have no branch at all — rebuild step 7)
   const { data: orgCounts } = await supabase
     .from('organizations')
     .select('branch_id')
 
   const countMap: Record<string, number> = {}
+  let unassignedCount = 0
   orgCounts?.forEach(r => {
     if (r.branch_id) countMap[r.branch_id] = (countMap[r.branch_id] ?? 0) + 1
+    else unassignedCount += 1
   })
 
   const enriched = (branches ?? []).map(b => ({
@@ -33,5 +35,5 @@ export default async function HQBranchesPage() {
     org_count: countMap[b.id] ?? 0,
   }))
 
-  return <BranchesClient branches={enriched} isAdmin={isAdmin} />
+  return <BranchesClient branches={enriched} isAdmin={isAdmin} unassignedCount={unassignedCount} />
 }

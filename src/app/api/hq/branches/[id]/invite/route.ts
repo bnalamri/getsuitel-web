@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { issueBranchInvite } from '@/lib/hq/branchInvite'
 
 async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -9,56 +10,45 @@ async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
   return user
 }
 
-function generateCode(): string {
-  // 8 uppercase alphanumeric chars, no ambiguous O/0/I/1 pairs, formatted XXXX-XXXX
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const buf = new Uint8Array(8)
-  crypto.getRandomValues(buf)
-  const raw = Array.from(buf).map(b => chars[b % chars.length]).join('')
-  return `${raw.slice(0, 4)}-${raw.slice(4)}`
-}
-
-// POST /api/hq/branches/[id]/invite — generate (or rotate) invite code for a branch
+// POST /api/hq/branches/[id]/invite — generate (or rotate) invite code for a branch.
+// Manual HQ-triggered version of the same flow that fires automatically on
+// agreement signature (see the agreement route). Both go through
+// issueBranchInvite() so the code format/expiry/email template never drift.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: branchId } = await params
   const supabase = await createClient()
   const user = await requireHQ(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Verify branch exists
+  // Verify branch exists and is active — a locked/suspended/archived branch
+  // can't be invited into yet.
   const { data: branch } = await supabase
     .from('branches')
-    .select('id, display_name')
+    .select('id, display_name, status')
     .eq('id', branchId)
     .single()
   if (!branch) return NextResponse.json({ error: 'Branch not found' }, { status: 404 })
+  if (branch.status !== 'active') {
+    return NextResponse.json(
+      { error: `Branch is ${branch.status.replace('_', ' ')}, not active. Activate it (sign its agreement) before inviting a superadmin.` },
+      { status: 409 },
+    )
+  }
 
-  // Expire any existing unused codes for this branch
-  await supabase
-    .from('invite_codes')
-    .update({ expires_at: new Date().toISOString() })
-    .eq('branch_id', branchId)
-    .is('used_by', null)
-
-  // Create new code
-  const code = generateCode()
-  const { data: invite, error } = await supabase
-    .from('invite_codes')
-    .insert({
-      code,
-      branch_id: branchId,
-      created_by: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  try {
+    const result = await issueBranchInvite(supabase, {
+      branchId,
+      branchName: branch.display_name,
+      createdBy: user.id,
+      email: null, // manual dialog only shows/copies the code — it doesn't collect an email
     })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({
-    code: invite.code,
-    branch_name: branch.display_name,
-    expires_at: invite.expires_at,
-    invite_url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/auth/invite?code=${invite.code}`,
-  }, { status: 201 })
+    return NextResponse.json({
+      code: result.code,
+      branch_name: branch.display_name,
+      expires_at: result.expiresAt,
+      invite_url: result.inviteUrl,
+    }, { status: 201 })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to generate invite' }, { status: 500 })
+  }
 }

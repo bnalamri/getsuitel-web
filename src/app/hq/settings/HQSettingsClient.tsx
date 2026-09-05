@@ -173,11 +173,28 @@ export default function HQSettingsClient({
       rows = data ?? []
       filename = `getsuitel_branches_${today()}.csv`
     } else {
+      // branch_billing's real columns (20260831_hq_layer0.sql) are month /
+      // total_revenue_omr / share_amount_omr / license_fee_omr / paid_at —
+      // this used to select amount_omr/due_date/paid_date, none of which
+      // exist, so Postgrest rejected the query and the CSV always came out
+      // empty with no visible error.
       const { data } = await supabase
         .from('branch_billing')
-        .select('branch_id, amount_omr, due_date, paid_date, status, notes')
-        .order('due_date', { ascending: false })
-      rows = data ?? []
+        .select('branches(display_name), month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes')
+        .order('month', { ascending: false })
+      rows = (data ?? []).map(r => {
+        const branchRow = Array.isArray(r.branches) ? r.branches[0] : r.branches
+        return {
+          branch: branchRow?.display_name ?? '',
+          month: r.month,
+          total_revenue_omr: r.total_revenue_omr,
+          share_amount_omr: r.share_amount_omr,
+          license_fee_omr: r.license_fee_omr,
+          status: r.status,
+          paid_at: r.paid_at,
+          notes: r.notes,
+        }
+      })
       filename = `getsuitel_billing_${today()}.csv`
     }
 

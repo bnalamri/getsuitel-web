@@ -144,10 +144,17 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [signedName, setSignedName] = useState(d?.signed_doc_name ?? null)
   const [exportedAt, setExportedAt] = useState(d?.exported_at ?? null)
   const [signedAt, setSignedAt] = useState(d?.signed_at ?? null)
-  const [activating, setActivating] = useState(false)
-  const [activated, setActivated] = useState(false)
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+  const [activationMsg, setActivationMsg] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Required before Export is allowed — mirrors the server-side check in
+  // /api/hq/branches/[id]/agreement/export, so the button reflects reality
+  // instead of only failing after the click.
+  const missingRequired: string[] = []
+  if (!hqLegalName.trim())     missingRequired.push('HQ Legal Name')
+  if (!branchLegalName.trim()) missingRequired.push('Branch Legal Name')
+  if (!effectiveDate)          missingRequired.push('Effective Date')
+  if (!durationYears)          missingRequired.push('Duration (years)')
 
   function buildPayload() {
     return {
@@ -202,6 +209,10 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   }
 
   async function handleExport() {
+    if (missingRequired.length > 0) {
+      setSaveMsg(`Complete first: ${missingRequired.join(', ')}`)
+      return
+    }
     setExporting(true)
     setSaveMsg('')
     try {
@@ -215,7 +226,10 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
 
       // 2 — Fetch blob and trigger download (avoids browser "ask what to do" prompt)
       const exportRes = await fetch(`/api/hq/branches/${branchId}/agreement/export`)
-      if (!exportRes.ok) throw new Error('Export failed')
+      if (!exportRes.ok) {
+        const j = await exportRes.json().catch(() => null)
+        throw new Error(j?.error || 'Export failed')
+      }
       const blob = await exportRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -228,7 +242,7 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       setExportedAt(new Date().toISOString())
       setSaveMsg('Saved ✓')
     } catch (err) {
-      setSaveMsg('Error saving')
+      setSaveMsg(err instanceof Error ? err.message : 'Error saving')
       console.error(err)
     } finally {
       setExporting(false)
@@ -252,6 +266,13 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       setSignedUrl(json.url)
       setSignedName(json.name)
       setSignedAt(new Date().toISOString())
+      if (json.activated) {
+        setActivationMsg(
+          json.invited
+            ? 'Branch activated automatically — superadmin invite has been emailed.'
+            : 'Branch activated automatically. No superadmin email was on file, so generate/share an invite code from the Branches list when ready.'
+        )
+      }
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -267,21 +288,6 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
     exported: { label: 'Exported', color: 'bg-blue-50 text-blue-700 border-blue-200',    Icon: FileText },
     signed:   { label: 'Signed',   color: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
   }[status]
-
-  async function handleActivate() {
-    setActivating(true)
-    try {
-      const res = await fetch(`/api/hq/branches/${branchId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'active' }),
-      })
-      if (!res.ok) throw new Error('Failed to activate branch')
-      setActivated(true)
-    } finally {
-      setActivating(false)
-    }
-  }
 
   function fmtDate(iso: string | null | undefined) {
     if (!iso) return ''
@@ -489,13 +495,16 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             </p>
             <button
               onClick={handleExport}
-              disabled={exporting}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60"
+              disabled={exporting || missingRequired.length > 0}
+              title={missingRequired.length > 0 ? `Complete first: ${missingRequired.join(', ')}` : undefined}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm font-medium py-2 rounded-md hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <FileDown className="h-4 w-4" />
               {exporting ? 'Saving…' : 'Export Agreement (.docx)'}
             </button>
-
+            {missingRequired.length > 0 && (
+              <p className="mt-2 text-xs text-amber-600">Complete first: {missingRequired.join(', ')}</p>
+            )}
           </div>
 
           {/* Upload signed */}
@@ -547,30 +556,19 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             <p className="mt-2 text-xs text-gray-400 text-center">PDF, DOCX, or image · max 10MB</p>
           </div>
 
-          {/* Activate Branch */}
+          {/* Activation — automatic, fires the moment the signed copy is
+              uploaded above. No manual button: uploading IS the activation
+              event, so there's nothing left to forget to click. */}
           {signedAt && (
-            <div className={`rounded-xl border p-5 ${activated ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
-              <h2 className="text-sm font-semibold text-gray-700 mb-2">Activate Branch</h2>
-              {activated ? (
-                <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Branch is now Active
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs text-gray-500 mb-3">
-                    Agreement is signed. Mark the branch as active to allow it to start operations on the platform.
-                  </p>
-                  <button
-                    onClick={handleActivate}
-                    disabled={activating}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700 disabled:opacity-60"
-                  >
-                    <Zap className="h-4 w-4" />
-                    {activating ? 'Activating…' : 'Activate Branch'}
-                  </button>
-                </>
-              )}
+            <div className="rounded-xl border p-5 bg-green-50 border-green-200">
+              <h2 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                <Zap className="h-4 w-4 text-green-600" />
+                Branch Activated
+              </h2>
+              <div className="flex items-start gap-2 text-green-700 text-sm">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{activationMsg ?? 'This branch activated automatically when the signed copy was uploaded.'}</span>
+              </div>
             </div>
           )}
 

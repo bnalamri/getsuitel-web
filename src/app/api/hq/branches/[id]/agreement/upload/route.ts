@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { issueBranchInvite } from '@/lib/hq/branchInvite'
 
 async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,5 +55,55 @@ export async function POST(
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
 
-  return NextResponse.json({ url: publicUrl, name: file.name })
+  // ─── Auto-activation on signature ──────────────────────────────────────
+  // This is the ONE place a branch transitions pending_agreement → active
+  // and its superadmin invite is generated (+ emailed, if HQ set
+  // pending_superadmin_email). No separate "Activate Branch" button to
+  // remember to click — uploading the signed copy IS the activation event.
+  // The status filter in the UPDATE makes this idempotent: re-uploading a
+  // replacement signed copy on an already-active branch just updates the
+  // document, it does not re-activate or re-invite.
+  let activated = false
+  let invited = false
+  try {
+    const { data: branch } = await admin
+      .from('branches')
+      .select('id, status, display_name, pending_superadmin_email')
+      .eq('id', params.id)
+      .single()
+
+    if (branch?.status === 'pending_agreement') {
+      const { error: activateErr } = await admin
+        .from('branches')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', params.id)
+        .eq('status', 'pending_agreement') // guards against a double-fire race
+
+      if (!activateErr) {
+        activated = true
+        await admin.from('hq_audit_logs').insert({
+          branch_id: params.id,
+          actor_id: user.id,
+          action: 'status_change',
+          details: { from: 'pending_agreement', to: 'active', reason: 'agreement_signed' },
+        })
+
+        if (branch.pending_superadmin_email) {
+          const result = await issueBranchInvite(admin, {
+            branchId: params.id,
+            branchName: branch.display_name,
+            createdBy: user.id,
+            email: branch.pending_superadmin_email,
+          })
+          invited = result.emailed
+        }
+      }
+    }
+  } catch {
+    // Activation/invite failure must never fail the upload itself — the
+    // signed copy is already saved. HQ can still activate/invite manually
+    // from the Branch Command Center's Actions tab if this silently didn't fire.
+  }
+
+  return NextResponse.json({ url: publicUrl, name: file.name, activated, invited })
 }

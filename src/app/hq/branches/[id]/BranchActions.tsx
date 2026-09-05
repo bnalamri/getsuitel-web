@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, PlayCircle, PauseCircle, Archive, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, PlayCircle, PauseCircle, Archive, AlertTriangle, FileText, Clock } from 'lucide-react'
 
-type Status = 'active' | 'suspended' | 'archived'
+type Status = 'pending_agreement' | 'active' | 'suspended' | 'archived'
 
 export default function BranchActions({
   branchId,
@@ -44,6 +45,28 @@ export default function BranchActions({
       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 text-sm">
         <Archive className="w-4 h-4" />
         Archived — read-only
+      </div>
+    )
+  }
+
+  // A brand-new branch is locked until its franchise agreement is signed —
+  // there's nothing to suspend/reactivate yet, and the only way out of this
+  // state is uploading the signed copy on the Agreement screen (which
+  // auto-activates the branch, see /api/hq/branches/[id]/agreement/upload).
+  if (currentStatus === 'pending_agreement') {
+    return (
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-sm">
+          <Clock className="w-4 h-4" />
+          Pending Agreement — locked until signed
+        </div>
+        <Link
+          href={`/hq/branches/${branchId}/agreement`}
+          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          <FileText className="w-4 h-4" />
+          Open Agreement
+        </Link>
       </div>
     )
   }

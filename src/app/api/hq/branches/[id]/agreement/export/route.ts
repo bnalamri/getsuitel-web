@@ -101,14 +101,34 @@ export async function GET(
   const user = await requireHQ(supabase)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Load saved agreement data from DB
-  const { data: d } = await supabase
-    .from('branch_agreements')
-    .select('*')
-    .eq('branch_id', params.id)
-    .maybeSingle()
+  // Load saved agreement data + branch name/capacity limits. Capacity limits
+  // (max_orgs/max_units/max_staff/max_tenants) live on `branches`, not
+  // `branch_agreements` — the Capacity Limits section below used to read
+  // them off the agreement row, where those columns don't exist, so it
+  // always fell back to "Unlimited" regardless of what was actually set.
+  const [{ data: d }, { data: branch }] = await Promise.all([
+    supabase.from('branch_agreements').select('*').eq('branch_id', params.id).maybeSingle(),
+    supabase.from('branches').select('name, max_units, max_staff, max_tenants, max_orgs').eq('id', params.id).maybeSingle(),
+  ])
 
   if (!d) return NextResponse.json({ error: 'No agreement found. Save the draft first.' }, { status: 404 })
+
+  // A blank agreement used to export and mark itself "exported" with no
+  // real content — the "required" red asterisks in the UI were cosmetic
+  // only. Enforce the core fields server-side, not just visually.
+  const missing: string[] = []
+  if (!d.hq_legal_name?.trim())     missing.push('HQ Legal Name')
+  if (!d.branch_legal_name?.trim()) missing.push('Branch Legal Name')
+  if (!d.effective_date)            missing.push('Effective Date')
+  if (!d.duration_years)            missing.push('Duration (years)')
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: `Complete these fields before exporting: ${missing.join(', ')}.` },
+      { status: 422 },
+    )
+  }
+
+  const safeBranchName = (branch?.name ?? params.id.slice(0, 8)).replace(/[^a-zA-Z0-9]/g, '_')
 
   const effectiveDate = d.effective_date
     ? new Date(d.effective_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -207,10 +227,10 @@ export async function GET(
             children: [new TextRun({ text: 'The following operational limits apply to this Branch:' })],
           }),
           ...[
-            ['Maximum Organisations', d.max_orgs != null ? String(d.max_orgs) : 'Unlimited'],
-            ['Maximum Units', d.max_units != null ? String(d.max_units) : 'Unlimited'],
-            ['Maximum Staff Members', d.max_staff != null ? String(d.max_staff) : 'Unlimited'],
-            ['Maximum Tenants', d.max_tenants != null ? String(d.max_tenants) : 'Unlimited'],
+            ['Maximum Organisations', branch?.max_orgs != null ? String(branch.max_orgs) : 'Unlimited'],
+            ['Maximum Units', branch?.max_units != null ? String(branch.max_units) : 'Unlimited'],
+            ['Maximum Staff Members', branch?.max_staff != null ? String(branch.max_staff) : 'Unlimited'],
+            ['Maximum Tenants', branch?.max_tenants != null ? String(branch.max_tenants) : 'Unlimited'],
           ].map(([label, value]) =>
             new Paragraph({
               spacing: { after: 80 },
@@ -272,7 +292,7 @@ export async function GET(
   return new NextResponse(buffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="Branch_Agreement_${params.id.slice(0, 8)}.docx"`,
+      'Content-Disposition': `attachment; filename="Branch_Agreement_${safeBranchName}.docx"`,
     },
   })
 }

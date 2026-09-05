@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data: invite } = await service
     .from('invite_codes')
-    .select('id, code, branch_id, expires_at, used_by, branches(display_name, city, region)')
+    .select('id, code, branch_id, expires_at, used_by, branches(display_name, city, region, status)')
     .eq('code', code)
     .single()
 
@@ -25,7 +25,14 @@ export async function GET(req: NextRequest) {
   if (invite.used_by) return NextResponse.json({ error: 'This invite code has already been used' }, { status: 410 })
   if (new Date(invite.expires_at) < new Date()) return NextResponse.json({ error: 'This invite code has expired' }, { status: 410 })
 
-  const branch = invite.branches as { display_name: string; city: string | null; region: string | null } | null
+  const branch = invite.branches as { display_name: string; city: string | null; region: string | null; status: string } | null
+
+  if (branch?.status !== 'active') {
+    return NextResponse.json(
+      { error: `This branch is not active yet (status: ${branch?.status ?? 'unknown'}). Its invite link will work once HQ activates the branch.` },
+      { status: 403 },
+    )
+  }
 
   return NextResponse.json({
     valid: true,

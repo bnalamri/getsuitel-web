@@ -21,13 +21,25 @@ export async function POST(req: NextRequest) {
   // 1. Validate invite code
   const { data: invite } = await service
     .from('invite_codes')
-    .select('id, branch_id, used_by, expires_at')
+    .select('id, branch_id, used_by, expires_at, branches(status, display_name)')
     .eq('code', code.trim().toUpperCase())
     .single()
 
   if (!invite) return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
   if (invite.used_by) return NextResponse.json({ error: 'Invite code already used' }, { status: 410 })
   if (new Date(invite.expires_at) < new Date()) return NextResponse.json({ error: 'Invite code expired' }, { status: 410 })
+
+  // A branch's invite code only works while the branch is active. A locked
+  // (pending_agreement), suspended, or archived branch's code is rejected —
+  // this used to be skipped entirely, so a suspended branch's old invite
+  // link kept silently working.
+  const branchRow = Array.isArray(invite.branches) ? invite.branches[0] : invite.branches
+  if (branchRow?.status !== 'active') {
+    return NextResponse.json(
+      { error: `This branch is not active yet (status: ${branchRow?.status ?? 'unknown'}). The invite link will work once HQ activates the branch.` },
+      { status: 403 },
+    )
+  }
 
   // 2. Create Supabase auth user (email_confirm bypassed via admin API)
   const { data: authData, error: authErr } = await service.auth.admin.createUser({

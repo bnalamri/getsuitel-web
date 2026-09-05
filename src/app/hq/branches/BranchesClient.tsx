@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Building2, Plus, Search, Edit2, Mail, ExternalLink } from 'lucide-react'
+import { Building2, Plus, Search, Edit2, Mail, ExternalLink, AlertTriangle } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
 import InviteCodeDialog from '@/components/hq/InviteCodeDialog'
 import OmrSymbol from '@/components/ui/OmrSymbol'
@@ -20,7 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
   archived:  'bg-gray-100 text-gray-500',
 }
 
-export default function BranchesClient({ branches, isAdmin }: { branches: Branch[]; isAdmin: boolean }) {
+export default function BranchesClient({ branches, isAdmin, unassignedCount = 0 }: { branches: Branch[]; isAdmin: boolean; unassignedCount?: number }) {
   const [q, setQ]               = useState('')
   const [filter, setFilter]     = useState<'all'|'pending_agreement'|'active'|'suspended'|'archived'>('all')
   const [showModal, setModal]   = useState(false)
@@ -55,6 +55,17 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
           </button>
         )}
       </div>
+
+      {isAdmin && unassignedCount > 0 && (
+        <Link
+          href="/hq/branches/unassigned"
+          className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg hover:bg-amber-100 transition-colors"
+        >
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span>{unassignedCount} organisation(s) have no branch assigned.</span>
+          <span className="ml-auto font-semibold underline">Assign now →</span>
+        </Link>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -135,9 +146,10 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
                     {isAdmin && (
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => setInvite({ id: b.id, name: b.display_name })}
-                          className="text-gray-400 hover:text-yellow-600 transition-colors p-1"
-                          title="Generate invite code"
+                          onClick={() => b.status === 'active' && setInvite({ id: b.id, name: b.display_name })}
+                          disabled={b.status !== 'active'}
+                          className="text-gray-400 hover:text-yellow-600 transition-colors p-1 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-400"
+                          title={b.status === 'active' ? 'Generate invite code' : `Branch must be active to invite a superadmin (currently ${b.status.replace('_', ' ')})`}
                         >
                           <Mail className="w-4 h-4" />
                         </button>
@@ -162,14 +174,13 @@ export default function BranchesClient({ branches, isAdmin }: { branches: Branch
         <BranchFormModal
           branch={editing}
           onClose={() => setModal(false)}
-          onSaved={(savedId, savedName, inviteSent) => {
+          onSaved={() => {
+            // A new branch starts locked (pending_agreement) — there's no
+            // invite to generate yet, so just close and refresh. The invite
+            // dialog is only reachable via the Mail icon once the branch is
+            // active, or fires automatically when its agreement is signed.
             setModal(false)
-            if (!editing && !inviteSent) {
-              // New branch, no email sent — open invite dialog so HQ can copy the code manually
-              setInvite({ id: savedId, name: savedName })
-            } else {
-              window.location.reload()
-            }
+            window.location.reload()
           }}
         />
       )}

@@ -36,6 +36,9 @@ const t = {
     companyName: 'Company name', companyNamePlaceholder: 'Al-Ameri Real Estate LLC',
     crDoc: 'CR Certificate / Registration Document', crDocHint: 'Upload a copy of your commercial registration certificate (PDF, JPG, or PNG)',
     crDocRequired: 'Please upload your company registration document',
+    regionLabel: 'Your Region', regionPlaceholder: 'Select your region…',
+    regionHint: 'Your GetSuitel branch — determines your local support contact.',
+    regionRequired: 'Please select your region', noRegions: 'No regions available yet — please contact us',
   },
   ar: {
     step0Title: '…أنا', step0Sub: 'اختر نوع حسابك للبدء',
@@ -67,6 +70,9 @@ const t = {
     companyName: 'اسم الشركة', companyNamePlaceholder: 'شركة العامري للعقارات',
     crDoc: 'شهادة السجل التجاري / وثيقة التسجيل', crDocHint: 'ارفع نسخة من شهادة السجل التجاري (PDF أو JPG أو PNG)',
     crDocRequired: 'يرجى رفع وثيقة تسجيل الشركة',
+    regionLabel: 'منطقتك', regionPlaceholder: 'اختر منطقتك…',
+    regionHint: 'فرع GetSuitel الخاص بك — يحدد جهة الدعم المحلية.',
+    regionRequired: 'يرجى اختيار منطقتك', noRegions: 'لا توجد مناطق متاحة حالياً — يرجى التواصل معنا',
   },
 }
 
@@ -90,6 +96,10 @@ export default function RegisterPage() {
     fetch('/api/plans').then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) setPlanList(data)
     }).catch(() => {})
+    // Fetch active branches for the owner Region selector
+    fetch('/api/branches/active').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setBranchList(data)
+    }).catch(() => {})
   }, [])
   function toggleLang() {
     const next = lang === 'en' ? 'ar' : 'en'
@@ -105,6 +115,8 @@ export default function RegisterPage() {
   const [crFile, setCrFile] = useState<File|null>(null)
   const [plan, setPlan] = useState('basic')
   const [planList, setPlanList] = useState<DbPlan[]>(PLANS)
+  const [branchId, setBranchId] = useState('')
+  const [branchList, setBranchList] = useState<{id:string; display_name:string; city:string|null; region:string|null}[]>([])
   const [inviteCode, setInviteCode] = useState('')
   const [inviteOrg, setInviteOrg] = useState<{id:string;name:string}|null>(null)
   const [inviteErr, setInviteErr] = useState('')
@@ -198,6 +210,9 @@ export default function RegisterPage() {
     if (role === 'owner' && ownerType === 'company' && !crFile) {
       setError(T.crDocRequired); return
     }
+    if (role === 'owner' && !branchId) {
+      setError(T.regionRequired); return
+    }
     setLoading(true); setError('')
 
     // For staff, use the role from the invitation token
@@ -227,6 +242,7 @@ export default function RegisterPage() {
           national_id: role === 'owner' && ownerType === 'individual' ? (form.nationalId || undefined) : undefined,
           cr_number: role === 'owner' && ownerType === 'company' ? (form.crNumber || undefined) : undefined,
           authorized_rep: role === 'owner' && ownerType === 'company' ? (form.authorizedRep || undefined) : undefined,
+          branch_id: role === 'owner' ? branchId : undefined,
         }),
       })
       const data = await res.json()
@@ -460,6 +476,30 @@ export default function RegisterPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Region / branch selector — every new owner org is now tied to a
+                  branch from the moment it's created (see /api/branches/active
+                  and /api/auth/signup). Only branches that are 'active' (i.e.
+                  their franchise agreement is signed) are shown. */}
+              {role === 'owner' && (
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.regionLabel}</label>
+                  <select
+                    value={branchId}
+                    onChange={e => setBranchId(e.target.value)}
+                    required
+                    className="input"
+                  >
+                    <option value="" disabled>{branchList.length ? T.regionPlaceholder : T.noRegions}</option>
+                    {branchList.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {[b.city, b.region].filter(Boolean).join(', ') || b.display_name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="text-xs text-slate-400 mt-1.5">{T.regionHint}</div>
                 </div>
               )}
 

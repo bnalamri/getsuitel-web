@@ -23,13 +23,23 @@ export async function POST(req: NextRequest) {
   // Fetch and validate the code
   const { data: invite } = await service
     .from('invite_codes')
-    .select('id, branch_id, used_by, expires_at')
+    .select('id, branch_id, used_by, expires_at, branches(status)')
     .eq('code', code.trim().toUpperCase())
     .single()
 
   if (!invite) return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
   if (invite.used_by) return NextResponse.json({ error: 'Invite code already used' }, { status: 410 })
   if (new Date(invite.expires_at) < new Date()) return NextResponse.json({ error: 'Invite code expired' }, { status: 410 })
+
+  // Same activation gate as /api/invite/register — a locked, suspended, or
+  // archived branch's code should not silently keep working.
+  const branchRow = Array.isArray(invite.branches) ? invite.branches[0] : invite.branches
+  if (branchRow?.status !== 'active') {
+    return NextResponse.json(
+      { error: `This branch is not active yet (status: ${branchRow?.status ?? 'unknown'}).` },
+      { status: 403 },
+    )
+  }
 
   // Mark code as used
   const { error: useErr } = await service

@@ -28,3 +28,17 @@ CREATE TABLE IF NOT EXISTS hq_audit_logs (
 
 CREATE INDEX IF NOT EXISTS hq_audit_logs_branch_idx
   ON hq_audit_logs(branch_id, created_at DESC);
+
+-- RLS was never finished for this table (this is why "Save Limits" on Branch
+-- Command Center → Limits fails with 42501 "row-level security policy for
+-- table hq_audit_logs" on both web and mobile: the table has RLS enabled
+-- with zero policies, which default-denies every insert AND makes every
+-- select return 0 rows silently — matching the empty Audit tab). Mirrors the
+-- is_hq_admin()-only convention used for every other HQ write table
+-- (see "branches: hq all" in 20260831_hq_layer0.sql).
+ALTER TABLE hq_audit_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "hq_audit_logs: hq admin all"
+  ON hq_audit_logs FOR ALL
+  USING (public.is_hq_admin())
+  WITH CHECK (public.is_hq_admin());

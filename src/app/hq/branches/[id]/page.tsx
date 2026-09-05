@@ -11,6 +11,9 @@ const STATUS_STYLES: Record<string, string> = {
   suspended: 'bg-yellow-100 text-yellow-700',
   archived:  'bg-gray-100 text-gray-500',
 }
+// pending_agreement is now a real, DB-backed status (see
+// hq_lifecycle_rebuild_pending.sql) — this label map was previously the
+// only place that value existed at all.
 
 export default async function BranchDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -118,7 +121,7 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
           branch={{
             id:               branch.id,
             display_name:     branch.display_name,
-            status:           branch.status as 'active' | 'suspended' | 'archived',
+            status:           branch.status as 'pending_agreement' | 'active' | 'suspended' | 'archived',
             license_fee_omr:  Number(branch.license_fee_omr),
             revenue_share_pct: Number(branch.revenue_share_pct),
             created_at:       branch.created_at,

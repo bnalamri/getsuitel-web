@@ -7,7 +7,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
   const { email, password, name, role, lang, organization_id, plan, org_name, phone, staff_token,
-          owner_type, cr_number, authorized_rep, national_id } = await req.json()
+          owner_type, cr_number, authorized_rep, national_id, branch_id } = await req.json()
 
   // If staff_token provided, mark invitation as accepted
   if (staff_token) {
@@ -28,6 +28,29 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient()
+
+  // New organizations must be tied to a branch from the moment they're
+  // created — previously branch_id was left NULL for every signup, which
+  // silently broke every branch-scoped feature (health/limits/billing).
+  // Validate server-side rather than trusting the client-picked branch_id;
+  // only an 'active' branch is open for new sign-ups (see
+  // hq_lifecycle_rebuild_pending.sql for the pending_agreement lifecycle).
+  if (role === 'owner') {
+    if (!branch_id) {
+      return NextResponse.json({ error: 'Please select your region' }, { status: 400 })
+    }
+    const { data: branchRow } = await admin
+      .from('branches')
+      .select('id, status')
+      .eq('id', branch_id)
+      .single()
+    if (!branchRow || branchRow.status !== 'active') {
+      return NextResponse.json(
+        { error: 'The selected region is not currently accepting new sign-ups. Please choose another.' },
+        { status: 400 },
+      )
+    }
+  }
 
   // Create user without triggering Supabase's default verification email
   const { data: userData, error: createError } = await admin.auth.admin.createUser({
@@ -88,6 +111,23 @@ export async function POST(req: Request) {
   if (['property_manager', 'financial_manager'].includes(role) && organization_id) {
     await new Promise(r => setTimeout(r, 600))
     await admin.from('profiles').update({ organization_id }).eq('id', userId)
+  }
+
+  // Owner signups: the handle_new_user trigger creates the organizations row
+  // but has no branch context, so stamp branch_id on afterward. Same
+  // brief-delay pattern as the staff case above — the trigger runs on the
+  // auth.users insert and needs a moment to land before we can look up the
+  // organization it created.
+  if (role === 'owner' && branch_id) {
+    await new Promise(r => setTimeout(r, 600))
+    const { data: ownerProfile } = await admin
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', userId)
+      .single()
+    if (ownerProfile?.organization_id) {
+      await admin.from('organizations').update({ branch_id }).eq('id', ownerProfile.organization_id)
+    }
   }
 
   // Mark staff invitation as accepted

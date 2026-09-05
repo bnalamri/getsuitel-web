@@ -33,7 +33,7 @@ type BillingRow = {
 type BranchData = {
   id: string
   display_name: string
-  status: 'active' | 'suspended' | 'archived'
+  status: 'pending_agreement' | 'active' | 'suspended' | 'archived'
   license_fee_omr: number
   revenue_share_pct: number
   created_at: string
