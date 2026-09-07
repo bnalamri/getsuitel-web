@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useShell } from '@/components/layout/DashboardShell'
 import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages, ExternalLink } from 'lucide-react'
+import SuperAdminFeatureFlagsCard from './SuperAdminFeatureFlagsCard'
 
 const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const CURRENCY_LABELS: Record<string, string> = {
@@ -248,6 +249,9 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
           </button>
         </form>
       </div>
+
+      {/* ── Feature Flags ── */}
+      <SuperAdminFeatureFlagsCard />
 
       {/* ── Admin Profile ── */}
       <div className="card p-6">
