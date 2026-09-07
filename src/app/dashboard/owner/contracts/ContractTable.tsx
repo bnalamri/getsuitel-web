@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Calendar, FileText } from 'lucide-react'
+import { Calendar, FileText, Download } from 'lucide-react'
 import EditContractForm from './EditContractForm'
 import DeleteContractButton from './DeleteContractButton'
 import ActivateContractButton from './ActivateContractButton'
@@ -131,6 +131,14 @@ export default function ContractTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
+                        {canManage && (
+                          <a
+                            href={`/api/contracts/${c.id}/agreement/export`}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-navy-700 hover:text-navy-900 bg-navy-50 hover:bg-navy-100 border border-navy-200 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            <Download size={11} /> Agreement (EN/AR)
+                          </a>
+                        )}
                         {c.municipality_agreement_url ? (
                           <a
                             href={c.municipality_agreement_url}
@@ -151,7 +159,7 @@ export default function ContractTable({
                             <FileText size={11} /> ID Copy
                           </a>
                         ) : null}
-                        {!c.municipality_agreement_url && !c.national_id_copy_url && (
+                        {!canManage && !c.municipality_agreement_url && !c.national_id_copy_url && (
                           <span className="text-xs text-slate-300">—</span>
                         )}
                       </div>
