@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { CreditCard } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
-import ExportCSVButton from '../_components/ExportCSVButton'
+import ExportExcelButton from '../_components/ExportExcelButton'
 
 const PLAN_COLORS: Record<string, string> = {
   free:       'bg-gray-100 text-gray-600',
@@ -69,7 +69,7 @@ export default async function HQSubscriptionsReportPage({
         </div>
         <div className="flex items-center gap-2">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/subscriptions" />
-          <ExportCSVButton data={csvData} headers={csvHeaders} filename={`hq-subscriptions-${new Date().toISOString().substring(0,10)}.csv`} />
+          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[28, 26, 14, 18]} filename={`hq-subscriptions-${new Date().toISOString().substring(0,10)}.xlsx`} />
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { Wrench, AlertTriangle } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
 import StatusFilterSelect from '../_components/StatusFilterSelect'
-import ExportCSVButton from '../_components/ExportCSVButton'
+import ExportExcelButton from '../_components/ExportExcelButton'
 
 const STATUS_COLORS: Record<string, string> = {
   open:        'bg-blue-100 text-blue-700',
@@ -86,7 +86,7 @@ export default async function HQMaintenanceReportPage({
         <div className="flex items-center gap-2 flex-wrap">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/maintenance" />
           <StatusFilterSelect selected={statusFilter ?? null} basePath="/hq/reports/maintenance" />
-          <ExportCSVButton data={csvData} headers={csvHeaders} filename={`hq-maintenance-${new Date().toISOString().substring(0,10)}.csv`} />
+          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[24, 22, 22, 14, 12, 20, 12, 14]} filename={`hq-maintenance-${new Date().toISOString().substring(0,10)}.xlsx`} />
         </div>
       </div>
 

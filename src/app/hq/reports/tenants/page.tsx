@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { Users } from 'lucide-react'
 import BranchFilterSelect from '../_components/BranchFilterSelect'
-import ExportCSVButton from '../_components/ExportCSVButton'
+import ExportExcelButton from '../_components/ExportExcelButton'
 
 export default async function HQTenantsReportPage({
   searchParams,
@@ -61,7 +61,7 @@ export default async function HQTenantsReportPage({
         </div>
         <div className="flex items-center gap-2">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/tenants" />
-          <ExportCSVButton data={csvData} headers={csvHeaders} filename={`hq-tenants-${new Date().toISOString().substring(0,10)}.csv`} />
+          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[20, 26, 16, 12, 20, 26, 14, 12, 14, 14]} filename={`hq-tenants-${new Date().toISOString().substring(0,10)}.xlsx`} />
         </div>
       </div>
 
