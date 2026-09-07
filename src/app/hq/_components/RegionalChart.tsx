@@ -30,11 +30,19 @@ export default async function RegionalChart() {
     .select('branch_id')
     .in('branch_id', branchIds)
 
-  // Property counts per branch (via branch_id on properties)
+  // Property counts per branch. `properties` has no `branch_id` column of
+  // its own — only `organization_id` (branch is one hop away, via
+  // organizations.branch_id). The previous query here (`.select('branch_id')
+  // .in('branch_id', branchIds)`) referenced a column that doesn't exist —
+  // Postgrest error 42703 — but since the result is destructured as
+  // `{ data }` without checking `.error`, it silently resolved to `null`
+  // and every city rendered "0 props" regardless of actual property count.
+  // Resolve branch via the owning organization instead, same pattern as
+  // BranchHealthTable's units/contracts/maintenance queries.
   const { data: propRows } = await supabase
     .from('properties')
-    .select('branch_id')
-    .in('branch_id', branchIds)
+    .select('id, organizations!inner(branch_id)')
+    .in('organizations.branch_id', branchIds)
 
   // Build city→{orgs, properties} map
   const cityMap: Record<string, { orgs: number; properties: number }> = {}
@@ -53,8 +61,9 @@ export default async function RegionalChart() {
   })
 
   propRows?.forEach(r => {
-    if (!r.branch_id) return
-    const city = cityFor[r.branch_id]
+    const bid = (r.organizations as unknown as { branch_id: string | null } | null)?.branch_id
+    if (!bid) return
+    const city = cityFor[bid]
     if (city && cityMap[city]) cityMap[city].properties++
   })
 
