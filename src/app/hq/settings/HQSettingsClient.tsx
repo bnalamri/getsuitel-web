@@ -4,10 +4,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Shield, KeyRound, Eye, EyeOff, Globe, Languages,
-  ExternalLink, Loader2, Save, Calendar, Download, ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
+  ExternalLink, Loader2, Save, Calendar, ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
-import { buildXlsxBlob, type XlsxCell } from '@/lib/xlsx-zip'
 
 type Profile = { id: string; full_name: string | null; email: string; phone?: string | null; role: string; avatar_url?: string | null }
 type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
@@ -154,64 +153,6 @@ export default function HQSettingsClient({
       return { ...f, branch_overrides: overrides }
     }))
     setFlagSaving(null)
-  }
-
-  // ── Data Export ───────────────────────────────────────────────────────────
-  const [exportLoading, setExportLoading] = useState<string | null>(null)
-
-  async function exportData(type: 'branches' | 'billing') {
-    setExportLoading(type)
-    const supabase = createClient()
-
-    if (type === 'branches') {
-      const { data } = await supabase
-        .from('branches')
-        .select('name, city, region, status, license_fee_omr, revenue_share_pct, created_at')
-        .order('created_at', { ascending: false })
-      const rows: XlsxCell[][] = (data ?? []).map(r => [
-        r.name ?? '', r.city ?? '', r.region ?? '', r.status ?? '',
-        r.license_fee_omr ?? 0, r.revenue_share_pct ?? 0, r.created_at ?? '',
-      ])
-      downloadXlsx('Branches', [
-        { label: 'Name', width: 26 }, { label: 'City', width: 16 }, { label: 'Region', width: 18 },
-        { label: 'Status', width: 12 }, { label: 'License Fee (OMR)', width: 16 },
-        { label: 'Revenue Share (%)', width: 16 }, { label: 'Created At', width: 22 },
-      ], rows, `getsuitel_branches_${today()}.xlsx`)
-    } else {
-      // branch_billing's real columns (20260831_hq_layer0.sql) are month /
-      // total_revenue_omr / share_amount_omr / license_fee_omr / paid_at —
-      // this used to select amount_omr/due_date/paid_date, none of which
-      // exist, so Postgrest rejected the query and the CSV always came out
-      // empty with no visible error.
-      const { data } = await supabase
-        .from('branch_billing')
-        .select('branches(display_name), month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes')
-        .order('month', { ascending: false })
-      // Previously this was pushed through a hand-rolled CSV builder
-      // (downloadCSV below) with no UTF-8 BOM/signal. Branch names contain
-      // an em dash ("GetSuitel — Riyadh Branch"), and desktop Excel — which
-      // guesses the file's encoding from the OS codepage when a CSV has no
-      // BOM — rendered that as mangled "GetSuitel â€" Riyadh Branch" text.
-      // buildXlsxBlob writes real typed cells via TextEncoder (always
-      // UTF-8), which sidesteps the whole class of bug, same fix already
-      // applied to the HQ Reports exports.
-      const rows: XlsxCell[][] = (data ?? []).map(r => {
-        const branchRow = Array.isArray(r.branches) ? r.branches[0] : r.branches
-        return [
-          branchRow?.display_name ?? '', r.month ?? '', r.total_revenue_omr ?? 0,
-          r.share_amount_omr ?? 0, r.license_fee_omr ?? 0, r.status ?? '',
-          r.paid_at ?? '', r.notes ?? '',
-        ]
-      })
-      downloadXlsx('Billing', [
-        { label: 'Branch', width: 30 }, { label: 'Month', width: 14 },
-        { label: 'Total Revenue (OMR)', width: 16 }, { label: 'Share Amount (OMR)', width: 16 },
-        { label: 'License Fee (OMR)', width: 16 }, { label: 'Status', width: 12 },
-        { label: 'Paid At', width: 22 }, { label: 'Notes', width: 30 },
-      ], rows, `getsuitel_billing_${today()}.xlsx`)
-    }
-
-    setExportLoading(null)
   }
 
   return (
@@ -380,49 +321,6 @@ export default function HQSettingsClient({
         </form>
       </div>
 
-      {/* ── Data Export ── */}
-      <div className={card}>
-        <div className="flex items-center gap-2 mb-4">
-          <Download className="w-4 h-4 text-yellow-600" />
-          <h2 className="font-semibold text-gray-900">Data Export</h2>
-          <span className="ml-auto text-xs text-gray-400">Downloads as Excel (.xlsx)</span>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 border-b border-gray-100">
-            <div>
-              <p className="text-sm font-medium text-gray-800">Branches Report</p>
-              <p className="text-xs text-gray-400">Name, city, region, status, fees</p>
-            </div>
-            <button
-              onClick={() => exportData('branches')}
-              disabled={exportLoading === 'branches'}
-              className="flex items-center gap-1.5 px-4 py-2 border border-yellow-400 text-yellow-700 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {exportLoading === 'branches'
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Download className="w-4 h-4" />}
-              Export
-            </button>
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-sm font-medium text-gray-800">Billing Records</p>
-              <p className="text-xs text-gray-400">All branch billing history</p>
-            </div>
-            <button
-              onClick={() => exportData('billing')}
-              disabled={exportLoading === 'billing'}
-              className="flex items-center gap-1.5 px-4 py-2 border border-yellow-400 text-yellow-700 hover:bg-yellow-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {exportLoading === 'billing'
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Download className="w-4 h-4" />}
-              Export
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* ── Feature Flags ── */}
       <div className={card}>
         <div className="flex items-center gap-2 mb-4">
@@ -553,16 +451,3 @@ export default function HQSettingsClient({
   )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function today() {
-  return new Date().toISOString().split('T')[0]
-}
-
-function downloadXlsx(sheetName: string, cols: { label: string; width?: number }[], rows: XlsxCell[][], filename: string) {
-  if (!rows.length) return
-  const blob = buildXlsxBlob({ [sheetName]: { cols, rows } })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
-}

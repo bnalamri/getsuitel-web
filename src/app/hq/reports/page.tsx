@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Building2, Users, Wrench, TrendingUp, CreditCard, BarChart2, DollarSign } from 'lucide-react'
+import DataExportCard from './_components/DataExportCard'
 
 const ALL_REPORTS = [
   { href: '/hq/reports/properties',     icon: Building2,   label: 'Properties',             desc: 'All properties across branches — filter by branch, type, status', financeOnly: false },
@@ -43,6 +44,8 @@ export default async function HQReportsPage() {
           </Link>
         ))}
       </div>
+
+      <DataExportCard />
     </div>
   )
 }
