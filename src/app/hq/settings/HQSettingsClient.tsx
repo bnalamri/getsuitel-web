@@ -7,6 +7,7 @@ import {
   ExternalLink, Loader2, Save, Calendar, Download, ToggleLeft, ToggleRight, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import { buildXlsxBlob, type XlsxCell } from '@/lib/xlsx-zip'
 
 type Profile = { id: string; full_name: string | null; email: string; phone?: string | null; role: string; avatar_url?: string | null }
 type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
@@ -162,16 +163,20 @@ export default function HQSettingsClient({
     setExportLoading(type)
     const supabase = createClient()
 
-    let rows: Record<string, unknown>[] = []
-    let filename = ''
-
     if (type === 'branches') {
       const { data } = await supabase
         .from('branches')
         .select('name, city, region, status, license_fee_omr, revenue_share_pct, created_at')
         .order('created_at', { ascending: false })
-      rows = data ?? []
-      filename = `getsuitel_branches_${today()}.csv`
+      const rows: XlsxCell[][] = (data ?? []).map(r => [
+        r.name ?? '', r.city ?? '', r.region ?? '', r.status ?? '',
+        r.license_fee_omr ?? 0, r.revenue_share_pct ?? 0, r.created_at ?? '',
+      ])
+      downloadXlsx('Branches', [
+        { label: 'Name', width: 26 }, { label: 'City', width: 16 }, { label: 'Region', width: 18 },
+        { label: 'Status', width: 12 }, { label: 'License Fee (OMR)', width: 16 },
+        { label: 'Revenue Share (%)', width: 16 }, { label: 'Created At', width: 22 },
+      ], rows, `getsuitel_branches_${today()}.xlsx`)
     } else {
       // branch_billing's real columns (20260831_hq_layer0.sql) are month /
       // total_revenue_omr / share_amount_omr / license_fee_omr / paid_at —
@@ -182,23 +187,30 @@ export default function HQSettingsClient({
         .from('branch_billing')
         .select('branches(display_name), month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes')
         .order('month', { ascending: false })
-      rows = (data ?? []).map(r => {
+      // Previously this was pushed through a hand-rolled CSV builder
+      // (downloadCSV below) with no UTF-8 BOM/signal. Branch names contain
+      // an em dash ("GetSuitel — Riyadh Branch"), and desktop Excel — which
+      // guesses the file's encoding from the OS codepage when a CSV has no
+      // BOM — rendered that as mangled "GetSuitel â€" Riyadh Branch" text.
+      // buildXlsxBlob writes real typed cells via TextEncoder (always
+      // UTF-8), which sidesteps the whole class of bug, same fix already
+      // applied to the HQ Reports exports.
+      const rows: XlsxCell[][] = (data ?? []).map(r => {
         const branchRow = Array.isArray(r.branches) ? r.branches[0] : r.branches
-        return {
-          branch: branchRow?.display_name ?? '',
-          month: r.month,
-          total_revenue_omr: r.total_revenue_omr,
-          share_amount_omr: r.share_amount_omr,
-          license_fee_omr: r.license_fee_omr,
-          status: r.status,
-          paid_at: r.paid_at,
-          notes: r.notes,
-        }
+        return [
+          branchRow?.display_name ?? '', r.month ?? '', r.total_revenue_omr ?? 0,
+          r.share_amount_omr ?? 0, r.license_fee_omr ?? 0, r.status ?? '',
+          r.paid_at ?? '', r.notes ?? '',
+        ]
       })
-      filename = `getsuitel_billing_${today()}.csv`
+      downloadXlsx('Billing', [
+        { label: 'Branch', width: 30 }, { label: 'Month', width: 14 },
+        { label: 'Total Revenue (OMR)', width: 16 }, { label: 'Share Amount (OMR)', width: 16 },
+        { label: 'License Fee (OMR)', width: 16 }, { label: 'Status', width: 12 },
+        { label: 'Paid At', width: 22 }, { label: 'Notes', width: 30 },
+      ], rows, `getsuitel_billing_${today()}.xlsx`)
     }
 
-    downloadCSV(rows, filename)
     setExportLoading(null)
   }
 
@@ -373,7 +385,7 @@ export default function HQSettingsClient({
         <div className="flex items-center gap-2 mb-4">
           <Download className="w-4 h-4 text-yellow-600" />
           <h2 className="font-semibold text-gray-900">Data Export</h2>
-          <span className="ml-auto text-xs text-gray-400">Downloads as CSV</span>
+          <span className="ml-auto text-xs text-gray-400">Downloads as Excel (.xlsx)</span>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between py-3 border-b border-gray-100">
@@ -546,19 +558,9 @@ function today() {
   return new Date().toISOString().split('T')[0]
 }
 
-function downloadCSV(rows: Record<string, unknown>[], filename: string) {
+function downloadXlsx(sheetName: string, cols: { label: string; width?: number }[], rows: XlsxCell[][], filename: string) {
   if (!rows.length) return
-  const headers = Object.keys(rows[0])
-  const csv = [
-    headers.join(','),
-    ...rows.map(r =>
-      headers.map(h => {
-        const v = r[h] ?? ''
-        return typeof v === 'string' && v.includes(',') ? `"${v}"` : v
-      }).join(',')
-    ),
-  ].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
+  const blob = buildXlsxBlob({ [sheetName]: { cols, rows } })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href = url; a.download = filename; a.click()
