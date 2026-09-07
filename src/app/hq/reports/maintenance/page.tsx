@@ -86,7 +86,7 @@ export default async function HQMaintenanceReportPage({
         <div className="flex items-center gap-2 flex-wrap">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/maintenance" />
           <StatusFilterSelect selected={statusFilter ?? null} basePath="/hq/reports/maintenance" />
-          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[24, 22, 22, 14, 12, 20, 12, 14]} filename={`hq-maintenance-${new Date().toISOString().substring(0,10)}.xlsx`} />
+          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[24, 34, 22, 14, 12, 20, 12, 14]} filename={`hq-maintenance-${new Date().toISOString().substring(0,10)}.xlsx`} />
         </div>
       </div>
 

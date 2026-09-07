@@ -69,7 +69,7 @@ export default async function HQSubscriptionsReportPage({
         </div>
         <div className="flex items-center gap-2">
           <BranchFilterSelect branches={branches ?? []} selected={branchId ?? null} basePath="/hq/reports/subscriptions" />
-          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[28, 26, 14, 18]} filename={`hq-subscriptions-${new Date().toISOString().substring(0,10)}.xlsx`} />
+          <ExportExcelButton data={csvData} headers={csvHeaders} colWidths={[28, 34, 14, 18]} filename={`hq-subscriptions-${new Date().toISOString().substring(0,10)}.xlsx`} />
         </div>
       </div>
 
