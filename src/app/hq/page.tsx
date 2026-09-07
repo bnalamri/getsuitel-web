@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { Building2, Users, TrendingUp, AlertCircle } from 'lucide-react'
+import { Building2, Users, TrendingUp, AlertCircle, Receipt, UserPlus } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 import BranchHealthTable from './_components/BranchHealthTable'
 import ActivityFeed from './_components/ActivityFeed'
@@ -10,20 +10,31 @@ const OmrIcon = (_: { className?: string }) => <OmrSymbol variant="dark" size={2
 
 async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const adminClient = createAdminClient()
-  const [branches, orgs, billing] = await Promise.all([
+  const [branches, orgs, billing, proofs, trialingOrgs] = await Promise.all([
     supabase.from('branches').select('id, name, status, license_fee_omr, revenue_share_pct', { count: 'exact' }),
     adminClient.from('organizations').select('id', { count: 'exact', head: true }),
     supabase.from('branch_billing').select('total_revenue_omr, share_amount_omr, license_fee_omr, status'),
+    // Mirrors mobile's hq_dashboard.dart Pending Items block. This queries
+    // through the caller's own session, not the admin client — if the
+    // checked-in RLS policy on this table (service-role-only) is actually
+    // what's live, this silently comes back empty. Mobile's identical
+    // direct-client query is already deployed for this same count, so
+    // confirm on both platforms during Dashboard testing that this number
+    // is non-zero when pending proofs actually exist.
+    supabase.from('subscription_payment_proofs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('organizations').select('id', { count: 'exact', head: true }).eq('subscription_status', 'trialing'),
   ])
 
   const activeBranches  = branches.data?.filter(b => b.status === 'active').length ?? 0
   const totalBranches   = branches.count ?? 0
   const totalOrgs       = orgs.count ?? 0
 
-  const totalRevenue    = billing.data?.reduce((s, r) => s + Number(r.total_revenue_omr), 0) ?? 0
-  const pendingPayments = billing.data?.filter(r => r.status === 'pending').length ?? 0
+  const totalRevenue     = billing.data?.reduce((s, r) => s + Number(r.total_revenue_omr), 0) ?? 0
+  const pendingPayments  = billing.data?.filter(r => r.status === 'pending').length ?? 0
+  const pendingProofs    = proofs.count ?? 0
+  const pendingSignups   = trialingOrgs.count ?? 0
 
-  return { activeBranches, totalBranches, totalOrgs, totalRevenue, pendingPayments }
+  return { activeBranches, totalBranches, totalOrgs, totalRevenue, pendingPayments, pendingProofs, pendingSignups }
 }
 
 export default async function HQDashboardPage() {
@@ -68,6 +79,28 @@ export default async function HQDashboardPage() {
             sub="branch billing" color="red" />
         </>}
       </div>
+
+      {/* Pending items — mirrors mobile's Pending Items block */}
+      {(stats.pendingProofs > 0 || stats.pendingSignups > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {stats.pendingProofs > 0 && (
+            <div className="bg-amber-50 rounded-xl px-4 py-3 flex items-center gap-3">
+              <Receipt className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-amber-700">
+                {stats.pendingProofs} Payment Proof{stats.pendingProofs > 1 ? 's' : ''} pending review
+              </span>
+            </div>
+          )}
+          {stats.pendingSignups > 0 && (
+            <div className="bg-blue-50 rounded-xl px-4 py-3 flex items-center gap-3">
+              <UserPlus className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-blue-700">
+                {stats.pendingSignups} Trial Org{stats.pendingSignups > 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Branch health */}
       <BranchHealthTable />

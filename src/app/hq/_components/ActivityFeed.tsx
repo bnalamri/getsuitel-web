@@ -40,6 +40,14 @@ const TYPE_LABEL: Record<string, string> = {
 export default async function ActivityFeed() {
   const supabase = await createClient()
 
+  // Fetched individually via destructured { data } — a query that errors
+  // (wrong column name, RLS denial, etc.) silently resolves to `data: null`
+  // rather than throwing, so a broken source just yields zero events for
+  // that type instead of surfacing an error. Two of the four below used to
+  // fail exactly this way: `tenants` has no `name` column (it's
+  // `full_name`), and `invoices` has no `title` column at all — so "New
+  // tenant" and "Invoice created" never appeared here despite the UI below
+  // fully supporting both event types.
   const [
     { data: recentMaint },
     { data: recentOrgs },
@@ -60,13 +68,13 @@ export default async function ActivityFeed() {
 
     supabase
       .from('tenants')
-      .select('id, name, created_at, organizations!inner(name, branch_id, branches(display_name))')
+      .select('id, full_name, created_at, organizations!inner(name, branch_id, branches(display_name))')
       .order('created_at', { ascending: false })
       .limit(5),
 
     supabase
       .from('invoices')
-      .select('id, title, created_at, organizations!inner(name, branch_id, branches(display_name))')
+      .select('id, type, amount, currency, created_at, organizations!inner(name, branch_id, branches(display_name))')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -89,14 +97,16 @@ export default async function ActivityFeed() {
     ...(recentTenants ?? []).map(r => ({
       id:     `t-${r.id}`,
       type:   'tenant' as const,
-      title:  r.name,
+      title:  r.full_name,
       branch: ((r.organizations as { branches: { display_name: string } | null } | null)?.branches?.display_name) ?? null,
       time:   r.created_at,
     })),
     ...(recentInvoices ?? []).map(r => ({
       id:     `i-${r.id}`,
+      // No `title` column on invoices — compose a readable one from what
+      // the row actually has (e.g. "Rent invoice — OMR 250.00").
       type:   'invoice' as const,
-      title:  r.title ?? 'Invoice',
+      title:  `${r.type.charAt(0).toUpperCase()}${r.type.slice(1)} invoice — ${r.currency} ${Number(r.amount).toFixed(2)}`,
       branch: ((r.organizations as { branches: { display_name: string } | null } | null)?.branches?.display_name) ?? null,
       time:   r.created_at,
     })),
