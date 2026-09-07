@@ -16,13 +16,19 @@ interface Limits {
 
 interface AgreementData {
   hq_legal_name?: string | null
+  hq_legal_name_ar?: string | null
   hq_address?: string | null
+  hq_address_ar?: string | null
   hq_registration?: string | null
   hq_representative?: string | null
+  hq_representative_ar?: string | null
   branch_legal_name?: string | null
+  branch_legal_name_ar?: string | null
   branch_address?: string | null
+  branch_address_ar?: string | null
   branch_registration?: string | null
   branch_representative?: string | null
+  branch_representative_ar?: string | null
   effective_date?: string | null
   duration_years?: number | null
   payment_due_day?: number | null
@@ -145,13 +151,19 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
 
   // Form state
   const [hqLegalName, setHqLegalName] = useState(d?.hq_legal_name ?? '')
+  const [hqLegalNameAr, setHqLegalNameAr] = useState(d?.hq_legal_name_ar ?? '')
   const [hqAddress, setHqAddress] = useState(d?.hq_address ?? '')
+  const [hqAddressAr, setHqAddressAr] = useState(d?.hq_address_ar ?? '')
   const [hqRegistration, setHqRegistration] = useState(d?.hq_registration ?? '')
   const [hqRep, setHqRep] = useState(d?.hq_representative ?? '')
+  const [hqRepAr, setHqRepAr] = useState(d?.hq_representative_ar ?? '')
   const [branchLegalName, setBranchLegalName] = useState(d?.branch_legal_name ?? branchName)
+  const [branchLegalNameAr, setBranchLegalNameAr] = useState(d?.branch_legal_name_ar ?? '')
   const [branchAddress, setBranchAddress] = useState(d?.branch_address ?? [branchCity, branchCountry].filter(Boolean).join(', '))
+  const [branchAddressAr, setBranchAddressAr] = useState(d?.branch_address_ar ?? '')
   const [branchRegistration, setBranchRegistration] = useState(d?.branch_registration ?? '')
   const [branchRep, setBranchRep] = useState(d?.branch_representative ?? '')
+  const [branchRepAr, setBranchRepAr] = useState(d?.branch_representative_ar ?? '')
   const [effectiveDate, setEffectiveDate] = useState(d?.effective_date ?? '')
   const [durationYears, setDurationYears] = useState(String(d?.duration_years ?? 1))
   const [paymentDueDay, setPaymentDueDay] = useState(String(d?.payment_due_day ?? 1))
@@ -199,13 +211,19 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   function buildPayload() {
     return {
       hq_legal_name: hqLegalName || null,
+      hq_legal_name_ar: hqLegalNameAr || null,
       hq_address: hqAddress || null,
+      hq_address_ar: hqAddressAr || null,
       hq_registration: hqRegistration || null,
       hq_representative: hqRep || null,
+      hq_representative_ar: hqRepAr || null,
       branch_legal_name: branchLegalName || null,
+      branch_legal_name_ar: branchLegalNameAr || null,
       branch_address: branchAddress || null,
+      branch_address_ar: branchAddressAr || null,
       branch_registration: branchRegistration || null,
       branch_representative: branchRep || null,
+      branch_representative_ar: branchRepAr || null,
       effective_date: effectiveDate || null,
       duration_years: durationYears ? Number(durationYears) : null,
       payment_due_day: paymentDueDay ? Number(paymentDueDay) : null,
@@ -382,21 +400,48 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             <SectionHeader title="1. Parties" open={openSections.parties} onToggle={() => toggle('parties')} />
             {openSections.parties && (
               <div className="pb-5 space-y-5">
+                <p className="text-xs text-gray-500 -mb-1">
+                  The Arabic legal name/address is the officially registered one on the Commercial Registration — not a translation of the English value.
+                </p>
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">HQ (Franchisor)</p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <Input label="Legal Name" name="hq_legal_name" value={hqLegalName} onChange={setHqLegalName} placeholder="GetSuitel Technologies LLC" />
-                  <Input label="Commercial Registration No." name="hq_registration" value={hqRegistration} onChange={setHqRegistration} placeholder="CR12345678" />
-                </div>
-                <Input label="Registered Address" name="hq_address" value={hqAddress} onChange={setHqAddress} placeholder="P.O. Box 123, Muscat, Oman" />
-                <Input label="Authorised Representative" name="hq_representative" value={hqRep} onChange={setHqRep} placeholder="Full name and title" />
+                <BilingualField
+                  enLabel="Legal Name (English)" arLabel="الاسم القانوني (عربي)"
+                  enValue={hqLegalName} onEnChange={setHqLegalName}
+                  arValue={hqLegalNameAr} onArChange={setHqLegalNameAr}
+                  placeholder="GetSuitel Technologies LLC"
+                />
+                <Input label="Commercial Registration No." name="hq_registration" value={hqRegistration} onChange={setHqRegistration} placeholder="CR12345678" />
+                <BilingualField
+                  enLabel="Registered Address (English)" arLabel="العنوان المسجل (عربي)"
+                  enValue={hqAddress} onEnChange={setHqAddress}
+                  arValue={hqAddressAr} onArChange={setHqAddressAr}
+                  placeholder="P.O. Box 123, Muscat, Oman"
+                />
+                <BilingualField
+                  enLabel="Authorised Representative (English)" arLabel="الممثل المخول (عربي)"
+                  enValue={hqRep} onEnChange={setHqRep}
+                  arValue={hqRepAr} onArChange={setHqRepAr}
+                  placeholder="Full name and title"
+                />
                 <Divider />
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Branch (Franchisee)</p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <Input label="Legal Name" name="branch_legal_name" value={branchLegalName} onChange={setBranchLegalName} />
-                  <Input label="Commercial Registration No." name="branch_registration" value={branchRegistration} onChange={setBranchRegistration} />
-                </div>
-                <Input label="Registered Address" name="branch_address" value={branchAddress} onChange={setBranchAddress} />
-                <Input label="Authorised Representative" name="branch_representative" value={branchRep} onChange={setBranchRep} placeholder="Full name and title" />
+                <BilingualField
+                  enLabel="Legal Name (English)" arLabel="الاسم القانوني (عربي)"
+                  enValue={branchLegalName} onEnChange={setBranchLegalName}
+                  arValue={branchLegalNameAr} onArChange={setBranchLegalNameAr}
+                />
+                <Input label="Commercial Registration No." name="branch_registration" value={branchRegistration} onChange={setBranchRegistration} />
+                <BilingualField
+                  enLabel="Registered Address (English)" arLabel="العنوان المسجل (عربي)"
+                  enValue={branchAddress} onEnChange={setBranchAddress}
+                  arValue={branchAddressAr} onArChange={setBranchAddressAr}
+                />
+                <BilingualField
+                  enLabel="Authorised Representative (English)" arLabel="الممثل المخول (عربي)"
+                  enValue={branchRep} onEnChange={setBranchRep}
+                  arValue={branchRepAr} onArChange={setBranchRepAr}
+                  placeholder="Full name and title"
+                />
               </div>
             )}
           </div>

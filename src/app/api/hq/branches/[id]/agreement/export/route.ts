@@ -214,10 +214,10 @@ export async function GET(
               field('Authorised Representative', d.hq_representative),
             ],
             [
-              fieldAr('الاسم القانوني', d.hq_legal_name),
-              fieldAr('العنوان', d.hq_address),
+              d.hq_legal_name_ar?.trim() ? fieldAr('الاسم القانوني', d.hq_legal_name_ar) : awaitingArabicPlaceholder(),
+              d.hq_address_ar?.trim() ? fieldAr('العنوان', d.hq_address_ar) : awaitingArabicPlaceholder(),
               fieldAr('السجل التجاري', d.hq_registration),
-              fieldAr('الممثل المخول', d.hq_representative),
+              d.hq_representative_ar?.trim() ? fieldAr('الممثل المخول', d.hq_representative_ar) : awaitingArabicPlaceholder(),
             ],
           ),
           blank(),
@@ -230,10 +230,10 @@ export async function GET(
               field('Authorised Representative', d.branch_representative),
             ],
             [
-              fieldAr('الاسم القانوني', d.branch_legal_name),
-              fieldAr('العنوان', d.branch_address),
+              d.branch_legal_name_ar?.trim() ? fieldAr('الاسم القانوني', d.branch_legal_name_ar) : awaitingArabicPlaceholder(),
+              d.branch_address_ar?.trim() ? fieldAr('العنوان', d.branch_address_ar) : awaitingArabicPlaceholder(),
               fieldAr('السجل التجاري', d.branch_registration),
-              fieldAr('الممثل المخول', d.branch_representative),
+              d.branch_representative_ar?.trim() ? fieldAr('الممثل المخول', d.branch_representative_ar) : awaitingArabicPlaceholder(),
             ],
           ),
 
