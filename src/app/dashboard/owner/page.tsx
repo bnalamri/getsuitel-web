@@ -157,7 +157,12 @@ export default async function OwnerDashboard() {
     low: 'bg-slate-100 text-slate-600',
   }
 
-  const recentInvoices = invoices.data?.filter(i => i.status !== 'paid').slice(0, 5) ?? []
+  // "Pending Invoices" — must match the same pending definition used above
+  // (sent/overdue), not just "!== paid". A bare !== 'paid' filter also lets
+  // canceled and draft invoices show up under "Pending Invoices" on the
+  // dashboard, which is what a live screenshot caught: two canceled invoices
+  // listed there.
+  const recentInvoices = invoices.data?.filter(i => ['sent', 'overdue'].includes(i.status)).slice(0, 5) ?? []
 
   const onboardingSteps: OnboardingStep[] = [
     { label: 'Add your first property',  description: 'Create a property to start organising your units.',         href: '/dashboard/owner/properties', done: (props.count ?? 0) > 0 },
