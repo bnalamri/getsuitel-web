@@ -47,6 +47,12 @@ export function heading(text: string, level: HeadingLevel = HeadingLevel.HEADING
     text,
     heading: level,
     spacing: { before: 400, after: 60 },
+    // keepNext / keepLines: without these, Word is free to break the page
+    // right after a heading, stranding it alone at the bottom with its
+    // content (the AR heading below it, or the bilingualCard table) pushed
+    // to the next page — seen in the first real export.
+    keepNext: true,
+    keepLines: true,
     border: level === HeadingLevel.HEADING_2 ? {
       bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a56db' },
     } : undefined,
@@ -58,6 +64,8 @@ export function headingAr(textAr: string) {
     alignment: AlignmentType.RIGHT,
     bidirectional: true,
     spacing: { after: 160 },
+    keepNext: true,
+    keepLines: true,
     children: [new TextRun({ text: textAr, bold: true, size: 24, color: '1a56db', rightToLeft: true })],
   })
 }
