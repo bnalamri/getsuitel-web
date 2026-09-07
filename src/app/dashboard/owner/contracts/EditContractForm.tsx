@@ -22,6 +22,8 @@ type Contract = {
   municipality_agreement_url?: string | null
   national_id_copy_url?: string | null
   utilities_config?: { water?: string; electricity?: string; internet?: string } | null
+  notes?: string | null
+  notes_ar?: string | null
 }
 
 export default function EditContractForm({
@@ -64,6 +66,8 @@ export default function EditContractForm({
     util_water:       contract.utilities_config?.water       ?? 'owner',
     util_electricity: contract.utilities_config?.electricity ?? 'owner',
     util_internet:    contract.utilities_config?.internet    ?? 'owner',
+    notes:            contract.notes    ?? '',
+    notes_ar:         contract.notes_ar ?? '',
   })
 
   function handleClose() {
@@ -122,6 +126,8 @@ export default function EditContractForm({
         prev_unit_id:    contract.unit_id,
         prev_status:     contract.status,
         utilities_config: { water: form.util_water, electricity: form.util_electricity, internet: form.util_internet },
+        notes:    form.notes    || null,
+        notes_ar: form.notes_ar || null,
       }),
     })
     const json = await res.json()
@@ -375,6 +381,28 @@ export default function EditContractForm({
                 <Paperclip size={14} /> Attach National ID Copy
               </button>
             )}
+          </div>
+
+          {/* Special Conditions — shown on the exported Tenancy Agreement
+              (Section: Special Conditions). Both languages are written by
+              you, not auto-translated; leave the Arabic box empty to have
+              the export note it as English-only. */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="label">Special Conditions (optional)</label>
+            <textarea
+              className="input min-h-[80px] resize-y"
+              placeholder="e.g. Pets allowed with prior written approval."
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            />
+            <label className="label mt-2">الشروط الخاصة (عربي)</label>
+            <textarea
+              dir="rtl"
+              className="input min-h-[80px] resize-y text-right"
+              placeholder="مثال: يُسمح بالحيوانات الأليفة بموافقة خطية مسبقة."
+              value={form.notes_ar}
+              onChange={e => setForm(f => ({ ...f, notes_ar: e.target.value }))}
+            />
           </div>
 
           {error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}

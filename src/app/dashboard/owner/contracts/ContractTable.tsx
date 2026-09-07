@@ -21,6 +21,9 @@ interface Contract {
   payment_method: string; status: string
   municipality_agreement_url?: string | null
   national_id_copy_url?: string | null
+  utilities_config?: { water?: string; electricity?: string; internet?: string } | null
+  notes?: string | null
+  notes_ar?: string | null
   tenants?: { full_name: string } | null
   units?: { unit_number: string; properties?: { name: string } | null } | null
 }
@@ -177,6 +180,9 @@ export default function ContractTable({
                               payment_method: c.payment_method ?? 'cash', status: c.status,
                               municipality_agreement_url: c.municipality_agreement_url,
                               national_id_copy_url: c.national_id_copy_url,
+                              utilities_config: c.utilities_config,
+                              notes: c.notes,
+                              notes_ar: c.notes_ar,
                             }}
                             tenants={tenants}
                             units={allUnits as never}

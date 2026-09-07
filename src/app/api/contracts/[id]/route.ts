@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const {
     tenant_id, unit_id, start_date, end_date,
     rent_amount, currency, deposit_amount, payment_day, payment_method, status,
-    prev_unit_id, prev_status,
+    prev_unit_id, prev_status, notes, notes_ar,
   } = await req.json()
 
   const admin = createAdminClient()
@@ -64,6 +64,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     payment_day: Number(payment_day ?? 1),
     payment_method: payment_method ?? 'cash',
     status,
+    notes: notes || null,
+    notes_ar: notes_ar || null,
   }).eq('id', params.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

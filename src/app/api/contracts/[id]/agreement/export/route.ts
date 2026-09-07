@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel,
-  Table, TableRow, TableCell, WidthType, AlignmentType,
-  BorderStyle, PageNumber, Footer, Header,
+  Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle,
 } from 'docx'
-import { field, fieldAr, fieldBi, headingBi, body, bodyBi, blank, untranslatedNoteAr } from '@/lib/docx/bilingual'
+import {
+  field, fieldAr, headingBi, body, bodyAr, blank,
+  bilingualCard, awaitingArabicPlaceholder, untranslatedNoteAr,
+  brandedHeader, brandedFooter,
+} from '@/lib/docx/bilingual'
 
 // Owner-side only (owner / property_manager) — this generates the tenancy
 // contract between an owner's organisation and one of their tenants. It is
@@ -30,6 +33,21 @@ const PAYMENT_METHOD_LABEL: Record<string, [string, string]> = {
 const UTIL_PARTY_LABEL: Record<string, [string, string]> = {
   owner:  ['Owner', 'المالك'],
   tenant: ['Tenant', 'المستأجر'],
+}
+
+// Platform-authored fallback wording, used only if the organization has
+// never saved a Tenancy Agreement Template (Settings → Contracts →
+// Agreement Template). Identical to that form's own defaults and the DB
+// column defaults in 20260907_bilingual_agreement_templates.sql, so a
+// brand-new org gets sensible bilingual text on its very first export.
+const TEMPLATE_DEFAULTS = {
+  tenant_obligations_en: 'The Tenant shall pay rent on the due date each month, use the unit for residential purposes only, maintain the unit in good condition, avoid unauthorised alterations or subletting, and comply with all building rules and applicable laws.',
+  tenant_obligations_ar: 'يلتزم المستأجر بسداد الإيجار في تاريخ استحقاقه من كل شهر، واستخدام الوحدة لأغراض سكنية فقط، والحفاظ عليها بحالة جيدة، وعدم إجراء أي تعديلات أو تأجير من الباطن دون إذن، والامتثال لجميع لوائح المبنى والقوانين المعمول بها.',
+  landlord_obligations_en: 'The Landlord shall deliver the unit in a habitable condition, carry out structural and major maintenance not caused by tenant negligence, and respect the Tenant\'s right to quiet enjoyment of the property throughout the term.',
+  landlord_obligations_ar: 'يلتزم المالك بتسليم الوحدة بحالة صالحة للسكن، والقيام بأعمال الصيانة الإنشائية والرئيسية التي لا تعود إلى إهمال المستأجر، واحترام حق المستأجر في الانتفاع الهادئ بالعقار طوال مدة العقد.',
+  governing_law_en: 'This Agreement shall be governed by and construed in accordance with the Laws of the Sultanate of Oman. Any disputes arising out of or in connection with this Agreement shall be submitted to the competent courts of the Sultanate of Oman.',
+  governing_law_ar: 'يخضع هذا العقد ويُفسَّر وفقاً لقوانين سلطنة عُمان. وتُحال أي نزاعات تنشأ عن هذا العقد أو تتعلق به إلى المحاكم المختصة في سلطنة عُمان.',
+  notice_period_days: 30,
 }
 
 function signatureTable() {
@@ -85,17 +103,24 @@ export async function GET(
   const ownerProfile = await requireOwner(supabase)
   if (!ownerProfile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: contract } = await supabase
-    .from('contracts')
-    .select(`
-      id, start_date, end_date, rent_amount, currency, deposit_amount, payment_day, payment_method, status, notes,
-      utilities_config, organization_id,
-      municipality_agreement_url, national_id_copy_url,
-      tenants ( full_name, full_name_ar, email, phone, national_id, nationality ),
-      units ( unit_number, properties ( name, name_ar, address, city ) )
-    `)
-    .eq('id', params.id)
-    .maybeSingle()
+  const [{ data: contract }, { data: tpl }] = await Promise.all([
+    supabase
+      .from('contracts')
+      .select(`
+        id, start_date, end_date, rent_amount, currency, deposit_amount, payment_day, payment_method, status, notes, notes_ar,
+        utilities_config, organization_id,
+        municipality_agreement_url, national_id_copy_url,
+        tenants ( full_name, full_name_ar, email, phone, national_id, nationality ),
+        units ( unit_number, properties ( name, name_ar, address, city ) )
+      `)
+      .eq('id', params.id)
+      .maybeSingle(),
+    supabase
+      .from('tenancy_agreement_templates')
+      .select('*')
+      .eq('organization_id', ownerProfile.organization_id)
+      .maybeSingle(),
+  ])
 
   if (!contract || contract.organization_id !== ownerProfile.organization_id) {
     return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
@@ -110,6 +135,22 @@ export async function GET(
       { error: `Complete these fields before exporting: ${missing.join(', ')}.` },
       { status: 422 },
     )
+  }
+
+  // Reusable EN/AR legal wording — from the organization's own Tenancy
+  // Agreement Template (Contracts → Agreement Template), authored by the
+  // owner, never auto-translated. Falls back to platform defaults only if
+  // the org has never saved a template.
+  const t = {
+    tenantObligationsEn: tpl?.tenant_obligations_en || TEMPLATE_DEFAULTS.tenant_obligations_en,
+    tenantObligationsAr: tpl?.tenant_obligations_ar || TEMPLATE_DEFAULTS.tenant_obligations_ar,
+    landlordObligationsEn: tpl?.landlord_obligations_en || TEMPLATE_DEFAULTS.landlord_obligations_en,
+    landlordObligationsAr: tpl?.landlord_obligations_ar || TEMPLATE_DEFAULTS.landlord_obligations_ar,
+    governingLawEn: tpl?.governing_law_en || TEMPLATE_DEFAULTS.governing_law_en,
+    governingLawAr: tpl?.governing_law_ar || TEMPLATE_DEFAULTS.governing_law_ar,
+    noticeDays: tpl?.notice_period_days ?? TEMPLATE_DEFAULTS.notice_period_days,
+    clausesEn: tpl?.additional_clauses_en || null,
+    clausesAr: tpl?.additional_clauses_ar || null,
   }
 
   const { data: org } = await supabase
@@ -137,7 +178,7 @@ export async function GET(
   const currency = contract.currency ?? 'OMR'
   const rentLine   = `${currency} ${Number(contract.rent_amount).toFixed(2)} per month`
   const rentLineAr = `${currency} ${Number(contract.rent_amount).toFixed(2)} شهرياً`
-  const depositLine   = `${currency} ${Number(contract.deposit_amount ?? 0).toFixed(2)}`
+  const depositLine = `${currency} ${Number(contract.deposit_amount ?? 0).toFixed(2)}`
   const paymentDay = Number(contract.payment_day ?? 1)
   const paymentDaySuffix = paymentDay === 1 ? 'st' : paymentDay === 2 ? 'nd' : paymentDay === 3 ? 'rd' : 'th'
   const paymentDayLine   = `${paymentDay}${paymentDaySuffix} of each month`
@@ -151,19 +192,21 @@ export async function GET(
     ['Internet', 'الإنترنت', utilCfg.internet ?? 'owner'],
   ]
 
-  const termEn = `This Agreement commences on ${startFmt} and ends on ${endFmt}. Either party wishing not to renew must give the other at least 30 days' written notice before the end of the term. Early termination by either party requires 30 days' written notice and is subject to any deposit or notice-period terms agreed between the parties.`
-  const termAr = `تبدأ هذه الاتفاقية بتاريخ ${startFmt} وتنتهي بتاريخ ${endFmt}. على الطرف الراغب في عدم التجديد إخطار الطرف الآخر كتابياً بمدة لا تقل عن 30 يوماً قبل نهاية المدة. يتطلب الإنهاء المبكر من قبل أي من الطرفين إشعاراً خطياً مدته 30 يوماً، ويخضع لأي شروط متعلقة بالتأمين أو مدة الإشعار المتفق عليها بين الطرفين.`
-
-  const govEn = 'This Agreement shall be governed by and construed in accordance with the Laws of the Sultanate of Oman. Any disputes arising out of or in connection with this Agreement shall be submitted to the competent courts of the Sultanate of Oman.'
-  const govAr = 'تخضع هذه الاتفاقية وتُفسَّر وفقاً لقوانين سلطنة عُمان. وتُحال أي نزاعات تنشأ عن هذه الاتفاقية أو تتعلق بها إلى المحاكم المختصة في سلطنة عُمان.'
-
-  const tenantObligationsEn = 'The Tenant shall pay rent on time, use the property for residential purposes only, maintain the unit in good condition, promptly report any damage or maintenance issues, and comply with all building and community rules.'
-  const tenantObligationsAr = 'يلتزم المستأجر بسداد الإيجار في موعده، واستخدام العقار لأغراض السكن فقط، والحفاظ على الوحدة بحالة جيدة، والإبلاغ الفوري عن أي أضرار أو أعطال تحتاج صيانة، والالتزام بجميع قواعد المبنى والمجتمع السكني.'
-
-  const landlordObligationsEn = 'The Landlord shall deliver the unit in a habitable condition, carry out structural and major maintenance not caused by tenant negligence, and respect the Tenant\'s right to quiet enjoyment of the property throughout the term.'
-  const landlordObligationsAr = 'يلتزم المالك بتسليم الوحدة بحالة صالحة للسكن، والقيام بأعمال الصيانة الإنشائية والرئيسية التي لا تعود إلى إهمال المستأجر، واحترام حق المستأجر في الانتفاع الهادئ بالعقار طوال مدة العقد.'
+  const termEn = `This Agreement commences on ${startFmt} and ends on ${endFmt}. Either party wishing not to renew must give the other at least ${t.noticeDays} days' written notice before the end of the term. Early termination by either party requires ${t.noticeDays} days' written notice and is subject to any deposit or notice-period terms agreed between the parties.`
+  const termAr = `تبدأ هذه الاتفاقية بتاريخ ${startFmt} وتنتهي بتاريخ ${endFmt}. على الطرف الراغب في عدم التجديد إخطار الطرف الآخر كتابياً بمدة لا تقل عن ${t.noticeDays} يوماً قبل نهاية المدة. يتطلب الإنهاء المبكر من قبل أي من الطرفين إشعاراً خطياً مدته ${t.noticeDays} يوماً، ويخضع لأي شروط متعلقة بالتأمين أو مدة الإشعار المتفق عليها بين الطرفين.`
 
   const safeTenantName = (tenant?.full_name ?? 'Tenant').replace(/[^a-zA-Z0-9]/g, '_')
+
+  // Section numbering shifts depending on which optional sections render —
+  // computed once so headings and the Signatures section stay in sync.
+  const hasSpecialConditions = !!contract.notes
+  const hasAdditionalClauses = !!t.clausesEn
+  const hasAttachments = !!(contract.municipality_agreement_url || contract.national_id_copy_url)
+  let n = 8
+  const specialConditionsNum = hasSpecialConditions ? ++n : null
+  const additionalClausesNum = hasAdditionalClauses ? ++n : null
+  const attachmentsNum = hasAttachments ? ++n : null
+  const signaturesNum = ++n
 
   const doc = new Document({
     title: 'Tenancy Agreement / عقد إيجار',
@@ -175,40 +218,17 @@ export async function GET(
     },
     sections: [
       {
-        headers: {
-          default: new Header({
-            children: [new Paragraph({
-              alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: 'TENANCY AGREEMENT — عقد إيجار', italics: true, color: '888888', size: 18 })],
-            })],
-          }),
-        },
-        footers: {
-          default: new Footer({
-            children: [new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({ text: 'Page ', size: 18, color: '888888' }),
-                new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }),
-                new TextRun({ text: ' of ', size: 18, color: '888888' }),
-                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' }),
-                new TextRun({ text: '   |   صفحة ', size: 18, color: '888888' }),
-                new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }),
-                new TextRun({ text: ' من ', size: 18, color: '888888' }),
-                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' }),
-              ],
-            })],
-          }),
-        },
+        headers: { default: brandedHeader('TENANCY AGREEMENT', 'عقد إيجار') },
+        footers: { default: brandedFooter() },
         children: [
           // ── Cover ───────────────────────────────────────────────
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { before: 800, after: 40 },
-            children: [new TextRun({ text: 'TENANCY AGREEMENT', bold: true, size: 48, color: '1a56db' })],
+            children: [new TextRun({ text: 'TENANCY AGREEMENT', bold: true, size: 48, color: '1B3A6B' })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER, bidirectional: true, spacing: { after: 200 },
-            children: [new TextRun({ text: 'عقد إيجار', bold: true, size: 48, color: '1a56db', rightToLeft: true })],
+            children: [new TextRun({ text: 'عقد إيجار', bold: true, size: 48, color: '1B3A6B', rightToLeft: true })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { after: 40 },
@@ -221,101 +241,146 @@ export async function GET(
 
           // ── 1. Parties ────────────────────────────────────────
           ...headingBi('1. PARTIES', '1. الأطراف', HeadingLevel.HEADING_1),
-          ...headingBi('1.1 Landlord (Owner)', '1.1 المالك'),
-          field('Legal Name', landlordName),
-          fieldAr('الاسم القانوني', landlordNameAr),
-          ...(isCompany ? fieldBi('Commercial Registration', 'السجل التجاري', org?.cr_number) : []),
-          ...(isCompany ? fieldBi('Authorised Representative', 'الممثل المخول', landlordRep) : []),
-          ...fieldBi('Phone', 'الهاتف', ownerProfile.phone),
+          bilingualCard(
+            [
+              field('Legal Name', landlordName),
+              ...(isCompany ? [field('Commercial Registration', org?.cr_number)] : []),
+              ...(isCompany ? [field('Authorised Representative', landlordRep)] : []),
+              field('Phone', ownerProfile.phone),
+            ],
+            [
+              fieldAr('الاسم القانوني', landlordNameAr),
+              ...(isCompany ? [fieldAr('السجل التجاري', org?.cr_number)] : []),
+              ...(isCompany ? [fieldAr('الممثل المخول', landlordRep)] : []),
+              fieldAr('الهاتف', ownerProfile.phone),
+            ],
+          ),
           blank(),
-          ...headingBi('1.2 Tenant', '1.2 المستأجر'),
-          field('Full Name', tenant?.full_name ?? null),
-          fieldAr('الاسم الكامل', tenant?.full_name_ar ?? tenant?.full_name ?? null),
-          ...fieldBi('National ID', 'الرقم المدني / الهوية', tenant?.national_id),
-          ...fieldBi('Nationality', 'الجنسية', tenant?.nationality),
-          ...fieldBi('Phone', 'الهاتف', tenant?.phone),
-          ...fieldBi('Email', 'البريد الإلكتروني', tenant?.email),
+          bilingualCard(
+            [
+              field('Full Name', tenant?.full_name ?? null),
+              field('National ID', tenant?.national_id ?? null),
+              field('Nationality', tenant?.nationality ?? null),
+              field('Phone', tenant?.phone ?? null),
+              field('Email', tenant?.email ?? null),
+            ],
+            [
+              fieldAr('الاسم الكامل', tenant?.full_name_ar ?? tenant?.full_name ?? null),
+              fieldAr('الرقم المدني / الهوية', tenant?.national_id ?? null),
+              fieldAr('الجنسية', tenant?.nationality ?? null),
+              fieldAr('الهاتف', tenant?.phone ?? null),
+              fieldAr('البريد الإلكتروني', tenant?.email ?? null),
+            ],
+          ),
 
           // ── 2. Property & Unit ─────────────────────────────────
           ...headingBi('2. PROPERTY & UNIT', '2. العقار والوحدة', HeadingLevel.HEADING_1),
-          field('Property', property?.name ?? null),
-          fieldAr('العقار', property?.name_ar ?? property?.name ?? null),
-          ...fieldBi('Address', 'العنوان', property?.address),
-          ...fieldBi('City', 'المدينة', property?.city),
-          ...fieldBi('Unit Number', 'رقم الوحدة', unit?.unit_number),
+          bilingualCard(
+            [
+              field('Property', property?.name ?? null),
+              field('Address', property?.address ?? null),
+              field('City', property?.city ?? null),
+              field('Unit Number', unit?.unit_number ?? null),
+            ],
+            [
+              fieldAr('العقار', property?.name_ar ?? property?.name ?? null),
+              fieldAr('العنوان', property?.address ?? null),
+              fieldAr('المدينة', property?.city ?? null),
+              fieldAr('رقم الوحدة', unit?.unit_number ?? null),
+            ],
+          ),
 
           // ── 3. Commercial Terms ────────────────────────────────
           ...headingBi('3. COMMERCIAL TERMS', '3. الشروط التجارية', HeadingLevel.HEADING_1),
-          field('Rent', rentLine),
-          fieldAr('الإيجار', rentLineAr),
-          field('Payment Due Day (each month)', paymentDayLine),
-          fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDayLineAr),
-          field('Payment Method', paymentMethodEn),
-          fieldAr('طريقة الدفع', paymentMethodAr),
-          ...fieldBi('Security Deposit', 'مبلغ التأمين', depositLine),
-          ...fieldBi('Lease Term', 'مدة العقد', `${startFmt} — ${endFmt}`),
+          bilingualCard(
+            [
+              field('Rent', rentLine),
+              field('Payment Due Day (each month)', paymentDayLine),
+              field('Payment Method', paymentMethodEn),
+              field('Security Deposit', depositLine),
+              field('Lease Term', `${startFmt} — ${endFmt}`),
+            ],
+            [
+              fieldAr('الإيجار', rentLineAr),
+              fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDayLineAr),
+              fieldAr('طريقة الدفع', paymentMethodAr),
+              fieldAr('مبلغ التأمين', depositLine),
+              fieldAr('مدة العقد', `${startFmt} — ${endFmt}`),
+            ],
+          ),
 
           // ── 4. Utilities ───────────────────────────────────────
           ...headingBi('4. UTILITIES RESPONSIBILITY', '4. مسؤولية المرافق', HeadingLevel.HEADING_1),
-          ...bodyBi('Responsibility for utility payments is allocated as follows:', 'تُحدَّد مسؤولية دفع فواتير المرافق على النحو التالي:'),
-          ...utilRows.flatMap(([labelEn, labelAr, party]) => {
-            const [partyEn, partyAr] = UTIL_PARTY_LABEL[party] ?? UTIL_PARTY_LABEL.owner
-            return [field(labelEn, partyEn), fieldAr(labelAr, partyAr)]
-          }),
+          bilingualCard(
+            [
+              body('Responsibility for utility payments is allocated as follows:'),
+              ...utilRows.map(([labelEn, , party]) => field(labelEn, (UTIL_PARTY_LABEL[party] ?? UTIL_PARTY_LABEL.owner)[0])),
+            ],
+            [
+              bodyAr('تُحدَّد مسؤولية دفع فواتير المرافق على النحو التالي:'),
+              ...utilRows.map(([, labelAr, party]) => fieldAr(labelAr, (UTIL_PARTY_LABEL[party] ?? UTIL_PARTY_LABEL.owner)[1])),
+            ],
+          ),
 
           // ── 5. Tenant Obligations ──────────────────────────────
+          // Pulled from the org's Tenancy Agreement Template — owner-authored
+          // on both sides, never auto-translated.
           ...headingBi('5. TENANT OBLIGATIONS', '5. التزامات المستأجر', HeadingLevel.HEADING_1),
-          ...bodyBi(tenantObligationsEn, tenantObligationsAr),
+          bilingualCard([body(t.tenantObligationsEn)], [bodyAr(t.tenantObligationsAr)]),
 
           // ── 6. Landlord Obligations ────────────────────────────
           ...headingBi('6. LANDLORD OBLIGATIONS', '6. التزامات المالك', HeadingLevel.HEADING_1),
-          ...bodyBi(landlordObligationsEn, landlordObligationsAr),
+          bilingualCard([body(t.landlordObligationsEn)], [bodyAr(t.landlordObligationsAr)]),
 
           // ── 7. Term & Termination ──────────────────────────────
           ...headingBi('7. TERM AND TERMINATION', '7. المدة والإنهاء', HeadingLevel.HEADING_1),
-          ...bodyBi(termEn, termAr),
+          bilingualCard([body(termEn)], [bodyAr(termAr)]),
 
           // ── 8. Governing Law ───────────────────────────────────
           ...headingBi('8. GOVERNING LAW AND DISPUTE RESOLUTION', '8. القانون الحاكم وتسوية النزاعات', HeadingLevel.HEADING_1),
-          ...bodyBi(govEn, govAr),
+          bilingualCard([body(t.governingLawEn)], [bodyAr(t.governingLawAr)]),
 
-          // ── 9. Special Conditions (free text, not translated) ──
-          ...(contract.notes
+          // ── Special Conditions (per-contract, owner-authored) ───
+          ...(hasSpecialConditions
             ? [
-                ...headingBi('9. SPECIAL CONDITIONS', '9. شروط خاصة', HeadingLevel.HEADING_1),
-                body(contract.notes),
-                untranslatedNoteAr('ملاحظة: النص أعلاه شرط خاص أدخله المالك، ولم تتم ترجمته آلياً.'),
-              ]
-            : []),
-
-          // ── 10. Attached Documents ─────────────────────────────
-          ...((contract.municipality_agreement_url || contract.national_id_copy_url)
-            ? [
-                ...headingBi(contract.notes ? '10. ATTACHED DOCUMENTS' : '9. ATTACHED DOCUMENTS', contract.notes ? '10. المستندات المرفقة' : '9. المستندات المرفقة', HeadingLevel.HEADING_1),
-                ...bodyBi(
-                  'The following documents are held on file with this contract on the GetSuitel platform:' +
-                  (contract.municipality_agreement_url ? ' Municipality Agreement.' : '') +
-                  (contract.national_id_copy_url ? ' National ID Copy.' : ''),
-                  'المستندات التالية محفوظة مع هذا العقد على منصة جيت سويتل:' +
-                  (contract.municipality_agreement_url ? ' اتفاقية البلدية.' : '') +
-                  (contract.national_id_copy_url ? ' نسخة من الهوية الوطنية.' : '')
+                ...headingBi(`${specialConditionsNum}. SPECIAL CONDITIONS`, `${specialConditionsNum}. شروط خاصة`, HeadingLevel.HEADING_1),
+                bilingualCard(
+                  [body(contract.notes)],
+                  [contract.notes_ar?.trim() ? bodyAr(contract.notes_ar) : awaitingArabicPlaceholder()],
                 ),
               ]
             : []),
 
+          // ── Additional Clauses (from the org template, optional) ─
+          ...(hasAdditionalClauses
+            ? [
+                ...headingBi(`${additionalClausesNum}. ADDITIONAL CLAUSES`, `${additionalClausesNum}. بنود إضافية`, HeadingLevel.HEADING_1),
+                bilingualCard(
+                  [body(t.clausesEn)],
+                  [t.clausesAr?.trim() ? bodyAr(t.clausesAr) : untranslatedNoteAr('لم تتم إضافة نسخة عربية لهذا البند.')],
+                ),
+              ]
+            : []),
+
+          // ── Attached Documents ───────────────────────────────────
+          ...(hasAttachments
+            ? [
+                ...headingBi(`${attachmentsNum}. ATTACHED DOCUMENTS`, `${attachmentsNum}. المستندات المرفقة`, HeadingLevel.HEADING_1),
+                ...(() => {
+                  const enParts = ['The following documents are held on file with this contract on the GetSuitel platform:']
+                  const arParts = ['المستندات التالية محفوظة مع هذا العقد على منصة جيت سويتل:']
+                  if (contract.municipality_agreement_url) { enParts.push(' Municipality Agreement.'); arParts.push(' اتفاقية البلدية.') }
+                  if (contract.national_id_copy_url)       { enParts.push(' National ID Copy.');       arParts.push(' نسخة من الهوية الوطنية.') }
+                  return [body(enParts.join('')), bodyAr(arParts.join(''))]
+                })(),
+              ]
+            : []),
+
           // ── Signatures ──────────────────────────────────────────
-          ...headingBi(
-            contract.notes && (contract.municipality_agreement_url || contract.national_id_copy_url) ? '11. SIGNATURES'
-              : contract.notes || (contract.municipality_agreement_url || contract.national_id_copy_url) ? '10. SIGNATURES'
-              : '9. SIGNATURES',
-            contract.notes && (contract.municipality_agreement_url || contract.national_id_copy_url) ? '11. التوقيعات'
-              : contract.notes || (contract.municipality_agreement_url || contract.national_id_copy_url) ? '10. التوقيعات'
-              : '9. التوقيعات',
-            HeadingLevel.HEADING_1,
-          ),
-          ...bodyBi(
-            'IN WITNESS WHEREOF, the parties have executed this Agreement as of the start date first written above.',
-            'وإثباتاً لما تقدم، قام الطرفان بتوقيع هذا العقد اعتباراً من تاريخ البدء المذكور أعلاه.'
+          ...headingBi(`${signaturesNum}. SIGNATURES`, `${signaturesNum}. التوقيعات`, HeadingLevel.HEADING_1),
+          bilingualCard(
+            [body('IN WITNESS WHEREOF, the parties have executed this Agreement as of the start date first written above.')],
+            [bodyAr('وإثباتاً لما تقدم، قام الطرفان بتوقيع هذا العقد اعتباراً من تاريخ البدء المذكور أعلاه.')],
           ),
           blank(),
           signatureTable(),

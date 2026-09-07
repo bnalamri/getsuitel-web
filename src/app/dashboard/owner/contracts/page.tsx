@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { FileText, ArrowRight } from 'lucide-react'
+import { FileText, ArrowRight, FileEdit } from 'lucide-react'
 import AddContractForm from './AddContractForm'
 import ContractTable from './ContractTable'
 import Link from 'next/link'
@@ -47,7 +47,17 @@ export default async function ContractsPage() {
           <h2 className="text-2xl font-bold text-slate-900">Contracts</h2>
           <p className="text-slate-500 text-sm mt-0.5">{contracts.length} contracts</p>
         </div>
-        {canAddContract && canManage && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} defaultCurrency={defaultCurrency} />}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Link
+              href="/dashboard/owner/contracts/agreement-template"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 px-3 py-2 rounded-lg transition-colors"
+            >
+              <FileEdit size={14} /> Agreement Template
+            </Link>
+          )}
+          {canAddContract && canManage && <AddContractForm orgId={orgId} units={vacantUnits as never} tenants={tenants} defaultCurrency={defaultCurrency} />}
+        </div>
       </div>
 
       {!hasUnits ? (

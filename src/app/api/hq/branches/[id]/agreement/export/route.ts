@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel,
-  Table, TableRow, TableCell, WidthType, AlignmentType,
-  BorderStyle, PageNumber, Footer, Header,
+  Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle,
 } from 'docx'
-import { field, fieldAr, fieldBi, heading, headingAr, headingBi, body, bodyBi, blank, untranslatedNoteAr } from '@/lib/docx/bilingual'
+import {
+  field, fieldAr, heading, headingBi, body, bodyAr, blank,
+  bilingualCard, awaitingArabicPlaceholder, untranslatedNoteAr,
+  brandedHeader, brandedFooter,
+} from '@/lib/docx/bilingual'
 
 async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,26 +19,17 @@ async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
 }
 
 // ── Bilingual content ───────────────────────────────────────────────────────
-// The platform is EN/AR everywhere else (mobile + web UI both ship ARB/i18n
-// translations), but this generated agreement was English-only — a real gap
-// flagged during HQ Dashboard testing. Paragraph-level EN/AR helpers live in
-// '@/lib/docx/bilingual' (shared with the tenant agreement generator). Only
-// *our own* template copy is translated — free-text values the HQ admin
-// typed into the agreement form (legal names, addresses, custom clauses)
-// are shown exactly as entered, since auto-translating someone else's legal
-// wording would risk introducing an inaccurate translation of real contract
-// terms. A small map of the handful of known default values
-// (jurisdiction/governing law/dispute forum) is translated when the field
-// still holds its default; anything the admin overrode is left as typed.
-
-const AR_DEFAULTS: Record<string, string> = {
-  'Sultanate of Oman': 'سلطنة عُمان',
-  'Laws of the Sultanate of Oman': 'قوانين سلطنة عُمان',
-  'Commercial Court of Muscat': 'المحكمة التجارية بمسقط',
-}
-function arValue(v: string) {
-  return AR_DEFAULTS[v] ?? v
-}
+// Rebuilt per HQ's request: NOT auto-translated. This is a legal document —
+// HQ types both the English and Arabic wording themselves (reviewed by
+// counsel if they choose), saved on the branch_agreements row (the *_ar
+// columns added alongside every existing free-text field) and reused on
+// every export. Structural chrome (headings, field labels like "Legal
+// Name:") stays fixed bilingual copy written by the platform, since it
+// carries no legal weight of its own — only the substantive clauses
+// (obligations, governing law, custom clauses) are admin-authored per
+// language. Layout follows the standard bilingual-contract convention: an
+// English card and an Arabic card side by side per section (bilingualCard),
+// not stacked EN-then-AR paragraphs.
 
 function signatureTable() {
   const cell = (lines: { text: string; ar?: boolean }[]) =>
@@ -127,9 +121,12 @@ export async function GET(
 
   const years  = d.duration_years ?? 1
   const notice = d.notice_period_days ?? 30
-  const jurisdiction      = d.jurisdiction || 'Sultanate of Oman'
-  const governingLaw      = d.governing_law || 'Laws of the Sultanate of Oman'
-  const disputeResolution = d.dispute_resolution || 'Commercial Court of Muscat'
+  const jurisdiction        = d.jurisdiction || 'Sultanate of Oman'
+  const jurisdictionAr      = d.jurisdiction_ar || 'سلطنة عُمان'
+  const governingLaw        = d.governing_law || 'Laws of the Sultanate of Oman'
+  const governingLawAr      = d.governing_law_ar || 'قوانين سلطنة عُمان'
+  const disputeResolution   = d.dispute_resolution || 'Commercial Court of Muscat'
+  const disputeResolutionAr = d.dispute_resolution_ar || 'المحكمة التجارية بمسقط'
 
   const paymentDueLabel = d.payment_due_day ? (() => {
     const n = Number(d.payment_due_day)
@@ -141,8 +138,17 @@ export async function GET(
   const termEn = `This Agreement commences on the Effective Date and remains in force for ${years} year(s)${d.auto_renewal ? ', automatically renewing for successive terms of the same duration unless either party gives written notice of non-renewal at least ' + notice + ' days before the end of any term' : ''}. Either party may terminate this Agreement by providing ${notice} days' written notice.`
   const termAr = `تبدأ هذه الاتفاقية اعتباراً من تاريخ السريان وتظل نافذة المفعول لمدة ${years} سنة (سنوات)${d.auto_renewal ? '، وتُجدَّد تلقائياً لمدد متعاقبة بذات المدة ما لم يقدم أي من الطرفين إشعاراً خطياً بعدم التجديد قبل انتهاء أي مدة بمدة لا تقل عن ' + notice + ' يوماً' : ''}. يجوز لأي من الطرفين إنهاء هذه الاتفاقية بتقديم إشعار خطي مدته ${notice} يوماً.`
 
+  // Governing-law paragraph is built directly from the admin's own EN/AR
+  // strings now — no lookup table guessing a translation for a custom value.
   const govEn = `This Agreement shall be governed by and construed in accordance with the ${governingLaw}. Any disputes arising out of or in connection with this Agreement shall be submitted to the ${disputeResolution}.`
-  const govAr = `تخضع هذه الاتفاقية وتُفسَّر وفقاً لـ ${arValue(governingLaw)}. وتُحال أي نزاعات تنشأ عن هذه الاتفاقية أو تتعلق بها إلى ${arValue(disputeResolution)}.`
+  const govAr = `تخضع هذه الاتفاقية وتُفسَّر وفقاً لـ ${governingLawAr}. وتُحال أي نزاعات تنشأ عن هذه الاتفاقية أو تتعلق بها إلى ${disputeResolutionAr}.`
+
+  const limitRows: [string, string, number | null | undefined][] = [
+    ['Maximum Organisations', 'الحد الأقصى للمنظمات', branch?.max_orgs],
+    ['Maximum Units', 'الحد الأقصى للوحدات', branch?.max_units],
+    ['Maximum Staff Members', 'الحد الأقصى لأعضاء الفريق', branch?.max_staff],
+    ['Maximum Tenants', 'الحد الأقصى للمستأجرين', branch?.max_tenants],
+  ]
 
   const doc = new Document({
     title: 'Branch Franchise Agreement / اتفاقية امتياز الفرع',
@@ -159,49 +165,20 @@ export async function GET(
     },
     sections: [
       {
-        headers: {
-          default: new Header({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: [
-                  new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT — اتفاقية امتياز الفرع', italics: true, color: '888888', size: 18 }),
-                ],
-              }),
-            ],
-          }),
-        },
-        footers: {
-          default: new Footer({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({ text: 'Page ', size: 18, color: '888888' }),
-                  new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }),
-                  new TextRun({ text: ' of ', size: 18, color: '888888' }),
-                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' }),
-                  new TextRun({ text: '   |   صفحة ', size: 18, color: '888888' }),
-                  new TextRun({ children: [PageNumber.CURRENT], size: 18, color: '888888' }),
-                  new TextRun({ text: ' من ', size: 18, color: '888888' }),
-                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: '888888' }),
-                ],
-              }),
-            ],
-          }),
-        },
+        headers: { default: brandedHeader('BRANCH FRANCHISE AGREEMENT', 'اتفاقية امتياز الفرع') },
+        footers: { default: brandedFooter() },
         children: [
           // ── Cover ───────────────────────────────────────────────
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: 800, after: 40 },
-            children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', bold: true, size: 48, color: '1a56db' })],
+            children: [new TextRun({ text: 'BRANCH FRANCHISE AGREEMENT', bold: true, size: 48, color: '1B3A6B' })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             bidirectional: true,
             spacing: { after: 200 },
-            children: [new TextRun({ text: 'اتفاقية امتياز الفرع', bold: true, size: 48, color: '1a56db', rightToLeft: true })],
+            children: [new TextRun({ text: 'اتفاقية امتياز الفرع', bold: true, size: 48, color: '1B3A6B', rightToLeft: true })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -228,103 +205,133 @@ export async function GET(
 
           // ── 1. Parties ────────────────────────────────────────
           ...headingBi('1. PARTIES', '1. الأطراف', HeadingLevel.HEADING_1),
-          ...headingBi('1.1 HQ (Franchisor)', '1.1 المقر الرئيسي (المرخِّص)'),
-          ...fieldBi('Legal Name', 'الاسم القانوني', d.hq_legal_name),
-          ...fieldBi('Address', 'العنوان', d.hq_address),
-          ...fieldBi('Commercial Registration', 'السجل التجاري', d.hq_registration),
-          ...fieldBi('Authorised Representative', 'الممثل المخول', d.hq_representative),
+          heading('1.1 HQ (Franchisor)', HeadingLevel.HEADING_3),
+          bilingualCard(
+            [
+              field('Legal Name', d.hq_legal_name),
+              field('Address', d.hq_address),
+              field('Commercial Registration', d.hq_registration),
+              field('Authorised Representative', d.hq_representative),
+            ],
+            [
+              fieldAr('الاسم القانوني', d.hq_legal_name),
+              fieldAr('العنوان', d.hq_address),
+              fieldAr('السجل التجاري', d.hq_registration),
+              fieldAr('الممثل المخول', d.hq_representative),
+            ],
+          ),
           blank(),
-          ...headingBi('1.2 Branch (Franchisee)', '1.2 الفرع (المرخَّص له)'),
-          ...fieldBi('Legal Name', 'الاسم القانوني', d.branch_legal_name),
-          ...fieldBi('Address', 'العنوان', d.branch_address),
-          ...fieldBi('Commercial Registration', 'السجل التجاري', d.branch_registration),
-          ...fieldBi('Authorised Representative', 'الممثل المخول', d.branch_representative),
+          heading('1.2 Branch (Franchisee)', HeadingLevel.HEADING_3),
+          bilingualCard(
+            [
+              field('Legal Name', d.branch_legal_name),
+              field('Address', d.branch_address),
+              field('Commercial Registration', d.branch_registration),
+              field('Authorised Representative', d.branch_representative),
+            ],
+            [
+              fieldAr('الاسم القانوني', d.branch_legal_name),
+              fieldAr('العنوان', d.branch_address),
+              fieldAr('السجل التجاري', d.branch_registration),
+              fieldAr('الممثل المخول', d.branch_representative),
+            ],
+          ),
 
           // ── 2. Commercial Terms ───────────────────────────────
           ...headingBi('2. COMMERCIAL TERMS', '2. الشروط التجارية', HeadingLevel.HEADING_1),
-          ...fieldBi('Effective Date', 'تاريخ السريان', effectiveDate),
-          field('Agreement Duration', `${years} year(s)`),
-          fieldAr('مدة الاتفاقية', `${years} سنة (سنوات)`),
-          field('Payment Due Day (each month)', paymentDueLabel),
-          fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDueLabelAr),
-          field('Notice Period', `${notice} days`),
-          fieldAr('فترة الإشعار', `${notice} يوماً`),
-          field('Auto-Renewal', d.auto_renewal ? 'Yes — agreement renews automatically unless terminated' : 'No — must be renewed manually'),
-          fieldAr('التجديد التلقائي', d.auto_renewal ? 'نعم — تُجدَّد الاتفاقية تلقائياً ما لم يتم إنهاؤها' : 'لا — يجب تجديدها يدوياً'),
+          bilingualCard(
+            [
+              field('Effective Date', effectiveDate),
+              field('Agreement Duration', `${years} year(s)`),
+              field('Payment Due Day (each month)', paymentDueLabel),
+              field('Notice Period', `${notice} days`),
+              field('Auto-Renewal', d.auto_renewal ? 'Yes — renews automatically unless terminated' : 'No — must be renewed manually'),
+            ],
+            [
+              fieldAr('تاريخ السريان', effectiveDate),
+              fieldAr('مدة الاتفاقية', `${years} سنة (سنوات)`),
+              fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDueLabelAr),
+              fieldAr('فترة الإشعار', `${notice} يوماً`),
+              fieldAr('التجديد التلقائي', d.auto_renewal ? 'نعم — تُجدَّد تلقائياً ما لم يتم إنهاؤها' : 'لا — يجب تجديدها يدوياً'),
+            ],
+          ),
 
           // ── 3. Capacity Limits ────────────────────────────────
           ...headingBi('3. CAPACITY LIMITS', '3. الحدود التشغيلية', HeadingLevel.HEADING_1),
-          ...bodyBi('The following operational limits apply to this Branch:', 'تنطبق الحدود التشغيلية التالية على هذا الفرع:'),
-          ...([
-            ['Maximum Organisations', 'الحد الأقصى للمنظمات', branch?.max_orgs != null ? String(branch.max_orgs) : null],
-            ['Maximum Units', 'الحد الأقصى للوحدات', branch?.max_units != null ? String(branch.max_units) : null],
-            ['Maximum Staff Members', 'الحد الأقصى لأعضاء الفريق', branch?.max_staff != null ? String(branch.max_staff) : null],
-            ['Maximum Tenants', 'الحد الأقصى للمستأجرين', branch?.max_tenants != null ? String(branch.max_tenants) : null],
-          ] as [string, string, string | null][]).flatMap(([labelEn, labelAr, value]) => [
-            new Paragraph({
-              spacing: { after: 20 },
-              children: [
-                new TextRun({ text: `${labelEn}: `, bold: true }),
-                new TextRun({ text: value ?? 'Unlimited' }),
-              ],
-            }),
-            new Paragraph({
-              alignment: AlignmentType.RIGHT,
-              bidirectional: true,
-              spacing: { after: 100 },
-              children: [
-                new TextRun({ text: `${labelAr}: `, bold: true, rightToLeft: true }),
-                new TextRun({ text: value ?? 'غير محدود', rightToLeft: true }),
-              ],
-            }),
-          ]),
+          bilingualCard(
+            [
+              body('The following operational limits apply to this Branch:'),
+              ...limitRows.map(([labelEn, , value]) => field(labelEn, value != null ? String(value) : 'Unlimited')),
+            ],
+            [
+              bodyAr('تنطبق الحدود التشغيلية التالية على هذا الفرع:'),
+              ...limitRows.map(([, labelAr, value]) => fieldAr(labelAr, value != null ? String(value) : 'غير محدود')),
+            ],
+          ),
 
           // ── 4. HQ Obligations ─────────────────────────────────
+          // Admin-authored on both sides now — no auto-translation. If the
+          // Arabic box was left empty, show a nudge to complete the form
+          // rather than mislabeling the English text as Arabic.
           ...headingBi('4. HQ OBLIGATIONS', '4. التزامات المقر الرئيسي', HeadingLevel.HEADING_1),
-          ...bodyBi(
-            d.hq_obligations || 'HQ shall provide the Branch with access to the GetSuitel platform, technical support, training materials, and operational guidelines as agreed between the parties.',
-            d.hq_obligations
-              ? d.hq_obligations
-              : 'يلتزم المقر الرئيسي بتزويد الفرع بإمكانية الوصول إلى منصة جيت سويتل، والدعم الفني، والمواد التدريبية، والإرشادات التشغيلية وفق ما يتفق عليه الطرفان.'
+          bilingualCard(
+            [body(d.hq_obligations || 'HQ shall provide the Branch with access to the GetSuitel platform, technical support, training materials, and operational guidelines as agreed between the parties.')],
+            [d.hq_obligations_ar?.trim() ? bodyAr(d.hq_obligations_ar) : awaitingArabicPlaceholder()],
           ),
-          ...(d.hq_obligations ? [untranslatedNoteAr('(بند مخصص أدخله المقر الرئيسي — بالنص الأصلي أعلاه، لم تتم ترجمته آلياً)')] : []),
 
           // ── 5. Branch Obligations ─────────────────────────────
           ...headingBi('5. BRANCH OBLIGATIONS', '5. التزامات الفرع', HeadingLevel.HEADING_1),
-          ...bodyBi(
-            d.branch_obligations || 'The Branch shall operate in accordance with HQ guidelines, maintain data accuracy, promptly pay all fees, and comply with all applicable laws and regulations.',
-            d.branch_obligations
-              ? d.branch_obligations
-              : 'يلتزم الفرع بالعمل وفقاً لإرشادات المقر الرئيسي، والحفاظ على دقة البيانات، وسداد جميع الرسوم في مواعيدها، والامتثال لجميع القوانين والأنظمة المعمول بها.'
+          bilingualCard(
+            [body(d.branch_obligations || 'The Branch shall operate in accordance with HQ guidelines, maintain data accuracy, promptly pay all fees, and comply with all applicable laws and regulations.')],
+            [d.branch_obligations_ar?.trim() ? bodyAr(d.branch_obligations_ar) : awaitingArabicPlaceholder()],
           ),
-          ...(d.branch_obligations ? [untranslatedNoteAr('(بند مخصص أدخله المقر الرئيسي — بالنص الأصلي أعلاه، لم تتم ترجمته آلياً)')] : []),
 
           // ── 6. Term & Termination ─────────────────────────────
+          // Deterministic template sentence built from the same numbers on
+          // both sides (not user-authored free text), so no *_ar field is
+          // needed here — the two strings are already equivalent by
+          // construction.
           ...headingBi('6. TERM AND TERMINATION', '6. المدة والإنهاء', HeadingLevel.HEADING_1),
-          ...bodyBi(termEn, termAr),
+          bilingualCard([body(termEn)], [bodyAr(termAr)]),
 
           // ── 7. Governing Law ──────────────────────────────────
           ...headingBi('7. GOVERNING LAW AND DISPUTE RESOLUTION', '7. القانون الحاكم وتسوية النزاعات', HeadingLevel.HEADING_1),
-          ...fieldBi('Jurisdiction', 'الاختصاص القضائي', jurisdiction),
-          ...fieldBi('Governing Law', 'القانون الحاكم', governingLaw),
-          ...fieldBi('Dispute Resolution', 'تسوية النزاعات', disputeResolution),
-          blank(),
-          ...bodyBi(govEn, govAr),
+          bilingualCard(
+            [
+              field('Jurisdiction', jurisdiction),
+              field('Governing Law', governingLaw),
+              field('Dispute Resolution', disputeResolution),
+              blank(),
+              body(govEn),
+            ],
+            [
+              fieldAr('الاختصاص القضائي', jurisdictionAr),
+              fieldAr('القانون الحاكم', governingLawAr),
+              fieldAr('تسوية النزاعات', disputeResolutionAr),
+              blank(),
+              bodyAr(govAr),
+            ],
+          ),
 
           // ── 8. Custom Clauses ─────────────────────────────────
+          // Genuinely optional — if HQ wrote an English clause but left the
+          // Arabic box blank, that's an accepted gap (untranslatedNoteAr),
+          // not a "please complete the form" nudge.
           ...(d.custom_clauses
             ? [
                 ...headingBi('8. ADDITIONAL CLAUSES', '8. بنود إضافية', HeadingLevel.HEADING_1),
-                body(d.custom_clauses),
-                untranslatedNoteAr('ملاحظة: النص أعلاه بند إضافي أدخله المقر الرئيسي، ولم تتم ترجمته آلياً.'),
+                bilingualCard(
+                  [body(d.custom_clauses)],
+                  [d.custom_clauses_ar?.trim() ? bodyAr(d.custom_clauses_ar) : untranslatedNoteAr('لم تتم إضافة نسخة عربية لهذا البند.')],
+                ),
               ]
             : []),
 
           // ── Signatures ────────────────────────────────────────
           ...headingBi(d.custom_clauses ? '9. SIGNATURES' : '8. SIGNATURES', d.custom_clauses ? '9. التوقيعات' : '8. التوقيعات', HeadingLevel.HEADING_1),
-          ...bodyBi(
-            'IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date first written above.',
-            'وإثباتاً لما تقدم، قام الطرفان بتوقيع هذه الاتفاقية اعتباراً من تاريخ السريان المذكور أعلاه.'
+          bilingualCard(
+            [body('IN WITNESS WHEREOF, the parties have executed this Agreement as of the Effective Date first written above.')],
+            [bodyAr('وإثباتاً لما تقدم، قام الطرفان بتوقيع هذه الاتفاقية اعتباراً من تاريخ السريان المذكور أعلاه.')],
           ),
           blank(),
           signatureTable(),

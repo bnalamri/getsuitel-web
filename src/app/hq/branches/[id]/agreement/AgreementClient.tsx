@@ -29,11 +29,17 @@ interface AgreementData {
   notice_period_days?: number | null
   auto_renewal?: boolean | null
   hq_obligations?: string | null
+  hq_obligations_ar?: string | null
   branch_obligations?: string | null
+  branch_obligations_ar?: string | null
   jurisdiction?: string | null
+  jurisdiction_ar?: string | null
   governing_law?: string | null
+  governing_law_ar?: string | null
   dispute_resolution?: string | null
+  dispute_resolution_ar?: string | null
   custom_clauses?: string | null
+  custom_clauses_ar?: string | null
   exported_at?: string | null
   signed_doc_url?: string | null
   signed_doc_name?: string | null
@@ -62,9 +68,9 @@ function SectionHeader({ title, open, onToggle }: { title: string; open: boolean
   )
 }
 
-function Input({ label, name, value, onChange, type = 'text', placeholder, required, hint }: {
+function Input({ label, name, value, onChange, type = 'text', placeholder, required, hint, rtl }: {
   label: string; name: string; value: string | number; onChange: (v: string) => void
-  type?: string; placeholder?: string; required?: boolean; hint?: string
+  type?: string; placeholder?: string; required?: boolean; hint?: string; rtl?: boolean
 }) {
   return (
     <div>
@@ -77,15 +83,16 @@ function Input({ label, name, value, onChange, type = 'text', placeholder, requi
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        dir={rtl ? 'rtl' : undefined}
+        className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${rtl ? 'text-right font-arabic' : ''}`}
       />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   )
 }
 
-function Textarea({ label, name, value, onChange, rows = 4, hint }: {
-  label: string; name: string; value: string; onChange: (v: string) => void; rows?: number; hint?: string
+function Textarea({ label, name, value, onChange, rows = 4, hint, rtl }: {
+  label: string; name: string; value: string; onChange: (v: string) => void; rows?: number; hint?: string; rtl?: boolean
 }) {
   return (
     <div>
@@ -95,9 +102,36 @@ function Textarea({ label, name, value, onChange, rows = 4, hint }: {
         rows={rows}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+        dir={rtl ? 'rtl' : undefined}
+        className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y ${rtl ? 'text-right font-arabic' : ''}`}
       />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+    </div>
+  )
+}
+
+// A field paired with its Arabic counterpart, shown side by side on desktop
+// — this IS the legal-content field for exports now (no more auto
+// translation), so both language boxes sit at equal visual weight.
+function BilingualField({ enLabel, arLabel, enValue, onEnChange, arValue, onArChange, rows, isTextarea, type, placeholder, hint, required }: {
+  enLabel: string; arLabel: string
+  enValue: string; onEnChange: (v: string) => void
+  arValue: string; onArChange: (v: string) => void
+  rows?: number; isTextarea?: boolean; type?: string; placeholder?: string; hint?: string; required?: boolean
+}) {
+  return (
+    <div className="grid sm:grid-cols-2 gap-4">
+      {isTextarea ? (
+        <Textarea label={enLabel} name="" value={enValue} onChange={onEnChange} rows={rows} />
+      ) : (
+        <Input label={enLabel} name="" value={enValue} onChange={onEnChange} type={type} placeholder={placeholder} required={required} />
+      )}
+      {isTextarea ? (
+        <Textarea label={arLabel} name="" value={arValue} onChange={onArChange} rows={rows} rtl />
+      ) : (
+        <Input label={arLabel} name="" value={arValue} onChange={onArChange} rtl />
+      )}
+      {hint && <p className="sm:col-span-2 -mt-2 text-xs text-gray-500">{hint}</p>}
     </div>
   )
 }
@@ -124,11 +158,17 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
   const [noticeDays, setNoticeDays] = useState(String(d?.notice_period_days ?? 30))
   const [autoRenewal, setAutoRenewal] = useState(d?.auto_renewal ?? true)
   const [hqObligations, setHqObligations] = useState(d?.hq_obligations ?? 'HQ shall provide the Branch with access to the GetSuitel platform, ongoing technical support, training materials, platform updates, and operational guidelines.')
+  const [hqObligationsAr, setHqObligationsAr] = useState(d?.hq_obligations_ar ?? 'يلتزم المقر الرئيسي بتزويد الفرع بإمكانية الوصول إلى منصة جيت سويتل، والدعم الفني المستمر، والمواد التدريبية، وتحديثات المنصة، والإرشادات التشغيلية.')
   const [branchObligations, setBranchObligations] = useState(d?.branch_obligations ?? 'The Branch shall operate in accordance with HQ guidelines, maintain accurate data, pay all fees on time, protect user data in compliance with applicable laws, and report any operational issues promptly.')
+  const [branchObligationsAr, setBranchObligationsAr] = useState(d?.branch_obligations_ar ?? 'يلتزم الفرع بالعمل وفقاً لإرشادات المقر الرئيسي، والحفاظ على دقة البيانات، وسداد جميع الرسوم في مواعيدها، وحماية بيانات المستخدمين وفقاً للقوانين المعمول بها، والإبلاغ الفوري عن أي مشكلات تشغيلية.')
   const [jurisdiction, setJurisdiction] = useState(d?.jurisdiction ?? 'Sultanate of Oman')
+  const [jurisdictionAr, setJurisdictionAr] = useState(d?.jurisdiction_ar ?? 'سلطنة عُمان')
   const [governingLaw, setGoverningLaw] = useState(d?.governing_law ?? 'Laws of the Sultanate of Oman')
+  const [governingLawAr, setGoverningLawAr] = useState(d?.governing_law_ar ?? 'قوانين سلطنة عُمان')
   const [disputeRes, setDisputeRes] = useState(d?.dispute_resolution ?? 'Commercial Court of Muscat')
+  const [disputeResAr, setDisputeResAr] = useState(d?.dispute_resolution_ar ?? 'المحكمة التجارية بمسقط')
   const [customClauses, setCustomClauses] = useState(d?.custom_clauses ?? '')
+  const [customClausesAr, setCustomClausesAr] = useState(d?.custom_clauses_ar ?? '')
 
   // Sections open/closed
   const [openSections, setOpenSections] = useState({ parties: true, commercial: true, obligations: false, law: false, custom: false })
@@ -172,11 +212,17 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
       notice_period_days: noticeDays ? Number(noticeDays) : null,
       auto_renewal: autoRenewal,
       hq_obligations: hqObligations || null,
+      hq_obligations_ar: hqObligationsAr || null,
       branch_obligations: branchObligations || null,
+      branch_obligations_ar: branchObligationsAr || null,
       jurisdiction: jurisdiction || null,
+      jurisdiction_ar: jurisdictionAr || null,
       governing_law: governingLaw || null,
+      governing_law_ar: governingLawAr || null,
       dispute_resolution: disputeRes || null,
+      dispute_resolution_ar: disputeResAr || null,
       custom_clauses: customClauses || null,
+      custom_clauses_ar: customClausesAr || null,
       max_units: limits.max_units,
       max_staff: limits.max_staff,
       max_tenants: limits.max_tenants,
@@ -398,21 +444,24 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
           <div className="bg-white rounded-xl border border-gray-200 px-5">
             <SectionHeader title="3. Obligations" open={openSections.obligations} onToggle={() => toggle('obligations')} />
             {openSections.obligations && (
-              <div className="pb-5 space-y-4">
-                <Textarea
-                  label="HQ Obligations"
-                  name="hq_obligations"
-                  value={hqObligations}
-                  onChange={setHqObligations}
-                  rows={5}
+              <div className="pb-5 space-y-5">
+                <p className="text-xs text-gray-500 -mt-1">
+                  Legal wording — write both languages yourself (have counsel review if needed). Nothing here is auto-translated.
+                </p>
+                <BilingualField
+                  enLabel="HQ Obligations (English)"
+                  arLabel="التزامات المقر الرئيسي (عربي)"
+                  enValue={hqObligations} onEnChange={setHqObligations}
+                  arValue={hqObligationsAr} onArChange={setHqObligationsAr}
+                  isTextarea rows={5}
                   hint="What HQ commits to provide or do for the branch."
                 />
-                <Textarea
-                  label="Branch Obligations"
-                  name="branch_obligations"
-                  value={branchObligations}
-                  onChange={setBranchObligations}
-                  rows={5}
+                <BilingualField
+                  enLabel="Branch Obligations (English)"
+                  arLabel="التزامات الفرع (عربي)"
+                  enValue={branchObligations} onEnChange={setBranchObligations}
+                  arValue={branchObligationsAr} onArChange={setBranchObligationsAr}
+                  isTextarea rows={5}
                   hint="What the branch commits to in return."
                 />
               </div>
@@ -423,12 +472,22 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
           <div className="bg-white rounded-xl border border-gray-200 px-5">
             <SectionHeader title="4. Governing Law" open={openSections.law} onToggle={() => toggle('law')} />
             {openSections.law && (
-              <div className="pb-5 space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <Input label="Jurisdiction" name="jurisdiction" value={jurisdiction} onChange={setJurisdiction} />
-                  <Input label="Governing Law" name="governing_law" value={governingLaw} onChange={setGoverningLaw} />
-                </div>
-                <Input label="Dispute Resolution Forum" name="dispute_resolution" value={disputeRes} onChange={setDisputeRes} />
+              <div className="pb-5 space-y-5">
+                <BilingualField
+                  enLabel="Jurisdiction (English)" arLabel="الاختصاص القضائي (عربي)"
+                  enValue={jurisdiction} onEnChange={setJurisdiction}
+                  arValue={jurisdictionAr} onArChange={setJurisdictionAr}
+                />
+                <BilingualField
+                  enLabel="Governing Law (English)" arLabel="القانون الحاكم (عربي)"
+                  enValue={governingLaw} onEnChange={setGoverningLaw}
+                  arValue={governingLawAr} onArChange={setGoverningLawAr}
+                />
+                <BilingualField
+                  enLabel="Dispute Resolution Forum (English)" arLabel="جهة تسوية النزاعات (عربي)"
+                  enValue={disputeRes} onEnChange={setDisputeRes}
+                  arValue={disputeResAr} onArChange={setDisputeResAr}
+                />
               </div>
             )}
           </div>
@@ -438,13 +497,12 @@ export default function AgreementClient({ branchId, branchName, branchCity, bran
             <SectionHeader title="5. Additional Clauses (optional)" open={openSections.custom} onToggle={() => toggle('custom')} />
             {openSections.custom && (
               <div className="pb-5">
-                <Textarea
-                  label=""
-                  name="custom_clauses"
-                  value={customClauses}
-                  onChange={setCustomClauses}
-                  rows={6}
-                  hint="Any additional terms, confidentiality, IP, or special conditions."
+                <BilingualField
+                  enLabel="Additional Clauses (English)" arLabel="بنود إضافية (عربي)"
+                  enValue={customClauses} onEnChange={setCustomClauses}
+                  arValue={customClausesAr} onArChange={setCustomClausesAr}
+                  isTextarea rows={6}
+                  hint="Any additional terms, confidentiality, IP, or special conditions. Leave the Arabic box empty if this stays English-only — the export will note it as such."
                 />
               </div>
             )}
