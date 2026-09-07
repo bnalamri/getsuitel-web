@@ -21,8 +21,12 @@ export default function FeatureFlagsCard() {
 
   useEffect(() => {
     fetch('/api/owner/flags')
-      .then(r => r.json())
-      .then(d => setFlags(d.flags ?? []))
+      .then(async r => {
+        const d = await r.json()
+        if (!r.ok) { setError(d.error ?? `Error loading flags (${r.status})`); return }
+        setFlags(d.flags ?? [])
+      })
+      .catch(e => setError(String(e)))
       .finally(() => setLoading(false))
   }, [])
 
@@ -39,7 +43,7 @@ export default function FeatureFlagsCard() {
   }
 
   if (loading) return null
-  if (flags.length === 0) return null
+  if (flags.length === 0 && !error) return null
 
   return (
     <div className="card p-6">

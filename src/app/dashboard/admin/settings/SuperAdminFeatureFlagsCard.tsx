@@ -27,8 +27,12 @@ export default function SuperAdminFeatureFlagsCard() {
 
   useEffect(() => {
     fetch('/api/superadmin/flags')
-      .then(r => r.json())
-      .then(d => { setFlags(d.flags ?? []); setOrgs(d.organizations ?? []) })
+      .then(async r => {
+        const d = await r.json()
+        if (!r.ok) { setError(d.error ?? `Error loading flags (${r.status})`); return }
+        setFlags(d.flags ?? []); setOrgs(d.organizations ?? [])
+      })
+      .catch(e => setError(String(e)))
       .finally(() => setLoading(false))
   }, [])
 
