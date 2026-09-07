@@ -7,7 +7,7 @@ import {
 import {
   field, fieldAr, heading, headingBi, body, bodyAr, blank,
   bilingualCard, awaitingArabicPlaceholder, untranslatedNoteAr,
-  brandedHeader, brandedFooter,
+  brandedHeader, brandedFooter, dualDate,
 } from '@/lib/docx/bilingual'
 
 async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -115,9 +115,12 @@ export async function GET(
 
   const safeBranchName = (branch?.name ?? params.id.slice(0, 8)).replace(/[^a-zA-Z0-9]/g, '_')
 
-  const effectiveDate = d.effective_date
-    ? new Date(d.effective_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-    : '___________________'
+  // Dual-calendar: Gregorian + Hijri (Umm al-Qura), the convention on
+  // official Omani/GCC documents. Also fixes the Arabic side previously
+  // reusing the English-formatted string verbatim (English month name
+  // inside Arabic text).
+  const effectiveDateEn = dualDate(d.effective_date, 'en')
+  const effectiveDateAr = dualDate(d.effective_date, 'ar')
 
   const years  = d.duration_years ?? 1
   const notice = d.notice_period_days ?? 30
@@ -183,13 +186,13 @@ export async function GET(
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 },
-            children: [new TextRun({ text: `Effective Date: ${effectiveDate}`, size: 26, italics: true })],
+            children: [new TextRun({ text: `Effective Date: ${effectiveDateEn}`, size: 26, italics: true })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             bidirectional: true,
             spacing: { after: 120 },
-            children: [new TextRun({ text: `تاريخ السريان: ${effectiveDate}`, size: 26, italics: true, rightToLeft: true })],
+            children: [new TextRun({ text: `تاريخ السريان: ${effectiveDateAr}`, size: 26, italics: true, rightToLeft: true })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -241,14 +244,14 @@ export async function GET(
           ...headingBi('2. COMMERCIAL TERMS', '2. الشروط التجارية', HeadingLevel.HEADING_1),
           bilingualCard(
             [
-              field('Effective Date', effectiveDate),
+              field('Effective Date', effectiveDateEn),
               field('Agreement Duration', `${years} year(s)`),
               field('Payment Due Day (each month)', paymentDueLabel),
               field('Notice Period', `${notice} days`),
               field('Auto-Renewal', d.auto_renewal ? 'Yes — renews automatically unless terminated' : 'No — must be renewed manually'),
             ],
             [
-              fieldAr('تاريخ السريان', effectiveDate),
+              fieldAr('تاريخ السريان', effectiveDateAr),
               fieldAr('مدة الاتفاقية', `${years} سنة (سنوات)`),
               fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDueLabelAr),
               fieldAr('فترة الإشعار', `${notice} يوماً`),

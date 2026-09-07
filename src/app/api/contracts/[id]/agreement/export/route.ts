@@ -7,7 +7,7 @@ import {
 import {
   field, fieldAr, headingBi, body, bodyAr, blank,
   bilingualCard, awaitingArabicPlaceholder, untranslatedNoteAr,
-  brandedHeader, brandedFooter,
+  brandedHeader, brandedFooter, dualDate,
 } from '@/lib/docx/bilingual'
 
 // Owner-side only (owner / property_manager) — this generates the tenancy
@@ -171,9 +171,14 @@ export async function GET(
   const unit   = contract.units as unknown as { unit_number: string; properties: { name: string; name_ar: string | null; address: string; city: string } | null } | null
   const property = unit?.properties ?? null
 
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-  const startFmt = fmtDate(contract.start_date)
-  const endFmt   = fmtDate(contract.end_date)
+  // Dual-calendar: Gregorian + Hijri (Umm al-Qura), the convention on
+  // official Omani/GCC documents. Also fixes the Arabic side previously
+  // reusing the English-formatted string verbatim (English month name
+  // inside Arabic text).
+  const startEnFmt = dualDate(contract.start_date, 'en')
+  const startArFmt = dualDate(contract.start_date, 'ar')
+  const endEnFmt   = dualDate(contract.end_date, 'en')
+  const endArFmt   = dualDate(contract.end_date, 'ar')
 
   const currency = contract.currency ?? 'OMR'
   const rentLine   = `${currency} ${Number(contract.rent_amount).toFixed(2)} per month`
@@ -192,8 +197,8 @@ export async function GET(
     ['Internet', 'الإنترنت', utilCfg.internet ?? 'owner'],
   ]
 
-  const termEn = `This Agreement commences on ${startFmt} and ends on ${endFmt}. Either party wishing not to renew must give the other at least ${t.noticeDays} days' written notice before the end of the term. Early termination by either party requires ${t.noticeDays} days' written notice and is subject to any deposit or notice-period terms agreed between the parties.`
-  const termAr = `تبدأ هذه الاتفاقية بتاريخ ${startFmt} وتنتهي بتاريخ ${endFmt}. على الطرف الراغب في عدم التجديد إخطار الطرف الآخر كتابياً بمدة لا تقل عن ${t.noticeDays} يوماً قبل نهاية المدة. يتطلب الإنهاء المبكر من قبل أي من الطرفين إشعاراً خطياً مدته ${t.noticeDays} يوماً، ويخضع لأي شروط متعلقة بالتأمين أو مدة الإشعار المتفق عليها بين الطرفين.`
+  const termEn = `This Agreement commences on ${startEnFmt} and ends on ${endEnFmt}. Either party wishing not to renew must give the other at least ${t.noticeDays} days' written notice before the end of the term. Early termination by either party requires ${t.noticeDays} days' written notice and is subject to any deposit or notice-period terms agreed between the parties.`
+  const termAr = `تبدأ هذه الاتفاقية بتاريخ ${startArFmt} وتنتهي بتاريخ ${endArFmt}. على الطرف الراغب في عدم التجديد إخطار الطرف الآخر كتابياً بمدة لا تقل عن ${t.noticeDays} يوماً قبل نهاية المدة. يتطلب الإنهاء المبكر من قبل أي من الطرفين إشعاراً خطياً مدته ${t.noticeDays} يوماً، ويخضع لأي شروط متعلقة بالتأمين أو مدة الإشعار المتفق عليها بين الطرفين.`
 
   const safeTenantName = (tenant?.full_name ?? 'Tenant').replace(/[^a-zA-Z0-9]/g, '_')
 
@@ -232,11 +237,11 @@ export async function GET(
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER, spacing: { after: 40 },
-            children: [new TextRun({ text: `Term: ${startFmt} to ${endFmt}`, size: 24, italics: true })],
+            children: [new TextRun({ text: `Term: ${startEnFmt} to ${endEnFmt}`, size: 24, italics: true })],
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER, bidirectional: true, spacing: { after: 600 },
-            children: [new TextRun({ text: `المدة: من ${startFmt} إلى ${endFmt}`, size: 24, italics: true, rightToLeft: true })],
+            children: [new TextRun({ text: `المدة: من ${startArFmt} إلى ${endArFmt}`, size: 24, italics: true, rightToLeft: true })],
           }),
 
           // ── 1. Parties ────────────────────────────────────────
@@ -298,14 +303,14 @@ export async function GET(
               field('Payment Due Day (each month)', paymentDayLine),
               field('Payment Method', paymentMethodEn),
               field('Security Deposit', depositLine),
-              field('Lease Term', `${startFmt} — ${endFmt}`),
+              field('Lease Term', `${startEnFmt} — ${endEnFmt}`),
             ],
             [
               fieldAr('الإيجار', rentLineAr),
               fieldAr('يوم استحقاق الدفع (كل شهر)', paymentDayLineAr),
               fieldAr('طريقة الدفع', paymentMethodAr),
               fieldAr('مبلغ التأمين', depositLine),
-              fieldAr('مدة العقد', `${startFmt} — ${endFmt}`),
+              fieldAr('مدة العقد', `${startArFmt} — ${endArFmt}`),
             ],
           ),
 

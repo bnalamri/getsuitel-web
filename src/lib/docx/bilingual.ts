@@ -158,6 +158,28 @@ function gapCell() {
 // (field()/body() calls for the English card, fieldAr()/bodyAr() for the
 // Arabic card) — put the shared section heading above this via headingBi(),
 // spanning the full page width, not inside either card.
+// ── Dual-calendar dates ─────────────────────────────────────────────────
+// Official Omani/GCC documents customarily show both the Gregorian and
+// Hijri (Umm al-Qura) date. Node's built-in ICU supports the Islamic
+// calendar natively via Intl — no extra library needed. Western (Latin)
+// digits are used throughout, matching how every other number already
+// renders in these documents (e.g. "30 يوماً", not Eastern Arabic numerals).
+// Also fixes a latent bug: the Arabic side of a date used to reuse the
+// English-formatted string verbatim (English month name inside Arabic
+// text) — this gives it a real Arabic-locale Gregorian rendering too.
+export function dualDate(iso: string | null | undefined, lang: 'en' | 'ar'): string {
+  if (!iso) return '___________________'
+  const d = new Date(iso)
+  if (lang === 'en') {
+    const gregorian = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    const hijri = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+    return `${gregorian} (${hijri})`
+  }
+  const gregorian = new Intl.DateTimeFormat('ar-u-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+  const hijri = new Intl.DateTimeFormat('ar-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+  return `${gregorian} (${hijri})`
+}
+
 export function bilingualCard(enChildren: Paragraph[], arChildren: Paragraph[]) {
   return new Table({
     width: { size: CONTENT_WIDTH_DXA, type: WidthType.DXA },
