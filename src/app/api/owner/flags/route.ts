@@ -11,7 +11,7 @@ const TENANT_FACING_KEYS = ['bank_transfer', 'cheque_payments', 'mobile_wallet',
 // never trusted from a possibly-stale stored value — so if HQ or the
 // branch admin tightens a setting after an org already had it on, the org
 // is capped immediately rather than waiting for someone to re-save it.
-async function getCeiling(supabase: Awaited<ReturnType<typeof createClient>>, featureKey: string, branchId: string | null) {
+async function getCeiling(supabase: Awaited<ReturnType<typeof createClient>>, featureKey: string, branchId: string | null, orgId: string | null) {
   const { data: pf } = await supabase
     .from('platform_feature_flags')
     .select('enabled_globally, branch_overrides')
@@ -23,11 +23,15 @@ async function getCeiling(supabase: Awaited<ReturnType<typeof createClient>>, fe
 
   const { data: bf } = await supabase
     .from('branch_feature_flags')
-    .select('enabled_branchwide')
+    .select('enabled_branchwide, org_overrides')
     .eq('feature_key', featureKey)
     .eq('branch_id', branchId)
     .single()
-  const branchEffective = bf?.enabled_branchwide ?? true
+  // A Super Admin's per-org override (Inherit/On/Off) takes precedence over
+  // the branch-wide setting for this org specifically; falls back to the
+  // branch-wide value, then to open, if no override or row exists.
+  const orgOverride = orgId ? (bf?.org_overrides as Record<string, boolean> | null)?.[orgId] : undefined
+  const branchEffective = orgOverride ?? bf?.enabled_branchwide ?? true
   return hqCeiling && branchEffective
 }
 
@@ -62,7 +66,7 @@ export async function GET() {
     feature_key: pf.feature_key,
     label: pf.label,
     description: pf.description,
-    ceiling: await getCeiling(supabase, pf.feature_key, branchId ?? null),
+    ceiling: await getCeiling(supabase, pf.feature_key, branchId ?? null, orgId ?? null),
     enabled: orgFlagMap.get(pf.feature_key) ?? true,
   })))
 
@@ -91,7 +95,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (enabled) {
-    const ceiling = await getCeiling(supabase, feature_key, branchId ?? null)
+    const ceiling = await getCeiling(supabase, feature_key, branchId ?? null, orgId ?? null)
     if (!ceiling) {
       return NextResponse.json({ error: 'This feature is disabled for your branch — contact your branch administrator' }, { status: 403 })
     }
