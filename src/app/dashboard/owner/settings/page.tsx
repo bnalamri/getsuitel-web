@@ -6,7 +6,6 @@ import BankSettingsForm from './BankSettingsForm'
 import ChangePasswordForm from './ChangePasswordForm'
 import LanguageSettingsForm from './LanguageSettingsForm'
 import PlatformInfoCard from './PlatformInfoCard'
-import FeatureFlagsCard from './FeatureFlagsCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -64,7 +63,6 @@ export default async function SettingsPage() {
           <OrgSettingsForm org={org} userId={user.id} orgId={profile?.organization_id ?? null} platformCurrency={platformCurrency} />
           <PaymentSettingsForm org={org} orgId={profile?.organization_id ?? null} />
           <BankSettingsForm orgId={profile?.organization_id ?? ''} initialBanks={banks ?? []} />
-          <FeatureFlagsCard />
         </>
       )}
       <LanguageSettingsForm userId={user.id} />

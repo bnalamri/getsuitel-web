@@ -10,7 +10,7 @@ import {
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
   LogOut, Menu, X, ChevronLeft, ChevronRight,
   ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
-  UserCheck, DollarSign, Zap, Database, Package,
+  UserCheck, DollarSign, Zap, Database, Package, SlidersHorizontal,
 } from 'lucide-react'
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -40,6 +40,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/invitations', icon:Mail, en:'Invitations', ar:'الدعوات' },
     ]},
     { en:'System', ar:'النظام', items:[
+      { href:'/dashboard/admin/system', icon:SlidersHorizontal, en:'System Tools', ar:'أدوات النظام' },
       { href:'/dashboard/admin/cron-monitor', icon:Activity, en:'Cron Monitor', ar:'مراقب المهام' },
       { href:'/dashboard/admin/demo-audio', icon:Volume2, en:'Demo Audio', ar:'صوت الجولة' },
       { href:'/dashboard/admin/settings', icon:Settings, en:'Settings', ar:'الإعدادات' },
@@ -87,6 +88,9 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/maintenance', icon:Wrench, en:'Maintenance', ar:'الصيانة' },
       { href:'/dashboard/owner/notices', icon:AlertCircle, en:'Notices', ar:'الإشعارات' },
       { href:'/dashboard/owner/team', icon:HardHat, en:'Team', ar:'الفريق' },
+    ]},
+    { en:'System', ar:'النظام', items:[
+      { href:'/dashboard/owner/system', icon:SlidersHorizontal, en:'System Tools', ar:'أدوات النظام' },
     ]},
     { en:'Account', ar:'الحساب', items:[
       { href:'/dashboard/owner/staff', icon:UserCog, en:'Staff', ar:'الموظفون' },
