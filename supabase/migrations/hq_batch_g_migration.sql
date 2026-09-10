@@ -21,7 +21,7 @@ INSERT INTO platform_feature_flags (feature_key, label, description, enabled_glo
   ('expense_tracking',   'Expense Tracking',       'Owner expense management module',                     true),
   ('utility_bills',      'Utility Bills',          'Utility bill tracking and reporting per unit',        true),
   ('staff_invitations',  'Staff Invitations',      'Owners can invite property / financial managers',     true),
-  ('tenant_portal',      'Tenant Self-Service',    'Tenant can view contracts, pay invoices online',      true),
+  ('tenant_portal',      'Tenant Self-Service',    'Master switch — when off, tenants are blocked from logging in / using the app entirely', true),
   ('maintenance',        'Maintenance Requests',   'Tenant maintenance request submission and tracking',  true),
   ('notices_system',     'Notices & Alerts',       'Owner can send broadcast notices to tenants',         true)
 ON CONFLICT (feature_key) DO NOTHING;
