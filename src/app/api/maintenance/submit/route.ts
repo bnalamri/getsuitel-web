@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -17,6 +18,13 @@ export async function POST(req: Request) {
   }
   if (!profile.organization_id) {
     return NextResponse.json({ error: 'No organization linked to account' }, { status: 400 })
+  }
+
+  // Server-side enforcement of the maintenance flag — the UI hides the
+  // submit button when off, but this is the actual gate (route is called
+  // directly by mobile too, which has no client-side check of its own).
+  if (!(await isFeatureEnabled('maintenance', profile.organization_id))) {
+    return NextResponse.json({ error: 'Maintenance requests are currently unavailable for your property' }, { status: 403 })
   }
 
   const body = await req.json()

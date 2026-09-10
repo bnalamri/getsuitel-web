@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { Receipt } from 'lucide-react'
 import ExpensesClient from './ExpensesClient'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export const metadata = { title: 'Expenses' }
 
@@ -14,6 +15,12 @@ export default async function ExpensesPage() {
   const orgId   = profile?.organization_id
   const userName = (profile?.full_name as string) ?? ''
   if (!orgId) return null
+
+  // Direct-navigation guard — the nav link is already hidden when off (see
+  // DashboardShell.tsx), this covers a bookmarked/typed URL.
+  if (!(await isFeatureEnabled('expense_tracking', orgId))) {
+    return <div className="text-slate-400 text-center py-20">Expense tracking is currently unavailable for your property.</div>
+  }
 
   const admin = createAdminClient()
   const [expensesRes, propertiesRes, unitsRes, orgRes] = await Promise.all([

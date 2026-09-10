@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import OmrAmount from '@/components/OmrAmount'
 import InvoiceList from './InvoiceList'
+import { getEnabledFeatures } from '@/lib/featureFlags'
 
 export const metadata = { title: 'My Invoices' }
 
@@ -33,6 +34,14 @@ export default async function TenantInvoicesPage() {
   const totalDue  = inv.filter(i => ['sent', 'overdue'].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0)
   const totalPaid = inv.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
 
+  // Payment methods are individually gated by feature flags — cash has no
+  // flag (always available), the other three map 1:1. Computed server-side
+  // so the disabled options never render at all (per "hide completely").
+  const paymentFlags = await getEnabledFeatures(
+    ['bank_transfer', 'mobile_wallet', 'cheque_payments'],
+    tenant.organization_id
+  )
+
   return (
     <div className="space-y-6 max-w-2xl">
       <h2 className="text-2xl font-bold text-slate-900">My Invoices</h2>
@@ -56,6 +65,7 @@ export default async function TenantInvoicesPage() {
         tenantId={tenant.id}
         orgId={tenant.organization_id}
         org={org}
+        paymentFlags={paymentFlags}
       />
     </div>
   )

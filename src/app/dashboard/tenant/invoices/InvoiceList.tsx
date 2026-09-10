@@ -47,12 +47,13 @@ type Org = {
 } | null
 
 export default function InvoiceList({
-  invoices, tenantId, orgId, org,
+  invoices, tenantId, orgId, org, paymentFlags,
 }: {
   invoices: Invoice[]
   tenantId: string
   orgId: string | null
   org: Org
+  paymentFlags?: Record<string, boolean>
 }) {
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -130,6 +131,7 @@ export default function InvoiceList({
                   amount={invoice.amount}
                   currency={invoice.currency}
                   org={org}
+                  paymentFlags={paymentFlags}
                 />
               )}
             </div>

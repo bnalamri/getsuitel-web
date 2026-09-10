@@ -3,6 +3,7 @@ import { Bell, Clock, FileText, AlertCircle, HardHat } from 'lucide-react'
 import AddNoticeForm from './AddNoticeForm'
 import ShareNoticeButton from '@/components/ShareNoticeButton'
 import DeleteNoticeButton from '@/components/DeleteNoticeButton'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export const metadata = { title: 'Notices' }
 export const dynamic = 'force-dynamic'
@@ -49,6 +50,7 @@ export default async function NoticesPage() {
   const notices = noticesRes.data ?? []
   const tenants = tenantsRes.data ?? []
   const overdueInvoices = overdueRes.data ?? []
+  const canSend = await isFeatureEnabled('notices_system', orgId)
 
   const techEmails = (techniciansRes.data ?? []).map(t => ({
     id: t.id as string,
@@ -63,12 +65,14 @@ export default async function NoticesPage() {
           <h2 className="text-2xl font-bold text-slate-900">Notices</h2>
           <p className="text-slate-500 text-sm mt-0.5">{notices.length} notices sent</p>
         </div>
-        <AddNoticeForm
-          orgId={orgId}
-          tenants={tenants}
-          technicians={techEmails}
-          overdueInvoices={overdueInvoices as never}
-        />
+        {canSend && (
+          <AddNoticeForm
+            orgId={orgId}
+            tenants={tenants}
+            technicians={techEmails}
+            overdueInvoices={overdueInvoices as never}
+          />
+        )}
       </div>
 
       {/* Overdue alert banner */}

@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import StaffManagement from './StaffManagement'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export const metadata = { title: 'Staff Management' }
 
@@ -11,6 +12,12 @@ export default async function StaffPage() {
   const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
   const orgId = profile?.organization_id
   if (!orgId) return null
+
+  // Direct-navigation guard — the nav link is already hidden when off (see
+  // DashboardShell.tsx), this covers a bookmarked/typed URL.
+  if (!(await isFeatureEnabled('staff_invitations', orgId))) {
+    return <div className="text-slate-400 text-center py-20">Staff invitations are currently unavailable for your property.</div>
+  }
 
   const admin = createAdminClient()
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -46,6 +47,12 @@ export async function POST(req: Request) {
   }
   if (!profile.organization_id) {
     return NextResponse.json({ error: 'No organization linked' }, { status: 400 })
+  }
+
+  // Server-side enforcement of the notices_system flag — mirrors the UI's
+  // hidden "Add Notice" trigger (see owner/notices/page.tsx).
+  if (!(await isFeatureEnabled('notices_system', profile.organization_id))) {
+    return NextResponse.json({ error: 'Notices are currently unavailable for your property' }, { status: 403 })
   }
 
   const body = await req.json()

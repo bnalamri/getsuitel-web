@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 import { checkBranchLimit } from '@/lib/branchLimits'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://getsuitel.com'
@@ -23,6 +24,12 @@ export async function POST(req: Request) {
 
   if (!profile || profile.role !== 'owner' || !profile.organization_id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Server-side enforcement of the staff_invitations flag — mirrors the
+  // hidden "Staff" nav item / page (see DashboardShell.tsx + owner/staff/page.tsx).
+  if (!(await isFeatureEnabled('staff_invitations', profile.organization_id))) {
+    return NextResponse.json({ error: 'Staff invitations are currently unavailable for your property' }, { status: 403 })
   }
 
   const { email, role } = await req.json()

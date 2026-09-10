@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Wrench } from 'lucide-react'
 import SubmitRequestForm from './SubmitRequestForm'
 import MaintenanceList from './MaintenanceList'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export const metadata = { title: 'Maintenance' }
 
@@ -29,6 +30,7 @@ export default async function TenantMaintenancePage() {
     .order('created_at', { ascending: false })
 
   const reqs = requests ?? []
+  const canSubmit = await isFeatureEnabled('maintenance', tenant.organization_id)
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -37,13 +39,15 @@ export default async function TenantMaintenancePage() {
           <h2 className="text-2xl font-bold text-slate-900">Maintenance</h2>
           <p className="text-slate-500 text-sm mt-0.5">{reqs.length} requests</p>
         </div>
-        <SubmitRequestForm
-          tenantId={tenant.id}
-          orgId={tenant.organization_id}
-          unitId={contract?.unit_id ?? null}
-          unitNumber={(contract?.units as { unit_number: string } | null)?.unit_number ?? ''}
-          tenantName={tenantName}
-        />
+        {canSubmit && (
+          <SubmitRequestForm
+            tenantId={tenant.id}
+            orgId={tenant.organization_id}
+            unitId={contract?.unit_id ?? null}
+            unitNumber={(contract?.units as { unit_number: string } | null)?.unit_number ?? ''}
+            tenantName={tenantName}
+          />
+        )}
       </div>
 
       {reqs.length === 0 ? (

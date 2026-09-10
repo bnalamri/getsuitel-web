@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import UtilitiesClient from './UtilitiesClient'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 export default async function UtilitiesPage() {
   const supabase = await createClient()
@@ -16,6 +17,12 @@ export default async function UtilitiesPage() {
 
   if (!profile?.organization_id) redirect('/login')
   if (!['owner', 'property_manager', 'manager', 'financial_manager'].includes(profile.role)) redirect('/dashboard')
+
+  // Direct-navigation guard — the nav link is already hidden when off (see
+  // DashboardShell.tsx), this covers a bookmarked/typed URL.
+  if (!(await isFeatureEnabled('utility_bills', profile.organization_id))) {
+    return <div className="text-slate-400 text-center py-20">Utility bill tracking is currently unavailable for your property.</div>
+  }
 
   const admin = createAdminClient()
 

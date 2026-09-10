@@ -15,7 +15,15 @@ interface OrgPayment {
 
 type Method = 'bank_transfer' | 'mobile_transfer' | 'cheque' | 'cash'
 
-const methods: { id: Method; label: string; icon: React.ElementType; desc: string }[] = [
+// Maps each payment method to the feature-flag key that gates it. Cash has
+// no flag — it's always available regardless of the admin toggles.
+const METHOD_FLAG_KEY: Partial<Record<Method, string>> = {
+  bank_transfer:   'bank_transfer',
+  mobile_transfer: 'mobile_wallet',
+  cheque:          'cheque_payments',
+}
+
+const ALL_METHODS: { id: Method; label: string; icon: React.ElementType; desc: string }[] = [
   { id: 'bank_transfer',   label: 'Bank Transfer',   icon: Building2,   desc: 'Transfer to owner\'s bank account' },
   { id: 'mobile_transfer', label: 'Mobile Transfer', icon: Smartphone,  desc: 'Send via mobile wallet' },
   { id: 'cheque',          label: 'Cheque',          icon: Receipt,     desc: 'Payment via post-dated cheque' },
@@ -79,7 +87,7 @@ function FilePickerField({
 }
 
 export default function PaymentPanel({
-  invoiceId, tenantId, orgId, amount, currency, org,
+  invoiceId, tenantId, orgId, amount, currency, org, paymentFlags,
 }: {
   invoiceId: string
   tenantId: string
@@ -87,7 +95,18 @@ export default function PaymentPanel({
   amount: number
   currency: string
   org: OrgPayment | null
+  paymentFlags?: Record<string, boolean>
 }) {
+  // Hide methods whose flag is off (see task #507). No entry in paymentFlags
+  // for a given key defaults to enabled — fail open, same as the rest of the
+  // flag system, so a page that forgot to pass this prop never accidentally
+  // hides all payment options.
+  const methods = ALL_METHODS.filter(m => {
+    const flagKey = METHOD_FLAG_KEY[m.id]
+    if (!flagKey) return true // cash — ungated
+    return paymentFlags?.[flagKey] ?? true
+  })
+
   const [open, setOpen]        = useState(false)
   const [method, setMethod]    = useState<Method | null>(null)
   const [notes, setNotes]      = useState('')
