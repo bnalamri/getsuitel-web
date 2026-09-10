@@ -33,8 +33,9 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getsuitel.com'
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${siteUrl}/auth/reset-password`,
     })
     setLoading(false)
     if (err) { setError(T.error); return }

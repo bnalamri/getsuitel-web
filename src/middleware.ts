@@ -96,8 +96,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect auth pages → role dashboard
-  if (isAuthPage) {
+  // Redirect auth pages → role dashboard — except reset-password, where a
+  // logged-in user is expected (Supabase signs them in via the recovery
+  // link so they can set a new password; bouncing them to the dashboard
+  // here is what broke the password-reset flow).
+  if (isAuthPage && path !== '/auth/reset-password') {
     const url = request.nextUrl.clone()
     url.pathname = ROLE_HOME[role] ?? '/dashboard/owner'
     return withSupaCookies(NextResponse.redirect(url), supabaseResponse)

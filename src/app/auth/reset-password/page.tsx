@@ -1,18 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
 
 const t = {
   en: { title: 'Set new password', pass: 'New password', confirm: 'Confirm password',
     save: 'Save password', done: 'Password updated!', doneSub: 'You can now sign in with your new password.',
     goLogin: 'Go to sign in', mismatch: 'Passwords do not match', loading: 'Saving…',
-    weak: 'Password must be at least 8 characters' },
+    weak: 'Password must be at least 8 characters',
+    invalidTitle: 'Link expired', invalidSub: 'This password reset link is invalid or has expired. Please request a new one.',
+    requestNew: 'Request a new link', checking: 'Verifying link…' },
   ar: { title: 'تعيين كلمة مرور جديدة', pass: 'كلمة المرور الجديدة', confirm: 'تأكيد كلمة المرور',
     save: 'حفظ كلمة المرور', done: 'تم تحديث كلمة المرور!', doneSub: 'يمكنك الآن تسجيل الدخول بكلمة مرورك الجديدة.',
     goLogin: 'الذهاب لتسجيل الدخول', mismatch: 'كلمتا المرور غير متطابقتين', loading: 'جاري الحفظ…',
-    weak: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل' },
+    weak: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل',
+    invalidTitle: 'انتهت صلاحية الرابط', invalidSub: 'رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية. يرجى طلب رابط جديد.',
+    requestNew: 'طلب رابط جديد', checking: 'جاري التحقق من الرابط…' },
 }
 
 export default function ResetPasswordPage() {
@@ -23,8 +27,39 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+  const [checking, setChecking] = useState(true)
+  const [validSession, setValidSession] = useState(false)
   const router = useRouter()
   const T = t[lang]
+
+  // Supabase exchanges the recovery link's token for a session client-side,
+  // asynchronously, before this page can safely render the set-password
+  // form. Verify a session actually exists (or wait for the PASSWORD_RECOVERY
+  // event) instead of assuming updateUser() will silently work.
+  useEffect(() => {
+    const supabase = createClient()
+    let settled = false
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (settled) return
+      if (session) { settled = true; setValidSession(true); setChecking(false) }
+    })
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (settled) return
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        settled = true; setValidSession(true); setChecking(false)
+      }
+    })
+
+    // Give the client a moment to finish the token exchange before
+    // concluding the link is invalid.
+    const timeout = setTimeout(() => {
+      if (!settled) { settled = true; setChecking(false) }
+    }, 2500)
+
+    return () => { sub.subscription.unsubscribe(); clearTimeout(timeout) }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,7 +80,19 @@ export default function ResetPasswordPage() {
           <a href="https://www.getsuitel.com" className="text-white font-black text-3xl hover:opacity-80 transition-opacity">Get<span className="text-gold-400">Suitel</span></a>
         </div>
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {done ? (
+          {checking ? (
+            <div className="text-center py-6">
+              <Loader2 size={32} className="animate-spin text-navy-700 mx-auto mb-4"/>
+              <p className="text-slate-500 text-sm">{T.checking}</p>
+            </div>
+          ) : !validSession ? (
+            <div className="text-center">
+              <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4"/>
+              <h1 className="text-xl font-bold mb-2">{T.invalidTitle}</h1>
+              <p className="text-slate-500 text-sm mb-6">{T.invalidSub}</p>
+              <button onClick={() => router.push('/auth/forgot-password')} className="btn-primary">{T.requestNew}</button>
+            </div>
+          ) : done ? (
             <div className="text-center">
               <CheckCircle size={48} className="text-green-500 mx-auto mb-4"/>
               <h1 className="text-xl font-bold mb-2">{T.done}</h1>
