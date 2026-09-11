@@ -35,5 +35,15 @@ export async function POST(req: Request) {
     .eq('organization_id', profile.organization_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Keep the Cheque Tracker in sync — see matching comment in
+  // /api/invoices/[id]/route.ts. Marking an invoice paid here (Mark Paid
+  // button/modal) should also clear its linked cheque, if one exists.
+  await admin
+    .from('cheques')
+    .update({ status: 'cleared', cleared_date: update.paid_date })
+    .eq('invoice_id', invoiceId)
+    .not('status', 'in', '("cleared","bounced","cancelled","replaced")')
+
   return NextResponse.json({ ok: true })
 }
