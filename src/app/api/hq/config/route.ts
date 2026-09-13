@@ -28,7 +28,15 @@ export async function PATCH(req: NextRequest) {
   if (!await requireHQ(supabase)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { date_format, default_currency, currency_symbol, hq_contact_email } = body
+  const {
+    date_format, default_currency, currency_symbol, hq_contact_email,
+    hq_bank_name, hq_bank_account_name, hq_bank_iban,
+    hq_mobile_transfer_number, hq_mobile_transfer_label,
+    hq_bank_transfer_mode,
+  } = body
+
+  if (hq_bank_transfer_mode && !['manual', 'automatic'].includes(hq_bank_transfer_mode))
+    return NextResponse.json({ error: 'Invalid hq_bank_transfer_mode' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('platform_config')
@@ -37,6 +45,12 @@ export async function PATCH(req: NextRequest) {
       ...(default_currency   && { default_currency }),
       ...(currency_symbol    && { currency_symbol }),
       ...(hq_contact_email   && { hq_contact_email }),
+      ...(hq_bank_name              !== undefined && { hq_bank_name }),
+      ...(hq_bank_account_name      !== undefined && { hq_bank_account_name }),
+      ...(hq_bank_iban               !== undefined && { hq_bank_iban }),
+      ...(hq_mobile_transfer_number !== undefined && { hq_mobile_transfer_number }),
+      ...(hq_mobile_transfer_label  !== undefined && { hq_mobile_transfer_label }),
+      ...(hq_bank_transfer_mode     && { hq_bank_transfer_mode }),
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1)

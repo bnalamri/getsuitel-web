@@ -28,7 +28,7 @@ const PAYMENT_METHOD_LABEL: Record<string, [string, string]> = {
   cash:           ['Cash', 'نقداً'],
   cheque:         ['Cheque', 'شيك'],
   bank_transfer:  ['Bank Transfer', 'تحويل بنكي'],
-  mobile_wallet:  ['Mobile Wallet', 'محفظة إلكترونية'],
+  mobile_wallet:  ['Mobile Transfer', 'تحويل عبر الهاتف المحمول'],
 }
 const UTIL_PARTY_LABEL: Record<string, [string, string]> = {
   owner:  ['Owner', 'المالك'],

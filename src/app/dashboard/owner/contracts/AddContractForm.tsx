@@ -158,7 +158,7 @@ export default function AddContractForm({ orgId, units, tenants, defaultCurrency
                 <option value="cash">Cash</option>
                 <option value="cheque">Cheque</option>
                 <option value="bank_transfer">Bank Transfer</option>
-                <option value="mobile_wallet">Mobile Wallet</option>
+                <option value="mobile_wallet">Mobile Transfer</option>
               </select>
             </div>
             <div>

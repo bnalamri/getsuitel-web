@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   const totalDue = (Number(billing.share_amount_omr) + Number(billing.license_fee_omr)).toFixed(3)
   const adminName = branch.profiles.full_name ?? 'Branch Admin'
   const branchName = branch.display_name
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://getsuitel.com'}/superadmin/billing`
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://getsuitel.com'}/dashboard/admin/billing`
 
   const { error: emailErr } = await resend.emails.send({
     from: 'GetSuitel HQ <no-reply@getsuitel.com>',

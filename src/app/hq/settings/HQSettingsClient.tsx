@@ -4,12 +4,17 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Shield, KeyRound, Eye, EyeOff, Globe, Languages,
-  ExternalLink, Loader2, Save, Calendar,
+  ExternalLink, Loader2, Save, Calendar, Building2, Smartphone,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type Profile = { id: string; full_name: string | null; email: string; phone?: string | null; role: string; avatar_url?: string | null }
-type Config  = { date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string }
+type Config  = {
+  date_format: string; default_currency: string; currency_symbol: string; hq_contact_email?: string
+  hq_bank_name?: string | null; hq_bank_account_name?: string | null; hq_bank_iban?: string | null
+  hq_mobile_transfer_number?: string | null; hq_mobile_transfer_label?: string | null
+  hq_bank_transfer_mode?: 'manual' | 'automatic' | null
+}
 
 const card  = 'bg-white rounded-xl border border-gray-200 p-6'
 const label = 'block text-sm font-medium text-gray-700 mb-1'
@@ -115,6 +120,36 @@ export default function HQSettingsClient({
     if (!res.ok) { const e = await res.json(); setCfgMsg({ ok: false, text: e.error }); return }
     setCfgMsg({ ok: true, text: 'Platform defaults saved!' })
     setTimeout(() => setCfgMsg(null), 3000)
+  }
+
+  // ── HQ Payment Details ────────────────────────────────────────────────────
+  const [hqBankName,        setHqBankName]        = useState(config?.hq_bank_name ?? '')
+  const [hqBankAccountName, setHqBankAccountName] = useState(config?.hq_bank_account_name ?? '')
+  const [hqBankIban,        setHqBankIban]        = useState(config?.hq_bank_iban ?? '')
+  const [hqMobileNumber,    setHqMobileNumber]    = useState(config?.hq_mobile_transfer_number ?? '')
+  const [hqMobileLabel,     setHqMobileLabel]     = useState(config?.hq_mobile_transfer_label ?? 'Mobile Transfer')
+  const [bankTransferMode, setBankTransferMode]   = useState<'manual' | 'automatic'>(config?.hq_bank_transfer_mode ?? 'manual')
+  const [payLoading, setPayLoading] = useState(false)
+  const [payMsg,     setPayMsg]     = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function savePaymentDetails(e: React.FormEvent) {
+    e.preventDefault(); setPayLoading(true); setPayMsg(null)
+    const res = await fetch('/api/hq/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hq_bank_name:              hqBankName,
+        hq_bank_account_name:      hqBankAccountName,
+        hq_bank_iban:              hqBankIban,
+        hq_mobile_transfer_number: hqMobileNumber,
+        hq_mobile_transfer_label:  hqMobileLabel || 'Mobile Transfer',
+        hq_bank_transfer_mode:     bankTransferMode,
+      }),
+    })
+    setPayLoading(false)
+    if (!res.ok) { const e = await res.json(); setPayMsg({ ok: false, text: e.error }); return }
+    setPayMsg({ ok: true, text: 'Payment details saved!' })
+    setTimeout(() => setPayMsg(null), 3000)
   }
 
   return (
@@ -229,6 +264,81 @@ export default function HQSettingsClient({
             <button type="submit" disabled={cfgLoading} className={btn}>
               {cfgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <OmrSymbol variant="dark" size={16} />}
               {cfgMsg?.ok ? 'Saved!' : 'Save Defaults'}
+            </button>
+          )}
+        </form>
+      </div>
+
+      {/* ── HQ Payment Details ── */}
+      <div className={card}>
+        <div className="flex items-center gap-2 mb-4">
+          <Building2 className="w-4 h-4 text-yellow-600" />
+          <h2 className="font-semibold text-gray-900">Payment Details</h2>
+          <span className="ml-auto text-xs text-gray-400">Shown to branches for license/revenue-share payments</span>
+        </div>
+        <form onSubmit={savePaymentDetails} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Bank Name</label>
+              <input className={input} value={hqBankName} onChange={e => setHqBankName(e.target.value)} placeholder="BankMuscat" />
+            </div>
+            <div>
+              <label className={label}>Account Name</label>
+              <input className={input} value={hqBankAccountName} onChange={e => setHqBankAccountName(e.target.value)} placeholder="GetSuitel HQ" />
+            </div>
+            <div className="col-span-2">
+              <label className={label}>IBAN</label>
+              <input className={`${input} font-mono`} value={hqBankIban} onChange={e => setHqBankIban(e.target.value)} placeholder="OM00 0000 0000 0000 0000 0000" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 mt-2 mb-1">
+            <Smartphone className="w-3.5 h-3.5" /> Mobile Transfer
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={label}>Number</label>
+              <input className={input} value={hqMobileNumber} onChange={e => setHqMobileNumber(e.target.value)} placeholder="+968 9000 0000" />
+            </div>
+            <div>
+              <label className={label}>Label (e.g. OmanNet, Thawani)</label>
+              <input className={input} value={hqMobileLabel} onChange={e => setHqMobileLabel(e.target.value)} placeholder="Mobile Transfer" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Automatic Bank Transfer</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Coming soon — has no effect yet. Once a bank/PSP API is connected platform-wide,
+                  this becomes the master switch; branches still confirm manually until then.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bankTransferMode === 'automatic'}
+                disabled={!isAdmin}
+                onClick={() => setBankTransferMode(m => m === 'automatic' ? 'manual' : 'automatic')}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  bankTransferMode === 'automatic' ? 'bg-yellow-500' : 'bg-gray-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  bankTransferMode === 'automatic' ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+          </div>
+          {!isAdmin && (
+            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+              Read-only — only HQ Admin can change payment details.
+            </p>
+          )}
+          {payMsg && <Msg ok={payMsg.ok} text={payMsg.text} />}
+          {isAdmin && (
+            <button type="submit" disabled={payLoading} className={btn}>
+              {payLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {payMsg?.ok ? 'Saved!' : 'Save Payment Details'}
             </button>
           )}
         </form>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, Download, Loader2, Mail } from 'lucide-react'
+import { CheckCircle, Download, Loader2, Mail, FileText, XCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
 
 type BillingRow = {
@@ -14,7 +14,18 @@ type BillingRow = {
   status: string
   paid_at: string | null
   notes: string | null
+  payment_method?: string | null
+  receipt_url?: string | null
+  submitted_at?: string | null
+  rejection_reason?: string | null
   branches: { display_name: string; city: string | null } | null
+}
+
+const STATUS_STYLE: Record<string, string> = {
+  pending:   'bg-gray-100 text-gray-600',
+  submitted: 'bg-yellow-100 text-yellow-700',
+  paid:      'bg-green-100 text-green-700',
+  rejected:  'bg-red-100 text-red-700',
 }
 
 function fmtMonth(m: string) {
@@ -57,13 +68,47 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
       const res = await fetch('/api/hq/billing', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, action: 'mark_paid' }),
       })
       if (!res.ok) {
         const d = await res.json()
         setError(d.error ?? 'Failed to mark as paid')
         return
       }
+      router.refresh()
+    } finally {
+      setPaying(null)
+    }
+  }
+
+  async function confirmReceipt(id: string) {
+    setPaying(id)
+    setError(null)
+    try {
+      const res = await fetch('/api/hq/billing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'confirm' }),
+      })
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Failed to confirm'); return }
+      router.refresh()
+    } finally {
+      setPaying(null)
+    }
+  }
+
+  async function rejectReceipt(id: string) {
+    const reason = window.prompt('Reason for rejecting this receipt (shown to the branch):')
+    if (reason === null) return
+    setPaying(id)
+    setError(null)
+    try {
+      const res = await fetch('/api/hq/billing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'reject', rejection_reason: reason }),
+      })
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Failed to reject'); return }
       router.refresh()
     } finally {
       setPaying(null)
@@ -139,6 +184,7 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
             ) : billing.map(r => {
               const totalDue    = Number(r.share_amount_omr) + Number(r.license_fee_omr)
               const isPending   = r.status === 'pending'
+              const isSubmitted = r.status === 'submitted'
               const isThisRow   = paying === r.id
               return (
                 <tr key={r.id} className="hover:bg-gray-50">
@@ -151,9 +197,7 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                   <td className="px-5 py-3 text-right text-gray-700">{Number(r.license_fee_omr).toFixed(3)}</td>
                   <td className="px-5 py-3 text-right font-semibold text-gray-900">{totalDue.toFixed(3)}</td>
                   <td className="px-5 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                      r.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLE[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {r.status}
                     </span>
                     {r.paid_at && (
@@ -161,9 +205,18 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                         {new Date(r.paid_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     )}
+                    {isSubmitted && r.receipt_url && (
+                      <a href={r.receipt_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:underline mt-0.5">
+                        <FileText className="w-3 h-3" /> View receipt
+                      </a>
+                    )}
+                    {r.status === 'rejected' && r.rejection_reason && (
+                      <p className="text-xs text-red-500 mt-0.5">{r.rejection_reason}</p>
+                    )}
                   </td>
                   <td className="px-5 py-3">
-                    {isPending ? (
+                    {isPending && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => markPaid(r.id)}
@@ -191,7 +244,27 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                           {reminded.has(r.id) ? 'Sent' : 'Remind'}
                         </button>
                       </div>
-                    ) : (
+                    )}
+                    {isSubmitted && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => confirmReceipt(r.id)}
+                          disabled={!!paying}
+                          className="flex items-center gap-1.5 text-xs bg-green-600 text-white rounded-lg px-3 py-1.5 hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                          {isThisRow ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => rejectReceipt(r.id)}
+                          disabled={!!paying}
+                          className="flex items-center gap-1.5 text-xs border border-red-200 text-red-600 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                        >
+                          <XCircle className="w-3 h-3" /> Reject
+                        </button>
+                      </div>
+                    )}
+                    {!isPending && !isSubmitted && (
                       <span className="text-xs text-gray-400">—</span>
                     )}
                   </td>

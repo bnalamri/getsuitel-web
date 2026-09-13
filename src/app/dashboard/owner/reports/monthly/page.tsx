@@ -95,7 +95,7 @@ type Row = {
 
 const METHOD_LABEL: Record<string, string> = {
   cash: 'Cash', bank_transfer: 'Bank Transfer',
-  mobile_wallet: 'Mobile Wallet', cheque: 'Cheque', Cheque: 'Cheque',
+  mobile_wallet: 'Mobile Transfer', cheque: 'Cheque', Cheque: 'Cheque',
 }
 
 export default async function MonthlyRentStatement({

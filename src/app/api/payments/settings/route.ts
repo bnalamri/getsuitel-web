@@ -9,9 +9,11 @@ export async function PATCH(req: Request) {
 
   const body = await req.json()
   const { org_id, bank_account_name, bank_account_number, bank_name, bank_iban,
-          mobile_wallet_number, mobile_wallet_label } = body
+          mobile_wallet_number, mobile_wallet_label, bank_transfer_mode } = body
 
   if (!org_id) return NextResponse.json({ error: 'Missing org_id' }, { status: 400 })
+  if (bank_transfer_mode && !['manual', 'automatic'].includes(bank_transfer_mode))
+    return NextResponse.json({ error: 'Invalid bank_transfer_mode' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('organizations')
@@ -21,7 +23,8 @@ export async function PATCH(req: Request) {
       bank_name,
       bank_iban,
       mobile_wallet_number,
-      mobile_wallet_label: mobile_wallet_label || 'Mobile Wallet',
+      mobile_wallet_label: mobile_wallet_label || 'Mobile Transfer',
+      ...(bank_transfer_mode && { bank_transfer_mode }),
     })
     .eq('id', org_id)
     .select()

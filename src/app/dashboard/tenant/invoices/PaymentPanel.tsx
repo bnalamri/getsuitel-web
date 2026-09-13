@@ -217,7 +217,7 @@ export default function PaymentPanel({
           {method === 'mobile_transfer' && (
             <div className="space-y-2">
               {org?.mobile_wallet_number && (
-                <CopyField label={org.mobile_wallet_label ?? 'Mobile Wallet'} value={org.mobile_wallet_number} />
+                <CopyField label={org.mobile_wallet_label ?? 'Mobile Transfer'} value={org.mobile_wallet_number} />
               )}
               {!org?.mobile_wallet_number && (
                 <div className="text-xs text-slate-400 flex items-center gap-1">

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Building2, Smartphone } from 'lucide-react'
+import { Save, Loader2, Building2, Smartphone, Zap } from 'lucide-react'
 
 interface Org {
   bank_account_name?: string | null
@@ -10,6 +10,7 @@ interface Org {
   bank_iban?: string | null
   mobile_wallet_number?: string | null
   mobile_wallet_label?: string | null
+  bank_transfer_mode?: 'manual' | 'automatic' | null
 }
 
 export default function PaymentSettingsForm({ org, orgId }: { org: Org | null; orgId: string | null }) {
@@ -23,7 +24,8 @@ export default function PaymentSettingsForm({ org, orgId }: { org: Org | null; o
     bank_name:           org?.bank_name           ?? '',
     bank_iban:           org?.bank_iban           ?? '',
     mobile_wallet_number: org?.mobile_wallet_number ?? '',
-    mobile_wallet_label:  org?.mobile_wallet_label  ?? 'Mobile Wallet',
+    mobile_wallet_label:  org?.mobile_wallet_label  ?? 'Mobile Transfer',
+    bank_transfer_mode:   org?.bank_transfer_mode   ?? 'manual',
   })
 
   function set(key: keyof typeof form, value: string) {
@@ -94,11 +96,11 @@ export default function PaymentSettingsForm({ org, orgId }: { org: Org | null; o
         {/* Mobile wallet */}
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
-            <Smartphone size={15}/> Mobile Wallet Details
+            <Smartphone size={15}/> Mobile Transfer Details
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Wallet Number</label>
+              <label className="label">Number</label>
               <input className="input" placeholder="+968 9999 9999"
                 value={form.mobile_wallet_number} onChange={e => set('mobile_wallet_number', e.target.value)} />
             </div>
@@ -107,6 +109,36 @@ export default function PaymentSettingsForm({ org, orgId }: { org: Org | null; o
               <input className="input" placeholder="Thawani / OmanNet / ..."
                 value={form.mobile_wallet_label} onChange={e => set('mobile_wallet_label', e.target.value)} />
             </div>
+          </div>
+        </div>
+
+        {/* Manual / automatic switch */}
+        <div className="border-t border-slate-100 pt-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-2">
+              <Zap size={15} className="mt-0.5 text-slate-500"/>
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Automatic Bank Transfer</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Coming soon — once a bank/PSP API is connected, this switches confirmation
+                  from manual receipt review to automatic. Currently has no effect: all
+                  transfers are confirmed manually either way.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.bank_transfer_mode === 'automatic'}
+              onClick={() => set('bank_transfer_mode', form.bank_transfer_mode === 'automatic' ? 'manual' : 'automatic')}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                form.bank_transfer_mode === 'automatic' ? 'bg-yellow-500' : 'bg-slate-200'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                form.bank_transfer_mode === 'automatic' ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
         </div>
 

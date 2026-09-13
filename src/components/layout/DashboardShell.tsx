@@ -29,6 +29,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/admin/owners', icon:Shield, en:'Owners', ar:'الملاك' },
       { href:'/dashboard/admin/subscriptions', icon:CreditCard, en:'Subscriptions', ar:'الاشتراكات' },
       { href:'/dashboard/admin/plans', icon:Package, en:'Plans & Pricing', ar:'الخطط والأسعار' },
+      { href:'/dashboard/admin/billing', icon:CreditCard, en:'HQ Billing', ar:'فواتير المقر الرئيسي' },
       { href:'/dashboard/admin/notices', icon:Bell, en:'Notices', ar:'الإشعارات' },
     ]},
     { en:'Accounts', ar:'الحسابات', items:[

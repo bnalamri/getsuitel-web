@@ -18,6 +18,7 @@ export default async function HQBillingPage() {
       .from('branch_billing')
       .select(`
         id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes,
+        payment_method, receipt_url, submitted_at, rejection_reason,
         branches ( display_name, city )
       `)
       .order('month', { ascending: false })

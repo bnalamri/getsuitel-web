@@ -8,7 +8,12 @@ export async function GET() {
 
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin.from('platform_settings').select('key, value')
+    // Scoped to this branch's own superadmin — each branch has independent
+    // currency/timezone/payment settings (see 20260831_platform_settings_per_superadmin.sql)
+    const { data, error } = await admin
+      .from('platform_settings')
+      .select('key, value')
+      .eq('superadmin_id', auth.userId)
     if (error) return NextResponse.json({ default_currency: 'OMR' })
     const settings: Record<string, string> = {}
     data?.forEach(r => { settings[r.key] = r.value })
@@ -26,9 +31,11 @@ export async function PUT(req: Request) {
     const body = await req.json()
     const admin = createAdminClient()
     const updates = Object.entries(body).map(([key, value]) => ({
-      key, value: String(value), updated_at: new Date().toISOString(),
+      key, value: String(value), superadmin_id: auth.userId, updated_at: new Date().toISOString(),
     }))
-    const { error } = await admin.from('platform_settings').upsert(updates, { onConflict: 'key' })
+    const { error } = await admin
+      .from('platform_settings')
+      .upsert(updates, { onConflict: 'key,superadmin_id' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (e) {

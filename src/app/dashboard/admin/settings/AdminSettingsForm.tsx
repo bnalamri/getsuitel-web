@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useShell } from '@/components/layout/DashboardShell'
-import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages, ExternalLink } from 'lucide-react'
+import { Loader2, Save, Shield, KeyRound, Eye, EyeOff, Globe, Building2, Smartphone, Languages, ExternalLink, Zap } from 'lucide-react'
 
 const CURRENCIES = ['OMR','SAR','AED','KWD','QAR','BHD','USD','GBP','EUR']
 const CURRENCY_LABELS: Record<string, string> = {
@@ -47,7 +47,8 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
   const [payAccountName,  setPayAccountName]  = useState('')
   const [payIban,         setPayIban]         = useState('')
   const [payMobileWallet, setPayMobileWallet] = useState('')
-  const [payMobileLabel,  setPayMobileLabel]  = useState('Mobile Wallet')
+  const [payMobileLabel,  setPayMobileLabel]  = useState('Mobile Transfer')
+  const [bankTransferMode, setBankTransferMode] = useState<'manual' | 'automatic'>('manual')
   const [ppLoading, setPpLoading] = useState(false)
   const [ppSaved,   setPpSaved]   = useState(false)
   const [ppError,   setPpError]   = useState('')
@@ -68,6 +69,7 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
         if (map.payment_iban)          setPayIban(map.payment_iban)
         if (map.payment_mobile_wallet) setPayMobileWallet(map.payment_mobile_wallet)
         if (map.payment_mobile_label)  setPayMobileLabel(map.payment_mobile_label)
+        if (map.payment_bank_transfer_mode === 'automatic') setBankTransferMode('automatic')
       })
   }, [])
 
@@ -101,6 +103,7 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
         payment_iban:          payIban,
         payment_mobile_wallet: payMobileWallet,
         payment_mobile_label:  payMobileLabel,
+        payment_bank_transfer_mode: bankTransferMode,
       }),
     })
     if (!res.ok) { const d = await res.json(); setPpError(d.error ?? 'Error saving') }
@@ -228,16 +231,43 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 mt-2 mb-1">
-            <Smartphone size={14} /> Mobile Wallet
+            <Smartphone size={14} /> Mobile Transfer
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Wallet Number</label>
+              <label className="label">Number</label>
               <input className="input" value={payMobileWallet} onChange={e => setPayMobileWallet(e.target.value)} placeholder="+968 9000 0000" />
             </div>
             <div>
               <label className="label">Label (e.g. OmanNet, Thawani)</label>
-              <input className="input" value={payMobileLabel} onChange={e => setPayMobileLabel(e.target.value)} placeholder="Mobile Wallet" />
+              <input className="input" value={payMobileLabel} onChange={e => setPayMobileLabel(e.target.value)} placeholder="Mobile Transfer" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-2">
+                <Zap size={14} className="mt-0.5 text-gray-500"/>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Automatic Bank Transfer</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Coming soon — this branch-level switch has no effect yet; all owner
+                    payments are still confirmed manually until a bank/PSP API is connected.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bankTransferMode === 'automatic'}
+                onClick={() => setBankTransferMode(m => m === 'automatic' ? 'manual' : 'automatic')}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  bankTransferMode === 'automatic' ? 'bg-yellow-500' : 'bg-gray-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  bankTransferMode === 'automatic' ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
             </div>
           </div>
           {ppError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2.5 rounded-lg">{ppError}</div>}

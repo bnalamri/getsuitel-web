@@ -9,20 +9,34 @@ async function requireHQ(supabase: Awaited<ReturnType<typeof createClient>>) {
   return user
 }
 
-// PATCH /api/hq/billing — mark a record as paid
-// body: { id: string, notes?: string }
+// PATCH /api/hq/billing — confirm, reject, or directly mark a record paid
+// body: { id: string, notes?: string, action?: 'confirm' | 'reject' | 'mark_paid', rejection_reason?: string }
+//
+// - 'confirm'   — branch submitted a receipt (status was 'submitted'); HQ confirms it, recording who/when.
+// - 'reject'    — branch submitted a receipt HQ doesn't accept; branch can resubmit.
+// - 'mark_paid' (default, backward-compatible) — HQ marks paid directly with no receipt on file
+//   (e.g. cash handed over off-platform). No confirmed_by/confirmed_at trail in this case.
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
-  if (!await requireHQ(supabase)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await requireHQ(supabase)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, notes } = await req.json()
+  const { id, notes, action = 'mark_paid', rejection_reason } = await req.json()
   if (!id) return NextResponse.json({ error: 'Billing record ID required' }, { status: 400 })
+
+  const now = new Date().toISOString()
+  const updates: Record<string, unknown> =
+    action === 'reject'
+      ? { status: 'rejected', rejection_reason: rejection_reason ?? null, confirmed_by: user.id, confirmed_at: now }
+      : action === 'confirm'
+      ? { status: 'paid', paid_at: now, confirmed_by: user.id, confirmed_at: now, notes: notes ?? null }
+      : { status: 'paid', paid_at: now, notes: notes ?? null }
 
   const { data, error } = await supabase
     .from('branch_billing')
-    .update({ status: 'paid', paid_at: new Date().toISOString(), notes: notes ?? null })
+    .update(updates)
     .eq('id', id)
-    .select('id, status, paid_at')
+    .select('id, status, paid_at, confirmed_by, confirmed_at, rejection_reason')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
