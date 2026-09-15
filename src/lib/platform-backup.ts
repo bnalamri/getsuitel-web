@@ -29,8 +29,6 @@ export const BACKUP_TABLES = [
   'properties',
   'units',
   'tenants',
-  'team_members',
-  'org_payment_settings',
   'contracts',
   'invoices',
   'maintenance_requests',
