@@ -39,7 +39,19 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
-          } catch { /* Server component — ignore */ }
+          } catch (err) {
+            // TEMP DIAGNOSTIC (2026-09-15 login outage): this used to be a
+            // silent catch. If this fires during a login attempt it means
+            // cookieStore.set() is throwing — e.g. "Cookies can only be
+            // modified in a Server Action or Route Handler" — and that is
+            // why no Set-Cookie ever reaches the browser. Remove once the
+            // outage is confirmed fixed.
+            console.error(
+              '[supabase server] cookies().set failed — attempted cookies:',
+              cookiesToSet.map(c => c.name),
+              'error:', err
+            )
+          }
         },
       },
       global: { fetch: noStoreFetch },
