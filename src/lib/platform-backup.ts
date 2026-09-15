@@ -94,7 +94,12 @@ export async function runPlatformBackup(): Promise<BackupResult> {
       dump[table] = rows
       rowCounts[table] = rows.length
     } catch (e) {
-      errors.push(`${table}: ${String(e)}`)
+      const msg = e instanceof Error
+        ? e.message
+        : (typeof e === 'object' && e !== null && 'message' in e)
+          ? String((e as { message: unknown }).message)
+          : JSON.stringify(e)
+      errors.push(`${table}: ${msg}`)
       dump[table] = []
       rowCounts[table] = 0
     }
