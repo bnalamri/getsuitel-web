@@ -9,27 +9,40 @@ import autoTable from 'jspdf-autotable'
 export type BranchSummary = {
   id: string
   name: string
+  currency: string
   totalRevenue: number
   totalShare: number
   totalLicense: number
-  collected: number
-  pending: number
-  overdue: number
+  shareCollected: number
+  sharePending: number
+  shareOverdue: number
+  licenseCollected: number
+  licensePending: number
+  licenseOverdue: number
 }
 
 type Props = {
   branches: BranchSummary[]
-  grandTotalRevenue: number
-  grandTotalShare: number
+  // License fee is always a flat OMR fee, so it's safe to sum across every
+  // branch. Revenue/share now travel in each branch's own currency (see
+  // 20260915l_branch_currency.sql) and are grouped by currency instead —
+  // blending SAR/AED/OMR into one number would be meaningless.
   grandTotalLicense: number
-  grandCollected: number
-  grandPending: number
-  grandOverdue: number
+  grandLicenseCollected: number
+  grandLicensePending: number
+  grandLicenseOverdue: number
+  revenueByCurrency: Record<string, number>
+  shareByCurrency: Record<string, number>
+  shareCollectedByCurrency: Record<string, number>
+  sharePendingByCurrency: Record<string, number>
+  shareOverdueByCurrency: Record<string, number>
   chartData: Record<string, string | number>[]
 }
 
 export default function RevenueExportButtons({
-  branches, grandTotalRevenue, grandTotalShare, grandTotalLicense, grandCollected, grandPending, grandOverdue, chartData,
+  branches, grandTotalLicense, grandLicenseCollected, grandLicensePending, grandLicenseOverdue,
+  revenueByCurrency, shareByCurrency, shareCollectedByCurrency, sharePendingByCurrency, shareOverdueByCurrency,
+  chartData,
 }: Props) {
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null)
 
@@ -39,29 +52,41 @@ export default function RevenueExportButtons({
     try {
       const wb = XLSX.utils.book_new()
 
-      // Sheet 1: P&L Summary
-      const summaryRows = [
-        ['Branch', 'Total Revenue (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Overdue 7d+ (OMR)'],
+      // Sheet 1: P&L Summary — Revenue/Share are in each branch's own
+      // currency (Currency column), License Fee is always OMR. Per-branch
+      // rows never mix currencies since one branch = one currency; the
+      // TOTAL rows are broken out per currency instead of blended.
+      const summaryRows: (string | number)[][] = [
+        ['Branch', 'Currency', 'Total Revenue', 'HQ Share', 'License Fee (OMR)', 'Share Collected', 'Share Pending', 'Share Overdue 7d+', 'License Collected (OMR)', 'License Pending (OMR)', 'License Overdue 7d+ (OMR)'],
         ...branches.map(b => [
           b.name,
+          b.currency,
           b.totalRevenue.toFixed(3),
           b.totalShare.toFixed(3),
           b.totalLicense.toFixed(3),
-          b.collected.toFixed(3),
-          b.pending.toFixed(3),
-          b.overdue.toFixed(3),
+          b.shareCollected.toFixed(3),
+          b.sharePending.toFixed(3),
+          b.shareOverdue.toFixed(3),
+          b.licenseCollected.toFixed(3),
+          b.licensePending.toFixed(3),
+          b.licenseOverdue.toFixed(3),
         ]),
-        ['TOTAL',
-          grandTotalRevenue.toFixed(3),
-          grandTotalShare.toFixed(3),
-          grandTotalLicense.toFixed(3),
-          grandCollected.toFixed(3),
-          grandPending.toFixed(3),
-          grandOverdue.toFixed(3),
-        ],
+        ...Object.keys(revenueByCurrency).map(c => [
+          `TOTAL (${c})`,
+          c,
+          (revenueByCurrency[c] ?? 0).toFixed(3),
+          (shareByCurrency[c] ?? 0).toFixed(3),
+          '',
+          (shareCollectedByCurrency[c] ?? 0).toFixed(3),
+          (sharePendingByCurrency[c] ?? 0).toFixed(3),
+          (shareOverdueByCurrency[c] ?? 0).toFixed(3),
+          '', '', '',
+        ]),
+        ['TOTAL LICENSE FEE (OMR)', 'OMR', '', '', grandTotalLicense.toFixed(3), '', '', '',
+          grandLicenseCollected.toFixed(3), grandLicensePending.toFixed(3), grandLicenseOverdue.toFixed(3)],
       ]
       const ws1 = XLSX.utils.aoa_to_sheet(summaryRows)
-      ws1['!cols'] = [{ wch: 36 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }]
+      ws1['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 20 }]
       XLSX.utils.book_append_sheet(wb, ws1, 'P&L Summary')
 
       // Sheet 2: Monthly Revenue Trend
@@ -104,74 +129,107 @@ export default function RevenueExportButtons({
       doc.setFont('helvetica', 'normal')
       doc.text(`Generated: ${date}`, 283, 15, { align: 'right' })
 
-      // Summary KPI row
+      // Summary KPI row — license fee is always OMR (safe to blend); revenue
+      // is broken out per currency instead of summed across branches.
       doc.setTextColor(31, 41, 55)
       doc.setFontSize(8)
       const kpis = [
-        { label: 'Total Revenue', value: grandTotalRevenue.toFixed(3) + ' OMR' },
-        { label: 'HQ Share',      value: grandTotalShare.toFixed(3) + ' OMR' },
+        ...Object.entries(revenueByCurrency).map(([c, v]) => ({ label: `Revenue (${c})`, value: v.toFixed(3) + ' ' + c })),
         { label: 'License Fees',  value: grandTotalLicense.toFixed(3) + ' OMR' },
-        { label: 'Collected',     value: grandCollected.toFixed(3) + ' OMR' },
-        { label: 'Pending',       value: grandPending.toFixed(3) + ' OMR' },
-        { label: 'Overdue 7d+',   value: grandOverdue.toFixed(3) + ' OMR' },
+        { label: 'License Collected', value: grandLicenseCollected.toFixed(3) + ' OMR' },
+        { label: 'License Pending',   value: grandLicensePending.toFixed(3) + ' OMR' },
+        { label: 'License Overdue 7d+', value: grandLicenseOverdue.toFixed(3) + ' OMR' },
       ]
       kpis.forEach((k, i) => {
-        const x = 14 + i * 47
+        const x = 14 + (i % 6) * 47
+        const rowY = Math.floor(i / 6) * 16
         doc.setFillColor(249, 250, 251)
-        doc.roundedRect(x, 24, 44, 14, 2, 2, 'F')
+        doc.roundedRect(x, 24 + rowY, 44, 14, 2, 2, 'F')
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9)
-        doc.text(k.value, x + 22, 30, { align: 'center' })
+        doc.text(k.value, x + 22, 30 + rowY, { align: 'center' })
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(7)
         doc.setTextColor(107, 114, 128)
-        doc.text(k.label, x + 22, 35, { align: 'center' })
+        doc.text(k.label, x + 22, 35 + rowY, { align: 'center' })
         doc.setTextColor(31, 41, 55)
       })
 
-      // P&L Table
+      const kpiRows = Math.ceil(kpis.length / 6)
+      const tableStartY = 24 + kpiRows * 16 + 6
+
+      // P&L Table — Revenue/HQ Share/Share Collected-Pending-Overdue are in
+      // each branch's own currency (Currency column); License columns are
+      // always OMR. Per-currency totals replace the old single blended row.
       autoTable(doc, {
-        startY: 44,
-        head: [['Branch', 'Revenue (OMR)', 'HQ Share (OMR)', 'License (OMR)', 'Collected (OMR)', 'Pending (OMR)', 'Overdue 7d+ (OMR)']],
+        startY: tableStartY,
+        head: [['Branch', 'Cur.', 'Revenue', 'HQ Share', 'License (OMR)', 'Share Collected', 'Share Pending', 'Share Overdue 7d+']],
         body: [
           ...branches.map(b => [
             b.name,
+            b.currency,
             b.totalRevenue.toFixed(3),
             b.totalShare.toFixed(3),
             b.totalLicense.toFixed(3),
-            b.collected.toFixed(3),
-            b.pending.toFixed(3),
-            b.overdue.toFixed(3),
+            b.shareCollected.toFixed(3),
+            b.sharePending.toFixed(3),
+            b.shareOverdue.toFixed(3),
           ]),
-          ['TOTAL',
-            grandTotalRevenue.toFixed(3),
-            grandTotalShare.toFixed(3),
-            grandTotalLicense.toFixed(3),
-            grandCollected.toFixed(3),
-            grandPending.toFixed(3),
-            grandOverdue.toFixed(3),
-          ],
+          ...Object.keys(revenueByCurrency).map(c => [
+            `TOTAL (${c})`, c,
+            (revenueByCurrency[c] ?? 0).toFixed(3),
+            (shareByCurrency[c] ?? 0).toFixed(3),
+            '',
+            (shareCollectedByCurrency[c] ?? 0).toFixed(3),
+            (sharePendingByCurrency[c] ?? 0).toFixed(3),
+            (shareOverdueByCurrency[c] ?? 0).toFixed(3),
+          ]),
         ],
         headStyles: { fillColor: [31, 41, 55], textColor: [251, 191, 36], fontStyle: 'bold', fontSize: 8 },
         bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
         alternateRowStyles: { fillColor: [249, 250, 251] },
         columnStyles: {
-          0: { cellWidth: 70 },
-          1: { halign: 'right' },
+          0: { cellWidth: 60 },
+          1: { cellWidth: 14 },
           2: { halign: 'right' },
           3: { halign: 'right' },
-          4: { halign: 'right', textColor: [22, 163, 74] },
-          5: { halign: 'right', textColor: [220, 38, 38] },
-          6: { halign: 'right', textColor: [153, 27, 27] },
+          4: { halign: 'right' },
+          5: { halign: 'right', textColor: [22, 163, 74] },
+          6: { halign: 'right', textColor: [220, 38, 38] },
+          7: { halign: 'right', textColor: [153, 27, 27] },
         },
         didParseCell: (data) => {
-          // Bold totals row
-          if (data.row.index === branches.length) {
+          // Bold every TOTAL (per-currency) row
+          if (data.row.index >= branches.length) {
             data.cell.styles.fontStyle = 'bold'
             data.cell.styles.fillColor = [243, 244, 246]
           }
         },
       })
+
+      // License Fee summary — always OMR, so a single small table is valid
+      {
+        const licenseY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.text('License Fees (OMR)', 14, licenseY)
+        autoTable(doc, {
+          startY: licenseY + 4,
+          head: [['Total License Fee', 'Collected', 'Pending', 'Overdue 7d+']],
+          body: [[
+            grandTotalLicense.toFixed(3),
+            grandLicenseCollected.toFixed(3),
+            grandLicensePending.toFixed(3),
+            grandLicenseOverdue.toFixed(3),
+          ]],
+          headStyles: { fillColor: [31, 41, 55], textColor: [251, 191, 36], fontStyle: 'bold', fontSize: 8 },
+          bodyStyles: { fontSize: 8, textColor: [31, 41, 55], fontStyle: 'bold' },
+          columnStyles: {
+            0: { halign: 'right' }, 1: { halign: 'right', textColor: [22, 163, 74] },
+            2: { halign: 'right', textColor: [220, 38, 38] }, 3: { halign: 'right', textColor: [153, 27, 27] },
+          },
+        })
+      }
 
       // Monthly trend table (if available)
       if (chartData.length > 0) {
@@ -179,7 +237,7 @@ export default function RevenueExportButtons({
         const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
         doc.setFontSize(10)
         doc.setFont('helvetica', 'bold')
-        doc.text('Revenue Trend — Last 12 Months', 14, finalY)
+        doc.text('Revenue Trend — Last 12 Months (each branch in its own currency)', 14, finalY)
         autoTable(doc, {
           startY: finalY + 4,
           head: [['Month', ...branchNames]],

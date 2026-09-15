@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import { AlertTriangle } from 'lucide-react'
 
 type HealthRow = {
@@ -10,7 +10,8 @@ type HealthRow = {
   units: number
   occupied: number
   open_maint: number
-  revenue_omr: number
+  revenue: number
+  currency: string
 }
 
 function OccupancyBar({ pct }: { pct: number }) {
@@ -69,7 +70,7 @@ export default async function BranchHealthTable() {
   const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const { data: billing } = await supabase
     .from('branch_billing')
-    .select('branch_id, total_revenue_omr')
+    .select('branch_id, total_revenue_omr, currency')
     .eq('month', monthStr)
     .in('branch_id', branchIds)
 
@@ -87,7 +88,11 @@ export default async function BranchHealthTable() {
   const contractMap = countByBranch(contracts as never)
   const maintMap    = countByBranch(maint as never)
   const revenueMap: Record<string, number> = {}
-  billing?.forEach(r => { revenueMap[r.branch_id] = Number(r.total_revenue_omr) })
+  const currencyMap: Record<string, string> = {}
+  billing?.forEach(r => {
+    revenueMap[r.branch_id] = Number(r.total_revenue_omr)
+    currencyMap[r.branch_id] = r.currency || 'OMR'
+  })
 
   const rows: HealthRow[] = branches.map(b => ({
     id:           b.id,
@@ -96,7 +101,8 @@ export default async function BranchHealthTable() {
     units:        unitMap[b.id] ?? 0,
     occupied:     contractMap[b.id] ?? 0,
     open_maint:   maintMap[b.id] ?? 0,
-    revenue_omr:  revenueMap[b.id] ?? 0,
+    revenue:      revenueMap[b.id] ?? 0,
+    currency:     currencyMap[b.id] ?? 'OMR',
   }))
 
   return (
@@ -114,9 +120,7 @@ export default async function BranchHealthTable() {
               <th className="px-5 py-3 text-left" style={{ minWidth: 140 }}>Occupancy</th>
               <th className="px-5 py-3 text-center">Open Maint.</th>
               {isFinance && (
-                <th className="px-5 py-3 text-right">
-                  <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={12} /></span>
-                </th>
+                <th className="px-5 py-3 text-right">Revenue</th>
               )}
             </tr>
           </thead>
@@ -153,8 +157,7 @@ export default async function BranchHealthTable() {
                   {isFinance && (
                     <td className="px-5 py-3 text-right">
                       <span className="flex items-center justify-end gap-1 text-gray-800 font-semibold">
-                        <OmrSymbol variant="dark" size={12} />
-                        {r.revenue_omr.toFixed(3)}
+                        <CurrencyAmount value={r.revenue} currency={r.currency} />
                       </span>
                     </td>
                   )}

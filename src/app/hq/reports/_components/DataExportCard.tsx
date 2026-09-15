@@ -45,23 +45,27 @@ export default function DataExportCard() {
         { label: 'Revenue Share (%)', width: 16 }, { label: 'Created At', width: 22 },
       ], rows, `getsuitel_branches_${today()}.xlsx`)
     } else {
-      // branch_billing's real columns (20260831_hq_layer0.sql) are month /
-      // total_revenue_omr / share_amount_omr / license_fee_omr / paid_at.
+      // branch_billing's real columns (20260831_hq_layer0.sql, extended by
+      // 20260915l_branch_currency.sql) are month / total_revenue_omr /
+      // share_amount_omr / license_fee_omr / currency / paid_at. Revenue and
+      // share travel in each branch's own currency now — the Currency
+      // column tells the reader what those two figures are in; License Fee
+      // is always OMR regardless of branch currency.
       const { data } = await supabase
         .from('branch_billing')
-        .select('branches(display_name), month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes')
+        .select('branches(display_name), month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status, paid_at, notes')
         .order('month', { ascending: false })
       const rows: XlsxCell[][] = (data ?? []).map(r => {
         const branchRow = Array.isArray(r.branches) ? r.branches[0] : r.branches
         return [
-          branchRow?.display_name ?? '', r.month ?? '', r.total_revenue_omr ?? 0,
+          branchRow?.display_name ?? '', r.month ?? '', r.currency || 'OMR', r.total_revenue_omr ?? 0,
           r.share_amount_omr ?? 0, r.license_fee_omr ?? 0, r.status ?? '',
           r.paid_at ?? '', r.notes ?? '',
         ]
       })
       downloadXlsx('Billing', [
-        { label: 'Branch', width: 30 }, { label: 'Month', width: 14 },
-        { label: 'Total Revenue (OMR)', width: 16 }, { label: 'Share Amount (OMR)', width: 16 },
+        { label: 'Branch', width: 30 }, { label: 'Month', width: 14 }, { label: 'Currency', width: 10 },
+        { label: 'Total Revenue', width: 16 }, { label: 'Share Amount', width: 16 },
         { label: 'License Fee (OMR)', width: 16 }, { label: 'Status', width: 12 },
         { label: 'Paid At', width: 22 }, { label: 'Notes', width: 30 },
       ], rows, `getsuitel_billing_${today()}.xlsx`)

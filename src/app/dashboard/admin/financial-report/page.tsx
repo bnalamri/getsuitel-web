@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { unstable_noStore as noStore } from 'next/cache'
+import { getPlanPricesForAllBranches } from '@/lib/plan-pricing'
 import FinancialReportPDF from './FinancialReportPDF'
 
 export const dynamic = 'force-dynamic'
@@ -16,11 +17,12 @@ export default async function FinancialReportPage() {
 
   const admin = createAdminClient()
 
-  const [orgsRes, invoicesRes, receiptsRes, proofsRes] = await Promise.all([
-    admin.from('organizations').select('id, name, subscription_plan, subscription_status, subscription_expires_at, default_currency'),
+  const [orgsRes, invoicesRes, receiptsRes, proofsRes, planPrices] = await Promise.all([
+    admin.from('organizations').select('id, name, subscription_plan, subscription_status, subscription_expires_at, default_currency, branch_id'),
     admin.from('invoices').select('organization_id, amount, currency, status, type, created_at, due_date'),
     admin.from('payment_receipts').select('organization_id, amount, method, status, confirmed_at'),
     admin.from('subscription_payment_proofs').select('plan, status, submitted_at, amount, currency').order('submitted_at', { ascending: false }),
+    getPlanPricesForAllBranches(admin),
   ])
 
   const printDate = new Date().toLocaleDateString('en-GB', {
@@ -33,6 +35,7 @@ export default async function FinancialReportPage() {
       invoices={invoicesRes.data ?? []}
       receipts={receiptsRes.data ?? []}
       proofs={proofsRes.data ?? []}
+      planPrices={planPrices}
       printDate={printDate}
       printerName={printerName}
     />

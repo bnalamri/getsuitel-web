@@ -6,10 +6,12 @@ import {
   Clock, CheckCircle2, XCircle, FileText,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 
-type Branch = { id: string; display_name: string; license_fee_omr: number; revenue_share_pct: number } | null
+type Branch = { id: string; display_name: string; license_fee_omr: number; revenue_share_pct: number; currency?: string | null } | null
 type Billing = {
   id: string; month: string; total_revenue_omr: number; share_amount_omr: number; license_fee_omr: number
+  currency?: string | null
   status: 'pending' | 'submitted' | 'paid' | 'rejected'
   payment_method: string | null; receipt_url: string | null; submitted_at: string | null
   paid_at: string | null; rejection_reason: string | null; notes: string | null
@@ -91,8 +93,15 @@ export default function BillingClient({ branch, billing, hqPayment }: { branch: 
   const router = useRouter()
   const [openReceiptFor, setOpenReceiptFor] = useState<string | null>(null)
 
-  const owed = billing.filter(b => b.status !== 'paid').reduce((s, b) => s + Number(b.share_amount_omr) + Number(b.license_fee_omr), 0)
-  const paid = billing.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.share_amount_omr) + Number(b.license_fee_omr), 0)
+  // Revenue share travels in this branch's own currency (see
+  // 20260915l_branch_currency.sql); license fee is always a flat OMR fee.
+  // Track them separately rather than summing — for non-OMR branches,
+  // adding SAR/AED share to an OMR license fee would be meaningless.
+  const branchCurrency = branch?.currency || 'OMR'
+  const shareOwed   = billing.filter(b => b.status !== 'paid').reduce((s, b) => s + Number(b.share_amount_omr), 0)
+  const shareDone   = billing.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.share_amount_omr), 0)
+  const licenseOwed = billing.filter(b => b.status !== 'paid').reduce((s, b) => s + Number(b.license_fee_omr), 0)
+  const licenseDone = billing.filter(b => b.status === 'paid').reduce((s, b) => s + Number(b.license_fee_omr), 0)
 
   if (!branch) {
     return <div className="p-6"><div className={card}>No branch is linked to your account yet.</div></div>
@@ -107,12 +116,22 @@ export default function BillingClient({ branch, billing, hqPayment }: { branch: 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className={card}>
-          <p className="text-xs text-gray-500 flex items-center gap-1">Outstanding <OmrSymbol variant="dark" size={13} /></p>
-          <p className="text-2xl font-bold text-gray-900">{owed.toFixed(3)}</p>
+          <p className="text-xs text-gray-500 mb-1">Outstanding</p>
+          <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
+            <CurrencyAmount value={shareOwed} currency={branchCurrency} /> <span className="text-xs font-normal text-gray-400">revenue share</span>
+          </p>
+          <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
+            <OmrSymbol variant="dark" size={15} /> {licenseOwed.toFixed(3)} <span className="text-xs font-normal text-gray-400">license fee</span>
+          </p>
         </div>
         <div className={card}>
-          <p className="text-xs text-gray-500 flex items-center gap-1">Paid to Date <OmrSymbol variant="dark" size={13} /></p>
-          <p className="text-2xl font-bold text-gray-900">{paid.toFixed(3)}</p>
+          <p className="text-xs text-gray-500 mb-1">Paid to Date</p>
+          <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
+            <CurrencyAmount value={shareDone} currency={branchCurrency} /> <span className="text-xs font-normal text-gray-400">revenue share</span>
+          </p>
+          <p className="text-lg font-bold text-gray-900 flex items-center gap-1">
+            <OmrSymbol variant="dark" size={15} /> {licenseDone.toFixed(3)} <span className="text-xs font-normal text-gray-400">license fee</span>
+          </p>
         </div>
       </div>
 
@@ -145,8 +164,7 @@ export default function BillingClient({ branch, billing, hqPayment }: { branch: 
               <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
                 <th className="pb-2 pr-4">Month</th>
                 <th className="pb-2 pr-4">Revenue Share</th>
-                <th className="pb-2 pr-4">License Fee</th>
-                <th className="pb-2 pr-4">Total</th>
+                <th className="pb-2 pr-4">License Fee (OMR)</th>
                 <th className="pb-2 pr-4">Status</th>
                 <th className="pb-2">Action</th>
               </tr>
@@ -155,15 +173,13 @@ export default function BillingClient({ branch, billing, hqPayment }: { branch: 
               {billing.map(b => {
                 const badge = STATUS_BADGE[b.status]
                 const Icon = badge.icon
-                const total = Number(b.share_amount_omr) + Number(b.license_fee_omr)
                 return (
                   <tr key={b.id} className="align-top">
                     <td className="py-3 pr-4 whitespace-nowrap">
                       {new Date(b.month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                     </td>
-                    <td className="py-3 pr-4">{Number(b.share_amount_omr).toFixed(3)}</td>
-                    <td className="py-3 pr-4">{Number(b.license_fee_omr).toFixed(3)}</td>
-                    <td className="py-3 pr-4 font-semibold">{total.toFixed(3)}</td>
+                    <td className="py-3 pr-4"><CurrencyAmount value={Number(b.share_amount_omr)} currency={b.currency || branchCurrency} /></td>
+                    <td className="py-3 pr-4"><CurrencyAmount value={Number(b.license_fee_omr)} currency="OMR" /></td>
                     <td className="py-3 pr-4">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                         <Icon className="w-3 h-3" /> {badge.label}
@@ -193,7 +209,7 @@ export default function BillingClient({ branch, billing, hqPayment }: { branch: 
                 )
               })}
               {billing.length === 0 && (
-                <tr><td colSpan={6} className="py-6 text-center text-gray-400">No billing records yet.</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-gray-400">No billing records yet.</td></tr>
               )}
             </tbody>
           </table>

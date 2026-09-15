@@ -143,14 +143,14 @@ export async function exportFinancialReportToExcel(data: {
   byCurrency: { currency: string; invoiced: number; collected: number; outstanding: number; rate: number; count: number }[]
   byOrg: { name: string; subscription_plan: string; subscription_status: string; currency: string; invoiced: number; collected: number; outstanding: number; rate: number; count: number }[]
   byMonth: { label: string; invoiced: number; collected: number; count: number }[]
-  planBreakdown: { plan: string; price: number; total: number; active: number; mrr: number }[]
-  mrr: number; arr: number
+  planBreakdown: { plan: string; currency: string; price: number; total: number; active: number; mrr: number }[]
+  mrrByCurrency: Record<string, number>; arrByCurrency: Record<string, number>
   subRevByCurrency: Record<string, number>
   subPendingByCurrency: Record<string, number>
   orgs: { subscription_status: string }[]
 }) {
   const JSZip = await loadJSZip()
-  const { printDate, byCurrency, byOrg, byMonth, planBreakdown, mrr, arr, subRevByCurrency, subPendingByCurrency, orgs } = data
+  const { printDate, byCurrency, byOrg, byMonth, planBreakdown, mrrByCurrency, arrByCurrency, subRevByCurrency, subPendingByCurrency, orgs } = data
 
   // ── Sheet 1: Summary ────────────────────────────────────────────────────────
   const sum: RowDef[] = [
@@ -165,8 +165,8 @@ export async function exportFinancialReportToExcel(data: {
     }),
     [L('', 0), L('', 0), L('', 0), L('', 0), L('', 0), L('', 0)],
     [L('SUBSCRIPTION REVENUE SUMMARY', 2), L('', 2), L('', 2), L('', 2), L('', 2), L('', 2)],
-    [L('MRR (USD)', 14), L(mrr, 13)],
-    [L('ARR (USD)', 14), L(arr, 13)],
+    ...Object.entries(mrrByCurrency).map(([c, v]) => [L(`MRR (${c})`, 14), L(v, 13)]),
+    ...Object.entries(arrByCurrency).map(([c, v]) => [L(`ARR (${c})`, 14), L(v, 13)]),
     ...Object.entries(subRevByCurrency).map(([c, v]) => [L(`Payments Received (${c})`, 14), L(v, 9)]),
     ...Object.entries(subPendingByCurrency).map(([c, v]) => [L(`Pending Payments (${c})`, 14), L(v, 10)]),
     [L('', 0)],
@@ -201,13 +201,16 @@ export async function exportFinancialReportToExcel(data: {
   ]
 
   // ── Sheet 4: Subscription Plans ─────────────────────────────────────────────
+  // One row per (plan, currency) pair — branches can price the same slug
+  // differently, so a single blended "Price/mo" column would be wrong.
   const plans: RowDef[] = [
-    [L('Plan',3), L('Price/mo (USD)',4), L('Total Orgs',4), L('Active Orgs',4), L('MRR (USD)',4)],
+    [L('Plan',3), L('Currency',3), L('Price/mo',4), L('Total Orgs',4), L('Active Orgs',4), L('MRR',4)],
     ...planBreakdown.map((p, i) => {
       const a = i % 2 === 1
-      return [L(p.plan, a?7:5), L(p.price, a?8:6), L(p.total, a?8:6), L(p.active, a?8:6), L(p.mrr, a?11:9)]
+      return [L(p.plan, a?7:5), L(p.currency, a?7:5), L(p.price, a?8:6), L(p.total, a?8:6), L(p.active, a?8:6), L(p.mrr, a?11:9)]
     }),
-    [L('TOTAL', 14), L('', 0), L('', 0), L('Active', 14), L(mrr, 13)],
+    [L('', 0)],
+    ...Object.entries(mrrByCurrency).map(([c, v]) => [L(`TOTAL MRR (${c})`, 14), L('', 0), L('', 0), L('', 0), L('', 0), L(v, 13)]),
   ]
 
   // ── Build sheets ─────────────────────────────────────────────────────────────
@@ -215,7 +218,7 @@ export async function exportFinancialReportToExcel(data: {
     { name: 'Summary',            rows: sum,   widths: [32, 18, 18, 18, 18, 12] },
     { name: 'By Organization',    rows: org,   widths: [30, 14, 14, 12, 16, 16, 16, 16, 12] },
     { name: 'Monthly Trend',      rows: month, widths: [16, 16, 16, 12] },
-    { name: 'Subscription Plans', rows: plans, widths: [16, 18, 14, 14, 16] },
+    { name: 'Subscription Plans', rows: plans, widths: [16, 12, 14, 14, 14, 16] },
   ]
 
   // Build all worksheet XMLs (each returns "wsXml|||ssXml" — we only use wsXml, shared strings built separately)

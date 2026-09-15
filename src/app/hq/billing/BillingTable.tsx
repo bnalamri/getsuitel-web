@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, Download, Loader2, Mail, FileText, XCircle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 
 type BillingRow = {
   id: string
@@ -11,6 +12,7 @@ type BillingRow = {
   total_revenue_omr: number
   share_amount_omr: number
   license_fee_omr: number
+  currency?: string | null
   status: string
   paid_at: string | null
   notes: string | null
@@ -33,14 +35,19 @@ function fmtMonth(m: string) {
 }
 
 function exportCSV(rows: BillingRow[]) {
-  const headers = ['Branch', 'Month', 'Revenue (OMR)', 'Rev Share (OMR)', 'License Fee (OMR)', 'Total Amount (OMR)', 'Status', 'Paid At']
+  // Revenue and Rev Share travel in each branch's own currency (see
+  // 20260915l_branch_currency.sql); License Fee is always a flat OMR fee.
+  // A combined "Total Amount" column would silently sum different
+  // currencies together for non-Muscat branches, so it's been dropped —
+  // the Currency column tells the reader what Revenue/Rev Share are in.
+  const headers = ['Branch', 'Month', 'Currency', 'Revenue', 'Rev Share', 'License Fee (OMR)', 'Status', 'Paid At']
   const lines = rows.map(r => [
     r.branches?.display_name ?? '',
     fmtMonth(r.month),
+    r.currency || 'OMR',
     Number(r.total_revenue_omr).toFixed(3),
     Number(r.share_amount_omr).toFixed(3),
     Number(r.license_fee_omr).toFixed(3),
-    (Number(r.share_amount_omr) + Number(r.license_fee_omr)).toFixed(3),
     r.status,
     r.paid_at ? new Date(r.paid_at).toLocaleDateString('en-US') : '',
   ])
@@ -160,17 +167,10 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
             <tr>
               <th className="px-5 py-3 text-left">Branch</th>
               <th className="px-5 py-3 text-left">Month</th>
-              <th className="px-5 py-3 text-right">
-                <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={13} /></span>
-              </th>
-              <th className="px-5 py-3 text-right">
-                <span className="flex items-center justify-end gap-1">Rev Share <OmrSymbol variant="dark" size={13} /></span>
-              </th>
+              <th className="px-5 py-3 text-right">Revenue</th>
+              <th className="px-5 py-3 text-right">Rev Share</th>
               <th className="px-5 py-3 text-right">
                 <span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={13} /></span>
-              </th>
-              <th className="px-5 py-3 text-right">
-                <span className="flex items-center justify-end gap-1">Total Amount <OmrSymbol variant="dark" size={13} /></span>
               </th>
               <th className="px-5 py-3 text-left">Status</th>
               <th className="px-5 py-3 text-left">Action</th>
@@ -179,10 +179,10 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
           <tbody className="divide-y divide-gray-100">
             {!billing.length ? (
               <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-gray-400">No billing records yet</td>
+                <td colSpan={7} className="px-5 py-10 text-center text-gray-400">No billing records yet</td>
               </tr>
             ) : billing.map(r => {
-              const totalDue    = Number(r.share_amount_omr) + Number(r.license_fee_omr)
+              const rowCurrency = r.currency || 'OMR'
               const isPending   = r.status === 'pending'
               const isSubmitted = r.status === 'submitted'
               const isThisRow   = paying === r.id
@@ -192,10 +192,15 @@ export default function BillingTable({ billing }: { billing: BillingRow[] }) {
                     {r.branches?.display_name ?? '—'}
                   </td>
                   <td className="px-5 py-3 text-gray-600">{fmtMonth(r.month)}</td>
-                  <td className="px-5 py-3 text-right text-gray-700">{Number(r.total_revenue_omr).toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-gray-700">{Number(r.share_amount_omr).toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-gray-700">{Number(r.license_fee_omr).toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right font-semibold text-gray-900">{totalDue.toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right text-gray-700">
+                    <CurrencyAmount value={Number(r.total_revenue_omr)} currency={rowCurrency} />
+                  </td>
+                  <td className="px-5 py-3 text-right text-gray-700">
+                    <CurrencyAmount value={Number(r.share_amount_omr)} currency={rowCurrency} />
+                  </td>
+                  <td className="px-5 py-3 text-right text-gray-700">
+                    <CurrencyAmount value={Number(r.license_fee_omr)} currency="OMR" />
+                  </td>
                   <td className="px-5 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLE[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {r.status}

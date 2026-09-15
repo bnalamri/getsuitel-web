@@ -1,19 +1,17 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Building2, Users, TrendingUp, AlertCircle, Receipt, UserPlus } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import BranchHealthTable from './_components/BranchHealthTable'
 import ActivityFeed from './_components/ActivityFeed'
 import RegionalChart from './_components/RegionalChart'
-
-// Wraps OmrSymbol so it can be passed as a StatCard icon slot
-const OmrIcon = (_: { className?: string }) => <OmrSymbol variant="dark" size={24} />
 
 async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const adminClient = createAdminClient()
   const [branches, orgs, billing, proofs, trialingOrgs] = await Promise.all([
     supabase.from('branches').select('id, name, status, license_fee_omr, revenue_share_pct', { count: 'exact' }),
     adminClient.from('organizations').select('id', { count: 'exact', head: true }),
-    supabase.from('branch_billing').select('total_revenue_omr, share_amount_omr, license_fee_omr, status'),
+    supabase.from('branch_billing').select('total_revenue_omr, share_amount_omr, license_fee_omr, status, currency'),
     // Mirrors mobile's hq_dashboard.dart Pending Items block. This queries
     // through the caller's own session, not the admin client — if the
     // checked-in RLS policy on this table (service-role-only) is actually
@@ -29,12 +27,27 @@ async function getHQStats(supabase: Awaited<ReturnType<typeof createClient>>) {
   const totalBranches   = branches.count ?? 0
   const totalOrgs       = orgs.count ?? 0
 
-  const totalRevenue     = billing.data?.reduce((s, r) => s + Number(r.total_revenue_omr), 0) ?? 0
+  // Revenue is now tracked per-branch currency (see 20260915l_branch_currency.sql) —
+  // never blend amounts across currencies. Group by currency and surface the
+  // dominant one on the headline stat card; the multi-currency flag lets the UI
+  // note when other currencies are being omitted from that single number.
+  const revenueByCurrency: Record<string, number> = {}
+  for (const r of billing.data ?? []) {
+    const c = r.currency || 'OMR'
+    revenueByCurrency[c] = (revenueByCurrency[c] ?? 0) + Number(r.total_revenue_omr)
+  }
+  const revenuePrimaryCurrency = Object.entries(revenueByCurrency).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'OMR'
+  const totalRevenue        = revenueByCurrency[revenuePrimaryCurrency] ?? 0
+  const revenueMultiCurrency = Object.keys(revenueByCurrency).length > 1
   const pendingPayments  = billing.data?.filter(r => r.status === 'pending').length ?? 0
   const pendingProofs    = proofs.count ?? 0
   const pendingSignups   = trialingOrgs.count ?? 0
 
-  return { activeBranches, totalBranches, totalOrgs, totalRevenue, pendingPayments, pendingProofs, pendingSignups }
+  return {
+    activeBranches, totalBranches, totalOrgs,
+    totalRevenue, revenuePrimaryCurrency, revenueMultiCurrency,
+    pendingPayments, pendingProofs, pendingSignups,
+  }
 }
 
 export default async function HQDashboardPage() {
@@ -73,8 +86,9 @@ export default async function HQDashboardPage() {
         <StatCard icon={Users} label="Total Orgs" value={stats.totalOrgs}
           sub="across all branches" color="blue" />
         {isFinance && <>
-          <StatCard icon={OmrIcon} label={<span className="flex items-center gap-1">Total Revenue <OmrSymbol variant="dark" size={14} /></span>} value={stats.totalRevenue.toFixed(3)}
-            sub="all billing records" color="green" />
+          <StatCard icon={TrendingUp} label={`Total Revenue (${stats.revenuePrimaryCurrency})`}
+            value={<CurrencyAmount value={stats.totalRevenue} currency={stats.revenuePrimaryCurrency} />}
+            sub={stats.revenueMultiCurrency ? 'largest currency shown — other branch currencies excluded' : 'all billing records'} color="green" />
           <StatCard icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments}
             sub="branch billing" color="red" />
         </>}
@@ -171,7 +185,7 @@ export default async function HQDashboardPage() {
 }
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
-  icon: React.ElementType; label: React.ReactNode; value: string | number; sub: string; color: string
+  icon: React.ElementType; label: React.ReactNode; value: React.ReactNode; sub: string; color: string
 }) {
   const colors: Record<string, string> = {
     yellow: 'bg-yellow-100 text-yellow-700',

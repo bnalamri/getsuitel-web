@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
   const { data: branch } = await admin
     .from('branches')
-    .select('id, display_name, license_fee_omr, revenue_share_pct')
+    .select('id, display_name, license_fee_omr, revenue_share_pct, currency')
     .eq('superadmin_id', auth.userId)
     .single()
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   const [{ data: billing }, { data: config }] = await Promise.all([
     admin
       .from('branch_billing')
-      .select('id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, payment_method, receipt_url, submitted_at, paid_at, rejection_reason, notes')
+      .select('id, month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status, payment_method, receipt_url, submitted_at, paid_at, rejection_reason, notes')
       .eq('branch_id', branch.id)
       .order('month', { ascending: false }),
     admin

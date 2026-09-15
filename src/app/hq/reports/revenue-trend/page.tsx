@@ -26,7 +26,7 @@ export default async function HQRevenueTrendPage({
 
   let query = supabase
     .from('branch_billing')
-    .select('branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, branches ( display_name )')
+    .select('branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status, branches ( display_name )')
     .gte('month', fromDate)
     .order('month', { ascending: false })
 
@@ -47,7 +47,10 @@ export default async function HQRevenueTrendPage({
       .trim()
   }
 
-  // Normalize into a flat shape for the client
+  // Normalize into a flat shape for the client. Revenue/share travel in each
+  // branch's own currency (see 20260915l_branch_currency.sql); license fee
+  // is always OMR — the client groups revenue/share by currency rather than
+  // blending them.
   const billing = (rawBilling ?? []).map(r => ({
     branch_id:   r.branch_id,
     branch_name: cleanName((r.branches as { display_name: string } | null)?.display_name),
@@ -55,6 +58,7 @@ export default async function HQRevenueTrendPage({
     revenue:     Number(r.total_revenue_omr),
     share:       Number(r.share_amount_omr),
     license:     Number(r.license_fee_omr),
+    currency:    r.currency || 'OMR',
     status:      r.status as string,
   }))
 

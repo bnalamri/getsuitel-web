@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, AlertCircle, AlertTriangle } from 'lucide-react'
+import { AlertCircle, AlertTriangle } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import BillingTable from './BillingTable'
 import GenerateBillingButton from './GenerateBillingButton'
 
@@ -17,7 +18,7 @@ export default async function HQBillingPage() {
     supabase
       .from('branch_billing')
       .select(`
-        id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, paid_at, notes,
+        id, month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status, paid_at, notes,
         payment_method, receipt_url, submitted_at, rejection_reason,
         branches ( display_name, city )
       `)
@@ -37,8 +38,22 @@ export default async function HQBillingPage() {
       .eq('month', currentMonthKey),
   ])
 
-  const totalPending   = billing?.filter(r => r.status === 'pending').reduce((s, r) => s + Number(r.share_amount_omr) + Number(r.license_fee_omr), 0) ?? 0
-  const totalCollected = billing?.filter(r => r.status === 'paid').reduce((s, r) => s + Number(r.share_amount_omr) + Number(r.license_fee_omr), 0) ?? 0
+  // license_fee_omr is always a flat OMR fee (HQ's home-currency franchise fee) —
+  // it's safe to sum across branches. share_amount_omr now travels in each
+  // branch's own currency (see 20260915l_branch_currency.sql), so summing it
+  // across branches with different currencies would blend, say, SAR and AED
+  // into one meaningless number. Track license fees and revenue share
+  // separately, and break revenue share out per currency.
+  const licenseFeeCollected = billing?.filter(r => r.status === 'paid').reduce((s, r) => s + Number(r.license_fee_omr), 0) ?? 0
+  const licenseFeePending   = billing?.filter(r => r.status === 'pending').reduce((s, r) => s + Number(r.license_fee_omr), 0) ?? 0
+
+  const shareCollectedByCurrency: Record<string, number> = {}
+  const sharePendingByCurrency: Record<string, number> = {}
+  billing?.forEach(r => {
+    const c = r.currency || 'OMR'
+    if (r.status === 'paid') shareCollectedByCurrency[c] = (shareCollectedByCurrency[c] ?? 0) + Number(r.share_amount_omr)
+    if (r.status === 'pending') sharePendingByCurrency[c] = (sharePendingByCurrency[c] ?? 0) + Number(r.share_amount_omr)
+  })
 
   // Branches that have NO billing record for the current month
   const billedBranchIds = new Set(currentMonthBilling?.map(r => r.branch_id) ?? [])
@@ -56,15 +71,17 @@ export default async function HQBillingPage() {
         <GenerateBillingButton currentMonth={currentMonthKey} />
       </div>
 
-      {/* Summary stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Summary stat cards — license fee (always OMR) and revenue share
+          (per-branch currency) are shown separately rather than summed,
+          since blending them would mix currencies for non-Muscat branches. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-lg bg-green-100 flex items-center justify-center">
             <OmrSymbol variant="dark" size={24} />
           </div>
           <div>
-            <p className="text-xs text-gray-500 flex items-center gap-1">Total Collected <OmrSymbol variant="dark" size={13} /></p>
-            <p className="text-2xl font-bold text-gray-900">{totalCollected.toFixed(3)}</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">License Fees Collected <OmrSymbol variant="dark" size={13} /></p>
+            <p className="text-2xl font-bold text-gray-900"><CurrencyAmount value={licenseFeeCollected} currency="OMR" /></p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
@@ -72,9 +89,33 @@ export default async function HQBillingPage() {
             <AlertCircle className="w-6 h-6 text-yellow-700" />
           </div>
           <div>
-            <p className="text-xs text-gray-500 flex items-center gap-1">Pending Collection <OmrSymbol variant="dark" size={13} /></p>
-            <p className="text-2xl font-bold text-gray-900">{totalPending.toFixed(3)}</p>
+            <p className="text-xs text-gray-500 flex items-center gap-1">License Fees Pending <OmrSymbol variant="dark" size={13} /></p>
+            <p className="text-2xl font-bold text-gray-900"><CurrencyAmount value={licenseFeePending} currency="OMR" /></p>
           </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs text-gray-500 mb-1">Revenue Share Collected</p>
+          {Object.keys(shareCollectedByCurrency).length > 0 ? (
+            <div className="space-y-0.5">
+              {Object.entries(shareCollectedByCurrency).map(([c, v]) => (
+                <p key={c} className="text-lg font-bold text-gray-900"><CurrencyAmount value={v} currency={c} /></p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-gray-400">—</p>
+          )}
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs text-gray-500 mb-1">Revenue Share Pending</p>
+          {Object.keys(sharePendingByCurrency).length > 0 ? (
+            <div className="space-y-0.5">
+              {Object.entries(sharePendingByCurrency).map(([c, v]) => (
+                <p key={c} className="text-lg font-bold text-gray-900"><CurrencyAmount value={v} currency={c} /></p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-gray-400">—</p>
+          )}
         </div>
       </div>
 

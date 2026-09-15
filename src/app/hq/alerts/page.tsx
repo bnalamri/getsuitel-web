@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ShieldAlert, AlertTriangle, Info, Building2, CreditCard, Wrench, FileText, CheckCircle2 } from 'lucide-react'
-import OmrSymbol from '@/components/ui/OmrSymbol'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +54,7 @@ export default async function AlertCenterPage() {
     // Unpaid branch billing records
     supabase
       .from('branch_billing')
-      .select('id, branch_id, month, total_revenue_omr, license_fee_omr, status, created_at, branches!branch_billing_branch_id_fkey(display_name)')
+      .select('id, branch_id, month, total_revenue_omr, license_fee_omr, currency, status, created_at, branches!branch_billing_branch_id_fkey(display_name)')
       .neq('status', 'paid')
       .order('month', { ascending: false }),
 
@@ -120,6 +119,10 @@ export default async function AlertCenterPage() {
     const month = new Date(row.month).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
     const daysOverdue = Math.floor((today.getTime() - new Date(row.created_at).getTime()) / 86400000)
     const licenseFee = Number(row.license_fee_omr ?? 0).toFixed(3)
+    // license_fee_omr is always a flat OMR fee (by design), but
+    // total_revenue_omr now travels in the branch's own currency (see
+    // 20260915l_branch_currency.sql) — use the row's real currency for it.
+    const rowCurrency = row.currency || 'OMR'
 
     if (daysOverdue >= 7) {
       alerts.push({
@@ -136,7 +139,7 @@ export default async function AlertCenterPage() {
         severity: 'warning',
         icon:     FileText,
         title:    `Unpaid billing: ${branchName}`,
-        detail:   `${month} — OMR ${Number(row.total_revenue_omr).toFixed(3)} revenue not yet settled (${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} ago).`,
+        detail:   `${month} — ${rowCurrency} ${Number(row.total_revenue_omr).toFixed(3)} revenue not yet settled (${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} ago).`,
         href:     `/hq/branches/${row.branch_id}`,
       })
     }

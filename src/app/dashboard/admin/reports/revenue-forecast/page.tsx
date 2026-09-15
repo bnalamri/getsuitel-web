@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getMyBranchId } from '@/lib/admin-branch'
+import { getPlanPricesForBranch } from '@/lib/plan-pricing'
 import { AlertTriangle, TrendingUp, RefreshCw, Coins } from 'lucide-react'
 import PrintButton from '@/components/PrintButton'
 import PrintHeader from '@/components/PrintHeader'
@@ -7,14 +8,6 @@ import ExcelExportButton from './ExcelExportButton'
 
 export const metadata = { title: 'Subscription Revenue Forecast' }
 export const dynamic = 'force-dynamic'
-
-// Subscription plan prices
-const PLAN_PRICES: Record<string, number> = {
-  basic:      49,
-  pro:        99,
-  enterprise: 199,
-  free:       0,
-}
 
 function fmtCurrency(n: number, currency: string) {
   return `${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${currency}`
@@ -42,12 +35,18 @@ export default async function RevenueForecastPage() {
   const today = new Date()
   const printDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  // Read currency + date format from platform settings
-  const [currencyRow, dateFormatRow] = await Promise.all([
-    admin.from('platform_settings').select('value').eq('key', 'default_currency').maybeSingle(),
+  // Real, live plan prices for this branch (its own overrides layered on
+  // the HQ defaults) — replaces a previously hardcoded, stale PLAN_PRICES
+  // map that never matched real pricing. See src/lib/plan-pricing.ts.
+  const [planPrices, dateFormatRow] = await Promise.all([
+    getPlanPricesForBranch(admin, branchId),
     admin.from('platform_settings').select('value').eq('key', 'default_date_format').maybeSingle(),
   ])
-  const adminCurrency = (currencyRow.data?.value as string) ?? 'OMR'
+  const priceOf = (slug: string) => planPrices[slug]?.price ?? 0
+  // This report is scoped to one branch, whose plans all share one
+  // currency in practice (see /pricing) — use the Pro plan's currency
+  // as the representative one, falling back across other slugs/OMR.
+  const adminCurrency = planPrices.pro?.currency ?? planPrices.basic?.currency ?? planPrices.enterprise?.currency ?? 'OMR'
   const adminDateFormat = (dateFormatRow.data?.value as string) ?? 'DD/MM/YYYY'
 
   const orgQ = admin
@@ -65,7 +64,7 @@ export default async function RevenueForecastPage() {
   // Current MRR
   const mrr = orgList
     .filter(o => o.subscription_status === 'active')
-    .reduce((s, o) => s + (PLAN_PRICES[o.subscription_plan] ?? 0), 0)
+    .reduce((s, o) => s + priceOf(o.subscription_plan), 0)
 
   // Build 12-month forecast
   const months: { key: string; label: string; renewals: number; atRisk: number; expectedMRR: number }[] = []
@@ -85,7 +84,7 @@ export default async function RevenueForecastPage() {
     const atRisk = expiringThisMonth.filter(o => o.subscription_status === 'past_due').length
     // Assume 80% renewal rate for active, 40% for past_due
     const expectedRevenue = expiringThisMonth.reduce((s, o) => {
-      const price = PLAN_PRICES[o.subscription_plan] ?? 0
+      const price = priceOf(o.subscription_plan)
       const rate = o.subscription_status === 'active' ? 0.8 : 0.4
       return s + price * rate
     }, 0)
@@ -105,7 +104,7 @@ export default async function RevenueForecastPage() {
     const plan = o.subscription_plan
     if (!byPlan[plan]) byPlan[plan] = { count: 0, mrr: 0 }
     byPlan[plan].count++
-    byPlan[plan].mrr += PLAN_PRICES[plan] ?? 0
+    byPlan[plan].mrr += priceOf(plan)
   }
 
   return (
@@ -240,7 +239,7 @@ export default async function RevenueForecastPage() {
                           {fmtDate(o.subscription_expires_at!, adminDateFormat)} ({daysLeft}d)
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700">{fmtCurrency(PLAN_PRICES[o.subscription_plan] ?? 0, adminCurrency)}/mo</td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">{fmtCurrency(priceOf(o.subscription_plan), adminCurrency)}/mo</td>
                     </tr>
                   )
                 })}

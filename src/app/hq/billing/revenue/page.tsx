@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import RevenueCharts from './RevenueCharts'
 import RevenueExportButtons from './RevenueExportButtons'
 import Link from 'next/link'
@@ -11,6 +12,7 @@ type BillingRecord = {
   total_revenue_omr: number
   share_amount_omr: number
   license_fee_omr: number
+  currency: string | null
   status: string
   created_at: string
   branches: { display_name: string } | null
@@ -22,7 +24,7 @@ export default async function HQRevenueOverviewPage() {
   const { data: billing } = await supabase
     .from('branch_billing')
     .select(`
-      id, branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, status, created_at,
+      id, branch_id, month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status, created_at,
       branches!branch_billing_branch_id_fkey ( display_name )
     `)
     .order('month', { ascending: false })
@@ -34,31 +36,52 @@ export default async function HQRevenueOverviewPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // ── Per-branch P&L summary ────────────────────────────────────────────────
+  // A branch's revenue/share travel in its own currency (see
+  // 20260915l_branch_currency.sql); license_fee_omr is always a flat OMR fee.
+  // So even within one branch, "collected"/"pending"/"overdue" can't just be
+  // share + license added together unless that branch's currency is OMR —
+  // they're tracked as separate share/license components below and only
+  // combined into one number where doing so is actually valid.
   const branchMap = new Map<string, {
     name: string
+    currency: string
     totalRevenue: number
     totalShare: number
     totalLicense: number
-    collected: number
-    pending: number
-    overdue: number
+    shareCollected: number
+    sharePending: number
+    shareOverdue: number
+    licenseCollected: number
+    licensePending: number
+    licenseOverdue: number
   }>()
 
   for (const r of rows) {
     const name = r.branches?.display_name ?? r.branch_id
+    const currency = r.currency || 'OMR'
     if (!branchMap.has(r.branch_id)) {
-      branchMap.set(r.branch_id, { name, totalRevenue: 0, totalShare: 0, totalLicense: 0, collected: 0, pending: 0, overdue: 0 })
+      branchMap.set(r.branch_id, {
+        name, currency, totalRevenue: 0, totalShare: 0, totalLicense: 0,
+        shareCollected: 0, sharePending: 0, shareOverdue: 0,
+        licenseCollected: 0, licensePending: 0, licenseOverdue: 0,
+      })
     }
     const b = branchMap.get(r.branch_id)!
     b.totalRevenue += Number(r.total_revenue_omr)
     b.totalShare   += Number(r.share_amount_omr)
     b.totalLicense += Number(r.license_fee_omr)
-    const due = Number(r.share_amount_omr) + Number(r.license_fee_omr)
+    const share   = Number(r.share_amount_omr)
+    const license = Number(r.license_fee_omr)
     if (r.status === 'paid') {
-      b.collected += due
+      b.shareCollected   += share
+      b.licenseCollected += license
     } else {
-      b.pending += due
-      if (new Date(r.created_at) < sevenDaysAgo) b.overdue += due
+      b.sharePending   += share
+      b.licensePending += license
+      if (new Date(r.created_at) < sevenDaysAgo) {
+        b.shareOverdue   += share
+        b.licenseOverdue += license
+      }
     }
   }
 
@@ -66,12 +89,25 @@ export default async function HQRevenueOverviewPage() {
     .map(([id, d]) => ({ id, ...d }))
     .sort((a, b) => b.totalRevenue - a.totalRevenue)
 
-  const grandTotalRevenue  = branches.reduce((s, b) => s + b.totalRevenue, 0)
-  const grandTotalShare    = branches.reduce((s, b) => s + b.totalShare,   0)
-  const grandTotalLicense  = branches.reduce((s, b) => s + b.totalLicense, 0)
-  const grandCollected     = branches.reduce((s, b) => s + b.collected,    0)
-  const grandPending       = branches.reduce((s, b) => s + b.pending,      0)
-  const grandOverdue       = branches.reduce((s, b) => s + b.overdue,      0)
+  // Grand totals: license fee is always OMR so it's safe to sum across every
+  // branch; revenue/share must be grouped by currency instead of blended.
+  const grandTotalLicense = branches.reduce((s, b) => s + b.totalLicense, 0)
+  const grandLicenseCollected = branches.reduce((s, b) => s + b.licenseCollected, 0)
+  const grandLicensePending   = branches.reduce((s, b) => s + b.licensePending,   0)
+  const grandLicenseOverdue   = branches.reduce((s, b) => s + b.licenseOverdue,   0)
+
+  const revenueByCurrency: Record<string, number> = {}
+  const shareByCurrency: Record<string, number> = {}
+  const shareCollectedByCurrency: Record<string, number> = {}
+  const sharePendingByCurrency: Record<string, number> = {}
+  const shareOverdueByCurrency: Record<string, number> = {}
+  for (const b of branches) {
+    revenueByCurrency[b.currency]        = (revenueByCurrency[b.currency] ?? 0) + b.totalRevenue
+    shareByCurrency[b.currency]          = (shareByCurrency[b.currency] ?? 0) + b.totalShare
+    shareCollectedByCurrency[b.currency] = (shareCollectedByCurrency[b.currency] ?? 0) + b.shareCollected
+    sharePendingByCurrency[b.currency]   = (sharePendingByCurrency[b.currency] ?? 0) + b.sharePending
+    shareOverdueByCurrency[b.currency]   = (shareOverdueByCurrency[b.currency] ?? 0) + b.shareOverdue
+  }
 
   // ── Monthly totals for chart ───────────────────────────────────────────────
   // Last 12 months, each branch as a series
@@ -101,30 +137,43 @@ export default async function HQRevenueOverviewPage() {
         </div>
         <RevenueExportButtons
           branches={branches}
-          grandTotalRevenue={grandTotalRevenue}
-          grandTotalShare={grandTotalShare}
           grandTotalLicense={grandTotalLicense}
-          grandCollected={grandCollected}
-          grandPending={grandPending}
-          grandOverdue={grandOverdue}
+          grandLicenseCollected={grandLicenseCollected}
+          grandLicensePending={grandLicensePending}
+          grandLicenseOverdue={grandLicenseOverdue}
+          revenueByCurrency={revenueByCurrency}
+          shareByCurrency={shareByCurrency}
+          shareCollectedByCurrency={shareCollectedByCurrency}
+          sharePendingByCurrency={sharePendingByCurrency}
+          shareOverdueByCurrency={shareOverdueByCurrency}
           chartData={chartData}
         />
       </div>
 
-      {/* Grand totals */}
+      {/* Grand totals — license fee is always OMR (safe to blend across
+          branches); revenue/HQ share/collection status are broken out per
+          currency instead, since branches now bill in their own currency. */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {Object.entries(revenueByCurrency).map(([c, v]) => (
+          <div key={`rev-${c}`} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="text-lg font-bold text-amber-600 mb-0.5"><CurrencyAmount value={v} currency={c} /></div>
+            <div className="text-xs text-gray-500">Total Revenue ({c})</div>
+          </div>
+        ))}
+        {Object.entries(shareByCurrency).map(([c, v]) => (
+          <div key={`share-${c}`} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="text-lg font-bold text-blue-600 mb-0.5"><CurrencyAmount value={v} currency={c} /></div>
+            <div className="text-xs text-gray-500">HQ Share ({c})</div>
+          </div>
+        ))}
         {[
-          { label: 'Total Revenue', value: grandTotalRevenue,  color: 'amber'  },
-          { label: 'HQ Share',      value: grandTotalShare,    color: 'blue'   },
-          { label: 'License Fees',  value: grandTotalLicense,  color: 'purple' },
-          { label: 'Collected',     value: grandCollected,     color: 'green'  },
-          { label: 'Pending',       value: grandPending,       color: grandPending > 0 ? 'red' : 'gray' },
-          { label: 'Overdue (7d+)', value: grandOverdue,       color: grandOverdue > 0 ? 'red' : 'gray' },
+          { label: 'License Fees',       value: grandTotalLicense,     color: 'purple' },
+          { label: 'License Collected',  value: grandLicenseCollected, color: 'green'  },
+          { label: 'License Pending',    value: grandLicensePending,   color: grandLicensePending > 0 ? 'red' : 'gray' },
+          { label: 'License Overdue (7d+)', value: grandLicenseOverdue, color: grandLicenseOverdue > 0 ? 'red' : 'gray' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className={`text-lg font-bold flex items-center gap-1 mb-0.5 ${
-              color === 'amber'  ? 'text-amber-600'  :
-              color === 'blue'   ? 'text-blue-600'   :
               color === 'purple' ? 'text-purple-600' :
               color === 'green'  ? 'text-green-600'  :
               color === 'red'    ? 'text-red-600'    : 'text-gray-700'
@@ -139,7 +188,8 @@ export default async function HQRevenueOverviewPage() {
       {/* Revenue trends chart */}
       {chartData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Revenue Trend — Last 12 Months</h2>
+          <h2 className="font-semibold text-gray-900 mb-1">Revenue Trend — Last 12 Months</h2>
+          <p className="text-xs text-gray-400 mb-4">Each branch plotted in its own currency — values aren&apos;t directly comparable across branches with different currencies.</p>
           <RevenueCharts data={chartData} branches={branchNames} colors={COLORS} />
         </div>
       )}
@@ -157,24 +207,14 @@ export default async function HQRevenueOverviewPage() {
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="px-5 py-3 text-left">Branch</th>
-                  <th className="px-5 py-3 text-right">
-                    <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={12} /></span>
-                  </th>
-                  <th className="px-5 py-3 text-right">
-                    <span className="flex items-center justify-end gap-1">HQ Share <OmrSymbol variant="dark" size={12} /></span>
-                  </th>
+                  <th className="px-5 py-3 text-right">Revenue</th>
+                  <th className="px-5 py-3 text-right">HQ Share</th>
                   <th className="px-5 py-3 text-right">
                     <span className="flex items-center justify-end gap-1">License <OmrSymbol variant="dark" size={12} /></span>
                   </th>
-                  <th className="px-5 py-3 text-right">
-                    <span className="flex items-center justify-end gap-1">Collected <OmrSymbol variant="dark" size={12} /></span>
-                  </th>
-                  <th className="px-5 py-3 text-right">
-                    <span className="flex items-center justify-end gap-1">Pending <OmrSymbol variant="dark" size={12} /></span>
-                  </th>
-                  <th className="px-5 py-3 text-right" title="Pending amount unpaid for 7+ days since billing">
-                    <span className="flex items-center justify-end gap-1">Overdue <OmrSymbol variant="dark" size={12} /></span>
-                  </th>
+                  <th className="px-5 py-3 text-right">Share Collected</th>
+                  <th className="px-5 py-3 text-right">Share Pending</th>
+                  <th className="px-5 py-3 text-right" title="Pending amount unpaid for 7+ days since billing">Share Overdue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -185,31 +225,42 @@ export default async function HQRevenueOverviewPage() {
                         {b.name}
                       </Link>
                     </td>
-                    <td className="px-5 py-3 text-right text-gray-700">{b.totalRevenue.toFixed(3)}</td>
-                    <td className="px-5 py-3 text-right text-gray-700">{b.totalShare.toFixed(3)}</td>
-                    <td className="px-5 py-3 text-right text-gray-700">{b.totalLicense.toFixed(3)}</td>
-                    <td className="px-5 py-3 text-right text-green-600 font-medium">{b.collected.toFixed(3)}</td>
+                    <td className="px-5 py-3 text-right text-gray-700"><CurrencyAmount value={b.totalRevenue} currency={b.currency} /></td>
+                    <td className="px-5 py-3 text-right text-gray-700"><CurrencyAmount value={b.totalShare} currency={b.currency} /></td>
+                    <td className="px-5 py-3 text-right text-gray-700"><CurrencyAmount value={b.totalLicense} currency="OMR" /></td>
+                    <td className="px-5 py-3 text-right text-green-600 font-medium"><CurrencyAmount value={b.shareCollected} currency={b.currency} /></td>
                     <td className="px-5 py-3 text-right">
-                      <span className={b.pending > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
-                        {b.pending.toFixed(3)}
+                      <span className={b.sharePending > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                        <CurrencyAmount value={b.sharePending} currency={b.currency} />
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <span className={b.overdue > 0 ? 'text-red-700 font-semibold' : 'text-gray-300'}>
-                        {b.overdue > 0 ? b.overdue.toFixed(3) : '—'}
+                      <span className={b.shareOverdue > 0 ? 'text-red-700 font-semibold' : 'text-gray-300'}>
+                        {b.shareOverdue > 0 ? <CurrencyAmount value={b.shareOverdue} currency={b.currency} /> : '—'}
                       </span>
                     </td>
                   </tr>
                 ))}
-                {/* Totals row */}
-                <tr className="bg-gray-50 font-semibold text-gray-900">
-                  <td className="px-5 py-3">Total</td>
-                  <td className="px-5 py-3 text-right">{grandTotalRevenue.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right">{grandTotalShare.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right">{grandTotalLicense.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-green-600">{grandCollected.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-red-600">{grandPending.toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right text-red-700">{grandOverdue.toFixed(3)}</td>
+                {/* Per-currency totals rows */}
+                {Object.entries(revenueByCurrency).map(([c, v]) => (
+                  <tr key={`total-${c}`} className="bg-gray-50 font-semibold text-gray-900">
+                    <td className="px-5 py-3">Total ({c})</td>
+                    <td className="px-5 py-3 text-right"><CurrencyAmount value={v} currency={c} /></td>
+                    <td className="px-5 py-3 text-right"><CurrencyAmount value={shareByCurrency[c] ?? 0} currency={c} /></td>
+                    <td className="px-5 py-3 text-right text-gray-300">—</td>
+                    <td className="px-5 py-3 text-right text-green-600"><CurrencyAmount value={shareCollectedByCurrency[c] ?? 0} currency={c} /></td>
+                    <td className="px-5 py-3 text-right text-red-600"><CurrencyAmount value={sharePendingByCurrency[c] ?? 0} currency={c} /></td>
+                    <td className="px-5 py-3 text-right text-red-700"><CurrencyAmount value={shareOverdueByCurrency[c] ?? 0} currency={c} /></td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-semibold text-gray-900">
+                  <td className="px-5 py-3">Total License Fee (OMR)</td>
+                  <td className="px-5 py-3"></td>
+                  <td className="px-5 py-3"></td>
+                  <td className="px-5 py-3 text-right"><CurrencyAmount value={grandTotalLicense} currency="OMR" /></td>
+                  <td className="px-5 py-3 text-right text-green-600"><CurrencyAmount value={grandLicenseCollected} currency="OMR" /></td>
+                  <td className="px-5 py-3 text-right text-red-600"><CurrencyAmount value={grandLicensePending} currency="OMR" /></td>
+                  <td className="px-5 py-3 text-right text-red-700"><CurrencyAmount value={grandLicenseOverdue} currency="OMR" /></td>
                 </tr>
               </tbody>
             </table>

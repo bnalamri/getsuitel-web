@@ -22,7 +22,7 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
     .from('branches')
     .select(`
       id, name, display_name, region, city, status,
-      license_fee_omr, revenue_share_pct, logo_url, created_at, updated_at,
+      license_fee_omr, revenue_share_pct, currency, logo_url, created_at, updated_at,
       max_units, max_staff, max_tenants, max_orgs,
       superadmin_id,
       profiles!branches_superadmin_id_fkey ( full_name, email, phone )
@@ -80,7 +80,7 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
 
     supabase
       .from('branch_billing')
-      .select('month, total_revenue_omr, share_amount_omr, license_fee_omr, status')
+      .select('month, total_revenue_omr, share_amount_omr, license_fee_omr, currency, status')
       .eq('branch_id', params.id)
       .order('month', { ascending: false }),
   ])
@@ -124,6 +124,7 @@ export default async function BranchDetailPage({ params }: { params: { id: strin
             status:           branch.status as 'pending_agreement' | 'active' | 'suspended' | 'archived',
             license_fee_omr:  Number(branch.license_fee_omr),
             revenue_share_pct: Number(branch.revenue_share_pct),
+            currency:         branch.currency || 'OMR',
             created_at:       branch.created_at,
             updated_at:       branch.updated_at,
             city:             branch.city,

@@ -3,6 +3,10 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+// revenue/share travel in each branch's own currency (see
+// 20260915l_branch_currency.sql); license is always OMR. Anywhere these are
+// aggregated below, revenue/share are grouped by currency rather than summed
+// across branches with different currencies.
 type BillingRow = {
   branch_id: string
   branch_name: string
@@ -10,6 +14,7 @@ type BillingRow = {
   revenue: number
   share: number
   license: number
+  currency: string
   status: string
 }
 type Branch = { id: string; display_name: string }
@@ -29,7 +34,7 @@ function arcPath(cx: number, cy: number, ro: number, ri: number, a1: number, a2:
   return `M${s1.x.toFixed(2)},${s1.y.toFixed(2)} A${ro},${ro},0,${lg},1,${e1.x.toFixed(2)},${e1.y.toFixed(2)} L${s2.x.toFixed(2)},${s2.y.toFixed(2)} A${ri},${ri},0,${lg},0,${e2.x.toFixed(2)},${e2.y.toFixed(2)} Z`
 }
 
-function DonutChart({ slices }: { slices: { label: string; value: number; color: string }[] }) {
+function DonutChart({ slices, currency = 'OMR' }: { slices: { label: string; value: number; color: string }[]; currency?: string }) {
   const total = slices.reduce((s, x) => s + x.value, 0)
   if (total === 0) return (
     <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No revenue data</div>
@@ -51,7 +56,7 @@ function DonutChart({ slices }: { slices: { label: string; value: number; color:
         <text x="100" y="114" textAnchor="middle" style={{ fontSize: 15, fontWeight: 700, fill: '#111827' }}>
           {total.toFixed(0)}
         </text>
-        <text x="100" y="128" textAnchor="middle" style={{ fontSize: 9, fill: '#9ca3af' }}>OMR</text>
+        <text x="100" y="128" textAnchor="middle" style={{ fontSize: 9, fill: '#9ca3af' }}>{currency}</text>
       </svg>
       <div className="w-full max-w-sm flex flex-col gap-2">
         {paths.map(p => (
@@ -125,36 +130,51 @@ function buildXlsxSheet(rows: CellDef[][], widths: number[], strIdx: Record<stri
 async function exportToExcel(billing: BillingRow[], months: string[], monthLabel: (m: string) => string) {
   const JSZip = await loadJSZip()
 
-  // Sheet 1: Monthly Platform Totals
-  const monthTotals: Record<string, { revenue: number; share: number; license: number }> = {}
-  months.forEach(m => { monthTotals[m] = { revenue: 0, share: 0, license: 0 } })
+  // Sheet 1: Monthly Platform Totals — grouped by currency, since revenue/share
+  // travel in each branch's own currency and can't be blended together.
+  const monthTotals: Record<string, Record<string, { revenue: number; share: number }>> = {}
+  const monthLicense: Record<string, number> = {}
+  months.forEach(m => { monthTotals[m] = {}; monthLicense[m] = 0 })
   billing.forEach(r => {
-    if (monthTotals[r.month]) {
-      monthTotals[r.month].revenue += r.revenue
-      monthTotals[r.month].share   += r.share
-      monthTotals[r.month].license += r.license
+    if (!monthTotals[r.month]) return
+    if (!monthTotals[r.month][r.currency]) monthTotals[r.month][r.currency] = { revenue: 0, share: 0 }
+    monthTotals[r.month][r.currency].revenue += r.revenue
+    monthTotals[r.month][r.currency].share   += r.share
+    monthLicense[r.month] += r.license
+  })
+  const sheet1Hdr: CellDef[] = ['Month','Currency','Total Revenue','HQ Share','License Fee (OMR)'].map(h => ({ v: h, s: 1 }))
+  const sheet1Rows: CellDef[][] = [sheet1Hdr]
+  months.slice().reverse().forEach((m, i) => {
+    const alt = i % 2 === 1 ? 3 : 2
+    const currencies = Object.keys(monthTotals[m])
+    if (currencies.length === 0) {
+      sheet1Rows.push([{ v: monthLabel(m), s: alt }, { v: '—', s: alt }, { v: 0, s: alt }, { v: 0, s: alt }, { v: monthLicense[m], s: alt }])
+    } else {
+      currencies.forEach((c, ci) => {
+        const t = monthTotals[m][c]
+        sheet1Rows.push([
+          { v: ci === 0 ? monthLabel(m) : '', s: alt }, { v: c, s: alt },
+          { v: t.revenue, s: alt }, { v: t.share, s: alt },
+          { v: ci === 0 ? monthLicense[m] : null, s: alt },
+        ])
+      })
     }
   })
-  const sheet1Hdr: CellDef[] = ['Month','Total Revenue (OMR)','HQ Share (OMR)','License Fee (OMR)'].map(h => ({ v: h, s: 1 }))
-  const sheet1Rows: CellDef[][] = [sheet1Hdr, ...months.slice().reverse().map((m, i) => {
-    const t = monthTotals[m]; const alt = i % 2 === 1 ? 3 : 2
-    return [{ v: monthLabel(m), s: alt }, { v: t.revenue, s: alt }, { v: t.share, s: alt }, { v: t.license, s: alt }]
-  })]
 
   // Sheet 2: Per-Branch Breakdown
-  const sheet2Hdr: CellDef[] = ['Branch','Month','Revenue (OMR)','HQ Share (OMR)','License Fee (OMR)','License Status'].map(h => ({ v: h, s: 1 }))
+  const sheet2Hdr: CellDef[] = ['Branch','Month','Currency','Revenue','HQ Share','License Fee (OMR)','License Status'].map(h => ({ v: h, s: 1 }))
   const sheet2Rows: CellDef[][] = [sheet2Hdr, ...billing.map((r, i) => {
     const alt = i % 2 === 1 ? 3 : 2
     return [
-      { v: r.branch_name, s: alt }, { v: monthLabel(r.month), s: alt },
+      { v: r.branch_name, s: alt }, { v: monthLabel(r.month), s: alt }, { v: r.currency, s: alt },
       { v: r.revenue, s: alt }, { v: r.share, s: alt }, { v: r.license, s: alt },
       { v: r.status, s: r.status === 'paid' ? 4 : alt },
     ]
   })]
 
   const sheetDefs = [
-    { name: 'Monthly Totals', rows: sheet1Rows, widths: [16, 20, 18, 18] },
-    { name: 'Per-Branch Breakdown', rows: sheet2Rows, widths: [30, 14, 20, 18, 18, 12] },
+    { name: 'Monthly Totals', rows: sheet1Rows, widths: [16, 10, 18, 16, 18] },
+    { name: 'Per-Branch Breakdown', rows: sheet2Rows, widths: [30, 14, 10, 18, 16, 18, 12] },
   ]
 
   // Build shared strings
@@ -229,23 +249,37 @@ export default function RevenueTrendClient({
     router.push(qs ? `/hq/reports/revenue-trend?${qs}` : '/hq/reports/revenue-trend')
   }
 
-  // Monthly totals from filtered billing
-  const monthTotals: Record<string, number> = {}
-  months.forEach(m => { monthTotals[m] = 0 })
-  billing.forEach(r => { if (monthTotals[r.month] !== undefined) monthTotals[r.month] += r.revenue })
-  const maxRevenue = Math.max(...Object.values(monthTotals), 1)
-
-  // Per-branch totals for donut (always use all billing, not filtered, for context)
-  // But if a branch is selected, show only that branch vs others
-  const branchTotals: Record<string, { name: string; revenue: number }> = {}
+  // Monthly totals from filtered billing, grouped by currency — revenue
+  // can't be summed across branches billing in different currencies.
+  const currenciesPresent = Array.from(new Set(billing.map(r => r.currency))).sort()
+  const monthTotalsByCurrency: Record<string, Record<string, number>> = {}
+  months.forEach(m => { monthTotalsByCurrency[m] = {} })
   billing.forEach(r => {
-    if (!branchTotals[r.branch_id]) branchTotals[r.branch_id] = { name: r.branch_name, revenue: 0 }
-    branchTotals[r.branch_id].revenue += r.revenue
+    if (monthTotalsByCurrency[r.month] === undefined) return
+    monthTotalsByCurrency[r.month][r.currency] = (monthTotalsByCurrency[r.month][r.currency] ?? 0) + r.revenue
   })
-  const donutSlices = Object.entries(branchTotals).map(([id, b], i) => ({
-    label: b.name,
-    value: b.revenue,
-    color: COLORS[i % COLORS.length],
+  const maxRevenueByCurrency: Record<string, number> = {}
+  currenciesPresent.forEach(c => {
+    maxRevenueByCurrency[c] = Math.max(...months.map(m => monthTotalsByCurrency[m][c] ?? 0), 1)
+  })
+
+  // Per-branch totals for donut, grouped by currency (always use all billing,
+  // not filtered, for context; if a branch is selected, show only that
+  // branch vs others). One donut per currency present.
+  const branchTotalsByCurrency: Record<string, Record<string, { name: string; revenue: number }>> = {}
+  billing.forEach(r => {
+    if (!branchTotalsByCurrency[r.currency]) branchTotalsByCurrency[r.currency] = {}
+    const bucket = branchTotalsByCurrency[r.currency]
+    if (!bucket[r.branch_id]) bucket[r.branch_id] = { name: r.branch_name, revenue: 0 }
+    bucket[r.branch_id].revenue += r.revenue
+  })
+  const donutsByCurrency = Object.entries(branchTotalsByCurrency).map(([currency, branchMap]) => ({
+    currency,
+    slices: Object.values(branchMap).map((b, i) => ({
+      label: b.name,
+      value: b.revenue,
+      color: COLORS[i % COLORS.length],
+    })),
   }))
 
   async function handleExport() {
@@ -283,36 +317,63 @@ export default function RevenueTrendClient({
         </div>
       </div>
 
-      {/* Donut chart — revenue by branch */}
+      {/* Donut chart(s) — revenue by branch, one per currency present since
+          revenue can't be blended across branches with different currencies */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-800 mb-4">Revenue Distribution by Branch</h2>
-        <DonutChart slices={donutSlices} />
+        {donutsByCurrency.length === 0 ? (
+          <div className="flex items-center justify-center h-48 text-gray-400 text-sm">No revenue data</div>
+        ) : (
+          <div className={`grid gap-6 ${donutsByCurrency.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+            {donutsByCurrency.map(d => (
+              <div key={d.currency}>
+                {donutsByCurrency.length > 1 && (
+                  <p className="text-xs text-gray-500 font-semibold mb-2 text-center">{d.currency}</p>
+                )}
+                <DonutChart slices={d.slices} currency={d.currency} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Bar chart — monthly totals */}
+      {/* Bar chart — monthly totals, one bar row per currency present */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-gray-800">Platform Monthly Revenue</h2>
           <span className="text-xs text-gray-400">
-            {selectedBranch ? branches.find(b => b.id === selectedBranch)?.display_name : 'All branches'} · OMR
+            {selectedBranch ? branches.find(b => b.id === selectedBranch)?.display_name : 'All branches'}
+            {currenciesPresent.length > 0 ? ` · ${currenciesPresent.join(', ')}` : ''}
           </span>
         </div>
-        <div className="space-y-3">
-          {months.slice().reverse().map(m => {
-            const rev = monthTotals[m] ?? 0
-            const pct = maxRevenue > 0 ? (rev / maxRevenue) * 100 : 0
-            return (
-              <div key={m} className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 w-24 flex-shrink-0 text-right">{monthLabel(m)}</span>
-                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%`, minWidth: pct > 0 ? 4 : 0 }} />
+        <div className="space-y-4">
+          {months.slice().reverse().map(m => (
+            <div key={m} className="space-y-1.5">
+              <span className="text-xs text-gray-500">{monthLabel(m)}</span>
+              {currenciesPresent.length === 0 ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden" />
+                  <span className="text-xs font-medium text-gray-400 w-24 flex-shrink-0 text-right">0.000</span>
                 </div>
-                <span className="text-xs font-medium text-gray-700 w-24 flex-shrink-0 text-right">
-                  {rev.toFixed(3)}
-                </span>
-              </div>
-            )
-          })}
+              ) : currenciesPresent.map(c => {
+                const rev = monthTotalsByCurrency[m][c] ?? 0
+                const pct = (maxRevenueByCurrency[c] ?? 1) > 0 ? (rev / maxRevenueByCurrency[c]) * 100 : 0
+                return (
+                  <div key={c} className="flex items-center gap-3">
+                    {currenciesPresent.length > 1 && (
+                      <span className="text-[10px] text-gray-400 w-10 flex-shrink-0">{c}</span>
+                    )}
+                    <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-yellow-400 transition-all" style={{ width: `${pct}%`, minWidth: pct > 0 ? 4 : 0 }} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 w-24 flex-shrink-0 text-right">
+                      {rev.toFixed(3)} {c}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -327,19 +388,21 @@ export default function RevenueTrendClient({
               <tr>
                 <th className="px-5 py-3 text-left">Branch</th>
                 <th className="px-5 py-3 text-left">Month</th>
-                <th className="px-5 py-3 text-right">Revenue (OMR)</th>
-                <th className="px-5 py-3 text-right">HQ Share (OMR)</th>
+                <th className="px-5 py-3 text-left">Currency</th>
+                <th className="px-5 py-3 text-right">Revenue</th>
+                <th className="px-5 py-3 text-right">HQ Share</th>
                 <th className="px-5 py-3 text-right">License Fee (OMR)</th>
                 <th className="px-5 py-3 text-left">License Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {!billing.length ? (
-                <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No billing records in last 12 months</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">No billing records in last 12 months</td></tr>
               ) : billing.map(r => (
                 <tr key={`${r.branch_id}-${r.month}`} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-900">{r.branch_name}</td>
                   <td className="px-5 py-3 text-gray-600">{monthLabel(r.month)}</td>
+                  <td className="px-5 py-3 text-gray-600">{r.currency}</td>
                   <td className="px-5 py-3 text-right text-gray-700">{r.revenue.toFixed(3)}</td>
                   <td className="px-5 py-3 text-right text-gray-700">{r.share.toFixed(3)}</td>
                   <td className="px-5 py-3 text-right text-purple-700 font-medium">{r.license.toFixed(3)}</td>
@@ -350,11 +413,21 @@ export default function RevenueTrendClient({
                   </td>
                 </tr>
               ))}
+              {currenciesPresent.map(c => (
+                <tr key={`total-${c}`} className="bg-gray-50 font-semibold text-gray-900">
+                  <td className="px-5 py-3" colSpan={2}>Total ({c})</td>
+                  <td className="px-5 py-3">{c}</td>
+                  <td className="px-5 py-3 text-right">{billing.filter(r => r.currency === c).reduce((s, r) => s + r.revenue, 0).toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right">{billing.filter(r => r.currency === c).reduce((s, r) => s + r.share, 0).toFixed(3)}</td>
+                  <td className="px-5 py-3 text-right text-gray-300">—</td>
+                  <td className="px-5 py-3"></td>
+                </tr>
+              ))}
               {billing.length > 0 && (
-                <tr className="bg-gray-50 font-semibold text-gray-900">
-                  <td className="px-5 py-3" colSpan={2}>Total</td>
-                  <td className="px-5 py-3 text-right">{billing.reduce((s, r) => s + r.revenue, 0).toFixed(3)}</td>
-                  <td className="px-5 py-3 text-right">{billing.reduce((s, r) => s + r.share, 0).toFixed(3)}</td>
+                <tr className="bg-gray-100 font-semibold text-gray-900">
+                  <td className="px-5 py-3" colSpan={3}>Total License Fee (OMR)</td>
+                  <td className="px-5 py-3 text-right text-gray-300">—</td>
+                  <td className="px-5 py-3 text-right text-gray-300">—</td>
                   <td className="px-5 py-3 text-right text-purple-700">{billing.reduce((s, r) => s + r.license, 0).toFixed(3)}</td>
                   <td className="px-5 py-3"></td>
                 </tr>

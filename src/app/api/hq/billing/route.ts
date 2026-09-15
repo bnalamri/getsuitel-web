@@ -66,10 +66,13 @@ export async function generateBilling(
   monthStart: Date,
   monthEnd: Date,
 ) {
-  // Get all active/suspended branches with their revenue share %
+  // Get all active/suspended branches with their revenue share % and
+  // their own operating currency (see 20260915l_branch_currency.sql —
+  // revenue/share amounts travel in the branch's own currency;
+  // license_fee_omr stays a flat HQ-set OMR fee regardless).
   const { data: branches } = await supabase
     .from('branches')
-    .select('id, license_fee_omr, revenue_share_pct')
+    .select('id, license_fee_omr, revenue_share_pct, currency')
     .in('status', ['active', 'suspended'])
 
   if (!branches?.length) {
@@ -85,6 +88,8 @@ export async function generateBilling(
       .select('id')
       .eq('branch_id', branch.id)
 
+    const branchCurrency = branch.currency || 'OMR'
+
     const orgIds = orgs?.map(o => o.id) ?? []
     if (orgIds.length === 0) {
       // No orgs — insert zero-revenue billing row
@@ -94,13 +99,16 @@ export async function generateBilling(
         total_revenue_omr:  0,
         share_amount_omr:   0,
         license_fee_omr:    Number(branch.license_fee_omr),
+        currency:           branchCurrency,
         status:             'pending',
       }, { onConflict: 'branch_id,month', ignoreDuplicates: false })
       if (!error) results.push(branch.id)
       continue
     }
 
-    // Sum paid OMR invoices within the month
+    // Sum paid invoices within the month, in the branch's own operating
+    // currency (was hardcoded to 'OMR' only — silently zeroed revenue
+    // for every SAR/AED branch. See 20260915l_branch_currency.sql).
     const { data: invoices } = await supabase
       .from('invoices')
       .select('amount, currency')
@@ -110,11 +118,15 @@ export async function generateBilling(
       .lt('paid_date', monthEnd.toISOString().substring(0, 10))
 
     const totalRevenue = invoices?.reduce((s, inv) => {
-      // Include only OMR invoices; skip foreign-currency for now
-      if (!inv.currency || inv.currency === 'OMR') return s + Number(inv.amount)
+      const invCurrency = inv.currency || 'OMR'
+      if (invCurrency === branchCurrency) return s + Number(inv.amount)
       return s
     }, 0) ?? 0
 
+    // Revenue share is a % of local rental revenue, so it travels in
+    // the same currency as totalRevenue. license_fee_omr is a separate,
+    // flat HQ-set fee always in OMR — never combine the two into one
+    // blended amount unless branchCurrency is itself OMR.
     const shareAmount = totalRevenue * Number(branch.revenue_share_pct) / 100
 
     const { error } = await supabase.from('branch_billing').upsert({
@@ -123,6 +135,7 @@ export async function generateBilling(
       total_revenue_omr:  totalRevenue,
       share_amount_omr:   shareAmount,
       license_fee_omr:    Number(branch.license_fee_omr),
+      currency:           branchCurrency,
       status:             'pending',
     }, { onConflict: 'branch_id,month', ignoreDuplicates: false })
 

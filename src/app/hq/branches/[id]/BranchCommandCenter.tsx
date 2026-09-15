@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, PauseCircle, Archive, BarChart2, ScrollText,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import BranchActions from './BranchActions'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ type BillingRow = {
   total_revenue_omr: string | number
   share_amount_omr: string | number
   license_fee_omr: string | number
+  currency?: string | null
   status: string
 }
 
@@ -36,6 +38,7 @@ type BranchData = {
   status: 'pending_agreement' | 'active' | 'suspended' | 'archived'
   license_fee_omr: number
   revenue_share_pct: number
+  currency: string
   created_at: string
   updated_at: string
   city: string | null
@@ -143,16 +146,17 @@ function OverviewTab({ branch, profile, stats }: { branch: BranchData; profile: 
     { label: 'Organisations',    value: stats.orgCount,    icon: Building2,  color: 'blue'    },
     { label: 'Properties',       value: stats.propCount,   icon: Home,       color: 'emerald' },
     { label: 'Tenants',          value: stats.tenantCount, icon: Users,      color: 'purple'  },
-    { label: 'Revenue (6 mo)',   omr: stats.totalRevenue6mo, icon: TrendingUp, color: 'amber' },
+    { label: `Revenue (6 mo)`,   amount: stats.totalRevenue6mo, icon: TrendingUp, color: 'amber' },
   ] as const
 
   return (
     <div className="space-y-6">
-      {/* KPI cards */}
+      {/* KPI cards — Revenue is in the branch's own currency (see
+          20260915l_branch_currency.sql), not always OMR */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {kpis.map(({ label, icon: Icon, color, ...rest }) => {
-          const omr   = 'omr'   in rest ? rest.omr   : undefined
-          const value = 'value' in rest ? rest.value : undefined
+          const amount = 'amount' in rest ? rest.amount : undefined
+          const value  = 'value'  in rest ? rest.value  : undefined
           return (
             <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${
@@ -166,9 +170,9 @@ function OverviewTab({ branch, profile, stats }: { branch: BranchData; profile: 
                   color === 'purple'  ? 'text-purple-600'  : 'text-amber-600'
                 }`} />
               </div>
-              {omr !== undefined ? (
+              {amount !== undefined ? (
                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
-                  <OmrSymbol size={17} variant="dark" /> {omr.toFixed(3)}
+                  <CurrencyAmount value={amount} currency={branch.currency} />
                 </div>
               ) : (
                 <div className="text-2xl font-bold text-gray-900">{value}</div>
@@ -238,17 +242,18 @@ function FinancialTab({ billing, branch }: { billing: BillingRow[]; branch: Bran
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
+      {/* Summary cards — revenue/share are in this branch's own currency
+          (see 20260915l_branch_currency.sql); license fee stays OMR */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="text-xl font-bold text-gray-900 flex items-center gap-1 mb-1">
-            <OmrSymbol size={17} variant="dark" /> {totalRevenue.toFixed(3)}
+            <CurrencyAmount value={totalRevenue} currency={branch.currency} />
           </div>
           <div className="text-xs text-gray-500">Total Revenue (all time)</div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="text-xl font-bold text-gray-900 flex items-center gap-1 mb-1">
-            <OmrSymbol size={17} variant="dark" /> {totalHQShare.toFixed(3)}
+            <CurrencyAmount value={totalHQShare} currency={branch.currency} />
           </div>
           <div className="text-xs text-gray-500">HQ Share (all time)</div>
         </div>
@@ -301,12 +306,12 @@ function FinancialTab({ billing, branch }: { billing: BillingRow[]; branch: Bran
                     </td>
                     <td className="px-5 py-3 text-right">
                       <span className="flex items-center justify-end gap-1 font-semibold text-gray-900">
-                        <OmrSymbol size={12} variant="dark" /> {Number(row.total_revenue_omr).toFixed(3)}
+                        <CurrencyAmount value={Number(row.total_revenue_omr)} currency={row.currency || branch.currency} />
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
                       <span className="flex items-center justify-end gap-1 text-gray-700">
-                        <OmrSymbol size={12} variant="dark" /> {Number(row.share_amount_omr).toFixed(3)}
+                        <CurrencyAmount value={Number(row.share_amount_omr)} currency={row.currency || branch.currency} />
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
