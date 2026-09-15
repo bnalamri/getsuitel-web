@@ -144,7 +144,7 @@ export default function LandingPage() {
   // 20260915_branch_pricing_plans.sql). Each plan now carries its own
   // `currency`, so this section no longer needs a separate /api/currency
   // lookup to know how to render a price.
-  type DbPlanLanding = { slug:string; name_en:string; name_ar:string; desc_en:string; desc_ar:string; price_monthly:number; currency:string; features_en:string[]; features_ar:string[]; is_popular:boolean }
+  type DbPlanLanding = { slug:string; name_en:string; name_ar:string; desc_en:string; desc_ar:string; price_monthly:number; currency:string; trial_days:number; features_en:string[]; features_ar:string[]; is_popular:boolean }
   const [dbPlans, setDbPlans] = useState<DbPlanLanding[]>([])
   const [livePrices, setLivePrices] = useState<Record<string,number>>({})
   useEffect(() => {
@@ -559,6 +559,9 @@ export default function LandingPage() {
                     <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{displayNum}</span>
                     <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
                   </div>
+                  <div className={`text-xs -mt-6 mb-6 ${highlight?'text-white/50':'text-slate-400'}`}>
+                    {db?.trial_days ?? 30} {lang === 'ar' ? 'يوم تجربة مجانية' : 'day free trial'}
+                  </div>
                   <ul className="space-y-3 mb-8">
                     {displayFeatures.map((f, j) => (
                       <li key={j} className={`flex items-center gap-3 text-sm ${highlight?'text-white/80':'text-slate-600'}`}>
@@ -597,6 +600,11 @@ export default function LandingPage() {
                         : <span className="text-3xl font-black text-gold-400">{C.pricing.exclusive.price}</span>
                       }
                     </div>
+                    {dbEx && (
+                      <div className="text-xs text-white/40 mt-1">
+                        {dbEx.trial_days} {lang === 'ar' ? 'يوم تجربة مجانية' : 'day free trial'}
+                      </div>
+                    )}
                   </div>
                   <ul className="flex-1 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 mb-6 md:mb-0">
                     {exFeatures.map((f, i) => (
