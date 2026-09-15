@@ -23,7 +23,7 @@ const roleConfig: Record<Role, {
     subtitle: 'You have been granted access to invoices, payments, and financial reports.',
     features: [
       { icon: Receipt,    label: 'Invoices & Payments', desc: 'Create invoices, record payments, and manage overdue accounts.' },
-      { icon: CreditCard, label: 'Cheques & Receipts',  desc: 'Track cheque status, confirm bank transfers and mobile wallet receipts.' },
+      { icon: CreditCard, label: 'Cheques & Receipts',  desc: 'Track cheque status, confirm bank transfers and mobile transfer receipts.' },
       { icon: FileText,   label: 'Financial Reports',   desc: 'View revenue collection reports, payment summaries, and tenant balances.' },
     ],
   },

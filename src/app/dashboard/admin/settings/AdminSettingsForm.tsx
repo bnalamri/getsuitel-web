@@ -211,7 +211,7 @@ export default function AdminSettingsForm({ profile, branchDisplayName }: { prof
           <Building2 size={16} className="text-navy-700" />
           <h3 className="font-semibold text-slate-900">Platform Payment Details</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-4">Bank and mobile wallet details for GetSuitel subscription payments.</p>
+        <p className="text-xs text-slate-500 mb-4">Bank and mobile transfer details for GetSuitel subscription payments.</p>
         <form onSubmit={handlePaymentSettings} className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-1">
             <Building2 size={14} /> Bank Transfer

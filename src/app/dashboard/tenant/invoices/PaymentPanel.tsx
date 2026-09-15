@@ -221,7 +221,7 @@ export default function PaymentPanel({
               )}
               {!org?.mobile_wallet_number && (
                 <div className="text-xs text-slate-400 flex items-center gap-1">
-                  <Info size={12}/> Wallet number not configured yet. Contact your property manager.
+                  <Info size={12}/> Mobile transfer number not configured yet. Contact your property manager.
                 </div>
               )}
               <div>

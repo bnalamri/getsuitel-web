@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { ToggleRight } from 'lucide-react'
+import { ToggleRight, DatabaseBackup } from 'lucide-react'
 
 const TOOLS = [
   { href: '/hq/system/feature-flags', icon: ToggleRight, label: 'Feature Flags', desc: 'Turn platform features on or off globally, or override per branch' },
+  { href: '/hq/system/backups', icon: DatabaseBackup, label: 'Platform Backups', desc: 'Daily full-database export, download, and restore — free-tier stand-in for Supabase Daily Backups' },
 ]
 
 export default function HQSystemPage() {

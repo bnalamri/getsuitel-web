@@ -38,6 +38,10 @@
     {
       "path": "/api/cron/license-reminder",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/platform-backup",
+      "schedule": "0 3 * * *"
     }
   ],
   "headers": [

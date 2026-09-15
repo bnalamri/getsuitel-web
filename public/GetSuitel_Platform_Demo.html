@@ -105,7 +105,7 @@ const R=[
   {name:'Invoice & Payment Collection',icon:'💰',desc:'Auto-generate rent invoices and track payments',steps:[
     {t:'Automatic Invoice Generation',d:'On the invoice date each month, the system generates rent invoices for every active contract automatically — no manual action from the owner.',tag:'Automated Cron Job',i:'⚙️'},
     {t:'Tenant Receives Email',d:'"Rent Invoice for August 2026 — Flat 11 — 250.000 OMR — Due by 05 Aug 2026". Email includes a "View & Pay" button.',tag:'Email Notification',i:'📬'},
-    {t:'Tenant Pays & Uploads Receipt',d:'Tenant → Invoices → "Pay Now" → Selects method (Bank Transfer / Mobile Wallet / Cash / Cheque) → Uploads photo of payment confirmation.',tag:'Tenant Portal',i:'💳'},
+    {t:'Tenant Pays & Uploads Receipt',d:'Tenant → Invoices → "Pay Now" → Selects method (Bank Transfer / Mobile Transfer / Cash / Cheque) → Uploads photo of payment confirmation.',tag:'Tenant Portal',i:'💳'},
     {t:'Owner Reviews Receipt',d:'Owner reviews uploaded proof → "Confirm" to mark as Paid, or "Reject" with an explanatory note.',tag:'Receipt Review',i:'🔍'},
     {t:'Invoice Closed',d:'Invoice status updates to "Paid". Overdue banners disappear. Payment recorded in Month-End Closing report.',tag:'Status: Paid ✅',i:'✅'},
   ]},
@@ -137,8 +137,8 @@ const R=[
   ]},
   {name:'Pay Rent Invoice',icon:'💳',desc:'Pay monthly rent via multiple payment methods',steps:[
     {t:'Receive Invoice Email',d:'"Rent Invoice for August 2026 — Flat 11 — 250.000 OMR — Due 05 Aug". Click "View & Pay" to go to the payment panel.',tag:'Email Notification',i:'📬'},
-    {t:'Select Payment Method',d:'Invoices → "Pay Now" → Bank Transfer (see owner bank details), Mobile Wallet (see mobile number), Cash (owner marks paid), or Cheque.',tag:'Payment Options',i:'💰'},
-    {t:'Upload Payment Receipt',d:'After paying, upload a screenshot of the bank transfer or mobile wallet confirmation. Add a reference number note if needed.',tag:'Receipt Upload',i:'📸'},
+    {t:'Select Payment Method',d:'Invoices → "Pay Now" → Bank Transfer (see owner bank details), Mobile Transfer (see mobile number), Cash (owner marks paid), or Cheque.',tag:'Payment Options',i:'💰'},
+    {t:'Upload Payment Receipt',d:'After paying, upload a screenshot of the bank transfer or mobile transfer confirmation. Add a reference number note if needed.',tag:'Receipt Upload',i:'📸'},
     {t:'Owner Confirms, Invoice Paid',d:'Owner reviews and confirms → Invoice status changes to "Paid" → Tenant sees the update and the invoice moves to payment history.',tag:'Status: Paid ✅',i:'✅'},
   ]},
   {name:'Submit Maintenance',icon:'🔧',desc:'Report issues and track repair progress',steps:[

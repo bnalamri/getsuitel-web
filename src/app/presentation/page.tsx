@@ -12,7 +12,7 @@ const ROLES = {
       en: [
         'Manage every property and unit from one dashboard',
         'Track tenants and contracts from move-in to renewal',
-        'Get paid faster — bank transfer, cheque, or mobile wallet',
+        'Get paid faster — bank transfer, cheque, or mobile transfer',
         'Assign and follow maintenance requests in seconds',
         'Full financial toolkit — income statements, P&L, month-end closing',
         'Live analytics on occupancy, revenue, and cash flow',
@@ -20,7 +20,7 @@ const ROLES = {
       ar: [
         'أدر كل عقار ووحدة من لوحة تحكم واحدة',
         'تابع المستأجرين والعقود من الدخول حتى التجديد',
-        'استلم مستحقاتك أسرع — تحويل بنكي، شيك، أو محفظة إلكترونية',
+        'استلم مستحقاتك أسرع — تحويل بنكي، شيك، أو تحويل عبر الهاتف المحمول',
         'أسند طلبات الصيانة وتابعها في ثوانٍ',
         'مجموعة أدوات مالية كاملة — بيانات الدخل، الأرباح والخسائر، الإقفال الشهري',
         'تحليلات حية للإشغال والإيرادات والتدفق النقدي',
