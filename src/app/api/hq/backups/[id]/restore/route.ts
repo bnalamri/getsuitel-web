@@ -24,7 +24,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { RESTORE_TABLES } from '@/lib/platform-backup'
+import { RESTORE_TABLES, GENERATED_COLUMNS } from '@/lib/platform-backup'
 
 const BUCKET = 'platform-backups'
 
@@ -84,9 +84,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       restoreCounts[table] = 0
       continue
     }
+    const dropCols = GENERATED_COLUMNS[table]
+    const cleanRows = dropCols
+      ? rows.map(row => {
+          const copy = { ...(row as Record<string, unknown>) }
+          for (const col of dropCols) delete copy[col]
+          return copy
+        })
+      : rows
     let restored = 0
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const chunk = rows.slice(i, i + CHUNK)
+    for (let i = 0; i < cleanRows.length; i += CHUNK) {
+      const chunk = cleanRows.slice(i, i + CHUNK)
       const { error } = await admin.from(table).upsert(chunk, { onConflict: 'id' })
       if (error) {
         errors.push(`${table}: ${error.message}`)

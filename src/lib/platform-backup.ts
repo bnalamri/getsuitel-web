@@ -61,6 +61,15 @@ export const BACKUP_TABLES = [
 // foreign keys already in place.
 export const RESTORE_TABLES = BACKUP_TABLES.filter(t => t !== 'profiles')
 
+// Columns Postgres computes itself (GENERATED ALWAYS ... STORED) and
+// refuses to accept an explicit value for. The backup file still captures
+// them as plain data (useful to read), but restore must strip them from
+// each row before upserting or Postgres rejects the whole insert.
+// branches.display_name = 'GetSuitel — ' || name || ' Branch', computed.
+export const GENERATED_COLUMNS: Record<string, string[]> = {
+  branches: ['display_name'],
+}
+
 export type BackupResult = {
   status: 'success' | 'partial' | 'error'
   storagePath?: string
