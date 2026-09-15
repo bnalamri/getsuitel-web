@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Download, Loader2, RotateCcw, AlertTriangle, PlayCircle, X } from 'lucide-react'
+import { Download, Loader2, RotateCcw, AlertTriangle, PlayCircle, X, Trash2 } from 'lucide-react'
 
 type Backup = {
   id: string
@@ -36,6 +36,7 @@ export default function HQBackupsClient() {
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
   const [confirmText, setConfirmText] = useState('')
   const [restoring, setRestoring] = useState(false)
@@ -64,6 +65,14 @@ export default function HQBackupsClient() {
     setDownloadingId(null)
     if (body.url) window.open(body.url, '_blank')
     else alert(body.error ?? 'Could not download this backup')
+  }
+
+  async function deleteBackup(b: Backup) {
+    if (!confirm(`Delete this backup from ${new Date(b.created_at).toLocaleString()}? This only removes the backup file — it has no effect on live platform data.`)) return
+    setDeletingId(b.id)
+    await fetch(`/api/hq/backups/${b.id}`, { method: 'DELETE' })
+    await load()
+    setDeletingId(null)
   }
 
   function openRestore(b: Backup) {
@@ -130,7 +139,8 @@ export default function HQBackupsClient() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => download(b.id)}
-                        disabled={downloadingId === b.id || b.status === 'running'}
+                        disabled={downloadingId === b.id || !b.size_bytes}
+                        title={!b.size_bytes ? 'No file to download — this backup did not finish' : undefined}
                         className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                       >
                         {downloadingId === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -138,11 +148,20 @@ export default function HQBackupsClient() {
                       </button>
                       <button
                         onClick={() => openRestore(b)}
-                        disabled={b.status === 'running'}
+                        disabled={!b.size_bytes}
+                        title={!b.size_bytes ? 'No file to restore from — this backup did not finish' : undefined}
                         className="flex items-center gap-1 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs hover:bg-red-50 disabled:opacity-50"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         Restore
+                      </button>
+                      <button
+                        onClick={() => deleteBackup(b)}
+                        disabled={deletingId === b.id || b.status === 'running'}
+                        className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {deletingId === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        Delete
                       </button>
                     </div>
                   </td>
