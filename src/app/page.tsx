@@ -140,11 +140,13 @@ const roleColors = ['from-navy-700 to-navy-900','from-emerald-600 to-emerald-800
 export default function LandingPage() {
   const [lang, setLang] = useState<'en'|'ar'>('en')
   const [activeTab, setActiveTab] = useState(0)
-  // Live plans (full data) + platform currency from DB
-  type DbPlanLanding = { slug:string; name_en:string; name_ar:string; desc_en:string; desc_ar:string; price_monthly:number; features_en:string[]; features_ar:string[]; is_popular:boolean }
+  // Live HQ-default plans (branch-specific pricing lives at /pricing — see
+  // 20260915_branch_pricing_plans.sql). Each plan now carries its own
+  // `currency`, so this section no longer needs a separate /api/currency
+  // lookup to know how to render a price.
+  type DbPlanLanding = { slug:string; name_en:string; name_ar:string; desc_en:string; desc_ar:string; price_monthly:number; currency:string; features_en:string[]; features_ar:string[]; is_popular:boolean }
   const [dbPlans, setDbPlans] = useState<DbPlanLanding[]>([])
   const [livePrices, setLivePrices] = useState<Record<string,number>>({})
-  const [platformCurrency, setPlatformCurrency] = useState('OMR')
   useEffect(() => {
     const saved = localStorage.getItem('lang') as 'en'|'ar'
     if (saved === 'ar') setLang('ar')
@@ -155,9 +157,6 @@ export default function LandingPage() {
         data.forEach(p => { map[p.slug] = p.price_monthly })
         setLivePrices(map)
       }
-    }).catch(() => {})
-    fetch('/api/currency').then(r => r.json()).then(d => {
-      if (d?.currency) setPlatformCurrency(d.currency)
     }).catch(() => {})
   }, [])
   function toggleLang() {
@@ -178,7 +177,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-white transition-colors">{C.nav.features}</a>
             <a href="#explore" className="hover:text-white transition-colors">{C.nav.explore}</a>
             <a href="#for-who" className="hover:text-white transition-colors">{C.nav.forWho}</a>
-            <a href="#pricing" className="hover:text-white transition-colors">{C.nav.pricing}</a>
+            <Link href="/pricing" className="hover:text-white transition-colors">{C.nav.pricing}</Link>
             <Link href="/presentation" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <PlayCircle size={13}/>{C.nav.demo}
             </Link>
@@ -520,9 +519,16 @@ export default function LandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-24 bg-slate-50">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8">
             <h2 className="text-4xl font-black text-slate-900 mb-4">{C.pricing.title}</h2>
             <p className="text-xl text-slate-500">{C.pricing.sub}</p>
+          </div>
+          <div className="text-center mb-16">
+            <Link href="/pricing" className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-700 hover:text-navy-900 underline underline-offset-2">
+              {lang === 'ar'
+                ? 'الأسعار أدناه هي أسعار GetSuitel المرجعية. اطلع على أسعار فرعك ←'
+                : '→ Prices below are GetSuitel’s standard reference rates. See pricing for your own market'}
+            </Link>
           </div>
           <div className="grid md:grid-cols-3 gap-8 items-start">
             {(() => {
@@ -536,6 +542,7 @@ export default function LandingPage() {
               const displayFeatures: string[] = db ? (lang==='ar' ? db.features_ar : db.features_en) : [...((item as {features:readonly string[]}).features)]
               const displayNum     = db ? db.price_monthly : Number((item as {price:string}).price.replace(/[^0-9.]/g,''))
               const highlight      = db ? db.is_popular : i === 1
+              const planCurrency   = db ? db.currency : 'OMR'
               const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
               const currencyImgSrc = highlight ? '/currency/omr_light.png' : '/currency/omr_dark.png'
               return (
@@ -544,10 +551,10 @@ export default function LandingPage() {
                   <div className={`text-lg font-bold mb-1 ${highlight?'text-white':'text-slate-900'}`}>{displayName}</div>
                   <div className={`text-sm mb-4 ${highlight?'text-white/60':'text-slate-500'}`}>{displayDesc}</div>
                   <div className="flex items-baseline gap-2 mb-8">
-                    {platformCurrency === 'OMR'
+                    {planCurrency === 'OMR'
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={currencyImgSrc} alt="OMR" style={{height:'2.5rem',width:'auto',marginBottom:'0.25rem'}} />
-                      : <span className={`text-4xl font-black ${highlight?'text-white':'text-slate-900'}`}>{CURRENCY_TEXT[platformCurrency] ?? platformCurrency}</span>
+                      : <span className={`text-4xl font-black ${highlight?'text-white':'text-slate-900'}`}>{CURRENCY_TEXT[planCurrency] ?? planCurrency}</span>
                     }
                     <span className={`text-5xl font-black ${highlight?'text-white':'text-slate-900'}`}>{displayNum}</span>
                     <span className={`text-sm ${highlight?'text-white/50':'text-slate-400'}`}>{C.pricing.month}</span>
@@ -623,7 +630,7 @@ export default function LandingPage() {
               <div className="font-semibold text-white mb-4 text-sm">{C.footer.product}</div>
               <ul className="space-y-2 text-sm">
                 <li><a href="#features" className="hover:text-white transition-colors">{C.footer.links.features}</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">{C.footer.links.pricing}</a></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">{C.footer.links.pricing}</Link></li>
                 <li><Link href="/auth/register" className="hover:text-white transition-colors">{C.footer.links.signup}</Link></li>
                 <li><Link href="/auth/login" className="hover:text-white transition-colors">{C.footer.links.signin}</Link></li>
                 <li><Link href="/presentation" className="hover:text-white transition-colors">{C.footer.links.demo}</Link></li>

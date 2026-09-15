@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Loader2, Save, X, ChevronDown, ChevronUp,
-  ToggleLeft, ToggleRight, Package, Star, ArrowUp, ArrowDown, Plus, RotateCcw,
+  Loader2, Save, Plus, X, ChevronDown, ChevronUp,
+  ToggleLeft, ToggleRight, Package, Star, ArrowUp, ArrowDown,
 } from 'lucide-react'
 
 type Plan = {
-  id: string | null           // null = not yet customized for this branch
+  id: string
   slug: string
   name_en: string
   name_ar: string
@@ -25,9 +25,14 @@ type Plan = {
   is_popular: boolean
   is_active: boolean
   sort_order: number
-  is_customized: boolean
-  default_price: number
-  default_currency: string
+}
+
+const DEFAULT_PLAN: Omit<Plan,'id'> = {
+  slug:'', name_en:'', name_ar:'', desc_en:'', desc_ar:'',
+  price_monthly:0, currency:'OMR', stripe_price_id:'',
+  max_properties:-1, max_units:-1, max_tenants:-1, max_staff:-1,
+  trial_days:30, features_en:[], features_ar:[],
+  is_popular:false, is_active:true, sort_order:99,
 }
 
 const CURRENCY_TEXT: Record<string,string> = { USD:'$', GBP:'£', EUR:'€', SAR:'SAR', AED:'AED', KWD:'KWD', QAR:'QAR', BHD:'BHD' }
@@ -136,36 +141,52 @@ function FeaturesPairEditor({
   )
 }
 
+const SLUG_OPTIONS = [
+  { value:'basic',      label:'basic — Basic plan',           sort:1 },
+  { value:'pro',        label:'pro — Pro plan',               sort:2 },
+  { value:'enterprise', label:'enterprise — Enterprise plan', sort:3 },
+  { value:'exclusive',  label:'exclusive — Fully Managed',    sort:4 },
+]
+const SLUG_SORT: Record<string,number> = { basic:1, pro:2, enterprise:3, exclusive:4 }
+
 function PlanEditor({ plan, onSave, onCancel, saving }:
-  { plan:Plan; onSave:(p:Plan)=>void; onCancel:()=>void; saving:boolean }) {
-  const [p, setP] = useState<Plan>(plan)
-  const set = <K extends keyof Plan>(k: K, v: Plan[K]) => setP(prev => ({...prev,[k]:v}))
+  { plan:Partial<Plan>; onSave:(p:Partial<Plan>)=>void; onCancel:()=>void; saving:boolean }) {
+  const [p, setP] = useState<Partial<Plan>>(plan)
+  const set = (k: keyof Plan, v: unknown) => setP(prev => ({...prev,[k]:v}))
+  const isNew = !plan.id
+  const currency = p.currency ?? 'OMR'
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
-      {!p.is_customized && (
-        <div className="bg-navy-50 border border-navy-100 text-navy-700 rounded-xl px-4 py-2.5 text-xs">
-          This plan currently follows GetSuitel HQ's default price ({p.default_price} {p.default_currency}/mo).
-          Saving any change below will make it your branch's own price from now on.
-        </div>
-      )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="label">Slug</label>
-          <div className="input bg-slate-50 text-slate-500 font-mono cursor-not-allowed select-none">{p.slug}</div>
+          <label className="label">Slug (unique key)</label>
+          {isNew ? (
+            <select className="input" value={p.slug??''} onChange={e => {
+              const slug = e.target.value
+              setP(prev => ({...prev, slug, sort_order: SLUG_SORT[slug] ?? prev.sort_order}))
+            }}>
+              <option value="" disabled>Select slug…</option>
+              {SLUG_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="input bg-slate-50 text-slate-500 font-mono cursor-not-allowed select-none">{p.slug}</div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="label">Price / month</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center"><CurrencyIcon code={p.currency} /></span>
-              <input type="number" className="input pl-8" value={p.price_monthly}
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center"><CurrencyIcon code={currency} /></span>
+              <input type="number" className="input pl-8" value={p.price_monthly??0}
                 onChange={e=>set('price_monthly',Number(e.target.value))} min={0}/>
             </div>
           </div>
           <div>
             <label className="label">Currency</label>
-            <select className="input" value={p.currency} onChange={e=>set('currency', e.target.value)}>
+            <select className="input" value={currency} onChange={e=>set('currency', e.target.value)}>
               {CURRENCY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -175,67 +196,73 @@ function PlanEditor({ plan, onSave, onCancel, saving }:
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Name (English)</label>
-          <input className="input" value={p.name_en} onChange={e=>set('name_en',e.target.value)}/>
+          <input className="input" value={p.name_en??''} onChange={e=>set('name_en',e.target.value)}/>
         </div>
         <div>
           <label className="label">Name (Arabic)</label>
-          <input className="input text-right" dir="rtl" value={p.name_ar} onChange={e=>set('name_ar',e.target.value)}/>
+          <input className="input text-right" dir="rtl" value={p.name_ar??''} onChange={e=>set('name_ar',e.target.value)}/>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Description (English)</label>
-          <input className="input" value={p.desc_en} onChange={e=>set('desc_en',e.target.value)}/>
+          <input className="input" value={p.desc_en??''} onChange={e=>set('desc_en',e.target.value)}/>
         </div>
         <div>
           <label className="label">Description (Arabic)</label>
-          <input className="input text-right" dir="rtl" value={p.desc_ar} onChange={e=>set('desc_ar',e.target.value)}/>
+          <input className="input text-right" dir="rtl" value={p.desc_ar??''} onChange={e=>set('desc_ar',e.target.value)}/>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Stripe Price ID</label>
-          <input className="input font-mono text-sm" value={p.stripe_price_id}
+          <input className="input font-mono text-sm" value={p.stripe_price_id??''}
             onChange={e=>set('stripe_price_id',e.target.value)} placeholder="price_..."/>
         </div>
         <div>
           <label className="label">Trial Days</label>
-          <input type="number" className="input" value={p.trial_days}
+          <input type="number" className="input" value={p.trial_days??30}
             onChange={e=>set('trial_days',Number(e.target.value))} min={0}/>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <LimitInput label="Max Properties" value={p.max_properties}
+        <LimitInput label="Max Properties" value={p.max_properties??-1}
           onChange={v=>set('max_properties',v)}/>
-        <LimitInput label="Max Units" value={p.max_units}
+        <LimitInput label="Max Units" value={p.max_units??-1}
           onChange={v=>set('max_units',v)}/>
-        <LimitInput label="Max Tenants" value={p.max_tenants}
+        <LimitInput label="Max Tenants" value={p.max_tenants??-1}
           onChange={v=>set('max_tenants',v)}/>
-        <LimitInput label="Max Staff Members" value={p.max_staff}
+        <LimitInput label="Max Staff Members" value={p.max_staff??-1}
           onChange={v=>set('max_staff',v)}/>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <FeaturesPairEditor
-          en={p.features_en} ar={p.features_ar}
+          en={p.features_en??[]} ar={p.features_ar??[]}
           onChangeEn={v=>set('features_en',v)} onChangeAr={v=>set('features_ar',v)}
         />
       </div>
 
       <div className="flex gap-6">
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="rounded" checked={p.is_popular}
+          <input type="checkbox" className="rounded" checked={p.is_popular??false}
             onChange={e=>set('is_popular',e.target.checked)}/>
           <span className="text-sm text-slate-700">Mark as Popular</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="rounded" checked={p.is_active}
+          <input type="checkbox" className="rounded" checked={p.is_active??true}
             onChange={e=>set('is_active',e.target.checked)}/>
-          <span className="text-sm text-slate-700">Active (visible on your branch's pricing)</span>
+          <span className="text-sm text-slate-700">Active (visible on site)</span>
         </label>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-700">Sort order</label>
+          <div className="input w-20 text-sm bg-slate-50 text-slate-500 cursor-not-allowed select-none">
+            {p.slug ? (SLUG_SORT[p.slug] ?? p.sort_order ?? '—') : '—'}
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2 border-t border-slate-100">
@@ -249,35 +276,37 @@ function PlanEditor({ plan, onSave, onCancel, saving }:
   )
 }
 
-export default function PlansPage() {
+export default function HQPlansClient() {
   const [plans, setPlans]     = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
   const [success, setSuccess] = useState('')
-  const [editingSlug, setEditingSlug] = useState<string|null>(null)
+  const [editingId, setEditingId] = useState<string|null>(null)
+  const [creating, setCreating]   = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/admin/plans')
+    const res = await fetch('/api/hq/plans')
     const data = await res.json()
     setPlans(Array.isArray(data) ? data : []); setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  async function savePlan(plan: Plan) {
+  async function savePlan(plan: Partial<Plan>) {
     setSaving(true); setError(''); setSuccess('')
     try {
-      const res = await fetch('/api/admin/plans', {
-        method: 'PATCH',
+      const isNew = !plan.id
+      const res = await fetch('/api/hq/plans', {
+        method: isNew ? 'POST' : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plan),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
-      setSuccess(`Plan "${plan.name_en}" saved for your branch.`)
-      setEditingSlug(null)
+      setSuccess(`Plan "${data.name_en}" saved successfully.`)
+      setEditingId(null); setCreating(false)
       await load()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error saving plan')
@@ -287,35 +316,33 @@ export default function PlansPage() {
 
   async function toggleActive(plan: Plan) {
     setSaving(true)
-    await fetch('/api/admin/plans', {
+    await fetch('/api/hq/plans', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...plan, is_active: !plan.is_active }),
+      body: JSON.stringify({ id: plan.id, is_active: !plan.is_active }),
     })
-    await load(); setSaving(false)
-  }
-
-  async function resetToDefault(plan: Plan) {
-    if (!confirm(`Reset "${plan.name_en}" back to GetSuitel HQ's default price and details? Your branch's own customization for this plan will be removed.`)) return
-    setSaving(true)
-    await fetch(`/api/admin/plans?slug=${encodeURIComponent(plan.slug)}`, { method: 'DELETE' })
     await load(); setSaving(false)
   }
 
   const fmt = (v: number) => v === -1 ? '∞' : v.toString()
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Package size={22} className="text-navy-600"/> Plans & Pricing
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Your branch's own pricing. Any plan you haven't customized follows GetSuitel HQ's default —
-            editing and saving it makes that price yours from then on; "Reset to HQ default" undoes it.
+            GetSuitel HQ's default plan catalogue. This is what the homepage shows and what every branch
+            inherits until its own superadmin sets a market-specific price for a plan.
           </p>
         </div>
+        {!creating && (
+          <button onClick={()=>setCreating(true)} className="btn-primary flex items-center gap-2">
+            <Plus size={16}/> New Plan
+          </button>
+        )}
       </div>
 
       {error && (
@@ -325,6 +352,18 @@ export default function PlansPage() {
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm mb-4">{success}</div>
       )}
 
+      {creating && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-slate-600 mb-3 uppercase tracking-wide">New Plan</h2>
+          <PlanEditor
+            plan={{...DEFAULT_PLAN}}
+            onSave={savePlan}
+            onCancel={()=>setCreating(false)}
+            saving={saving}
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="animate-spin text-slate-400" size={28}/>
@@ -332,10 +371,10 @@ export default function PlansPage() {
       ) : (
         <div className="space-y-4">
           {plans.map(plan => (
-            <div key={plan.slug} className={`bg-white border rounded-2xl overflow-hidden transition-all ${
+            <div key={plan.id} className={`bg-white border rounded-2xl overflow-hidden transition-all ${
               plan.is_active ? 'border-slate-200' : 'border-slate-100 opacity-60'
             }`}>
-              {editingSlug !== plan.slug ? (
+              {editingId !== plan.id ? (
                 <div className="flex items-center gap-4 p-5">
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${plan.is_active ? 'bg-emerald-500' : 'bg-slate-300'}`}/>
 
@@ -348,11 +387,6 @@ export default function PlansPage() {
                         </span>
                       )}
                       <span className="text-xs text-slate-400 font-mono">{plan.slug}</span>
-                      {plan.is_customized ? (
-                        <span className="inline-flex items-center gap-1 bg-gold-100 text-gold-700 text-xs px-2 py-0.5 rounded-full font-medium">Your price</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-xs px-2 py-0.5 rounded-full font-medium">HQ default</span>
-                      )}
                     </div>
                     <p className="text-sm text-slate-500 mt-0.5">{plan.desc_en}</p>
                   </div>
@@ -380,15 +414,6 @@ export default function PlansPage() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {plan.is_customized && (
-                      <button
-                        onClick={()=>resetToDefault(plan)}
-                        title="Reset to HQ default"
-                        className="text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <RotateCcw size={16}/>
-                      </button>
-                    )}
                     <button
                       onClick={()=>toggleActive(plan)}
                       title={plan.is_active ? 'Deactivate' : 'Activate'}
@@ -399,7 +424,7 @@ export default function PlansPage() {
                         : <ToggleLeft size={22}/>}
                     </button>
                     <button
-                      onClick={()=>setEditingSlug(plan.slug)}
+                      onClick={()=>setEditingId(plan.id)}
                       className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1"
                     >
                       <ChevronDown size={13}/> Edit
@@ -410,7 +435,7 @@ export default function PlansPage() {
                 <>
                   <div className="flex items-center justify-between px-5 pt-4 pb-2">
                     <span className="text-sm font-semibold text-navy-700">Editing: {plan.name_en}</span>
-                    <button onClick={()=>setEditingSlug(null)} className="text-slate-400 hover:text-slate-600">
+                    <button onClick={()=>setEditingId(null)} className="text-slate-400 hover:text-slate-600">
                       <ChevronUp size={16}/>
                     </button>
                   </div>
@@ -418,7 +443,7 @@ export default function PlansPage() {
                     <PlanEditor
                       plan={plan}
                       onSave={savePlan}
-                      onCancel={()=>setEditingSlug(null)}
+                      onCancel={()=>setEditingId(null)}
                       saving={saving}
                     />
                   </div>
