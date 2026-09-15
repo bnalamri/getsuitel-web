@@ -15,13 +15,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isDemo = user.email === process.env.DEMO_EMAIL
 
   // Fetch profile and organization separately to avoid RLS join issues
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!profile) redirect('/auth/logout')
+  if (!profile) {
+    // TEMP DIAGNOSTIC (2026-09-15 login outage): surfacing the real error
+    // instead of silently force-logging-out. Remove once confirmed fixed.
+    console.error('[dashboard layout] profile fetch failed for user', user.id, JSON.stringify(profileError))
+    redirect('/auth/logout')
+  }
 
   // tenant_portal is a master kill-switch (see task discussion 2026-09-10):
   // when off for a tenant's org, block access to the whole tenant dashboard
