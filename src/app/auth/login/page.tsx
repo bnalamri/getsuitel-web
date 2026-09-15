@@ -1,5 +1,5 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -12,6 +12,10 @@ const t = {
     signin: 'Sign In', noAccount: "Don't have an account?", register: 'Start free',
     lang: 'ع', error: 'Invalid email or password', loading: 'Signing in…',
     verified: 'Email verified! You can now sign in.',
+    // TEMP DIAGNOSTIC (2026-09-15 login outage): reason codes forwarded via
+    // /auth/logout?reason=... so a forced-logout bounce shows something
+    // instead of silently landing back here. Remove once confirmed stable.
+    reason_profile_missing: "We couldn't load your account profile, so you were signed out. If this keeps happening, contact support.",
   },
   ar: {
     title: 'مرحباً بعودتك', sub: 'تسجيل الدخول إلى حسابك',
@@ -19,6 +23,7 @@ const t = {
     signin: 'تسجيل الدخول', noAccount: 'ليس لديك حساب؟', register: 'ابدأ مجاناً',
     lang: 'EN', error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', loading: 'جاري الدخول…',
     verified: 'تم التحقق من بريدك! يمكنك الآن تسجيل الدخول.',
+    reason_profile_missing: 'تعذر تحميل ملفك الشخصي، فتم تسجيل خروجك. إذا استمرت المشكلة، تواصل مع الدعم.',
   },
 }
 
@@ -32,6 +37,12 @@ function LoginForm() {
   const params = useSearchParams()
   const T = t[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
+
+  useEffect(() => {
+    const reason = params.get('reason')
+    if (reason === 'profile_missing') setError(T.reason_profile_missing)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

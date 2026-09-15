@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // TEMP DIAGNOSTIC (2026-09-15 login outage): surfacing the real error
     // instead of silently force-logging-out. Remove once confirmed fixed.
     console.error('[dashboard layout] profile fetch failed for user', user.id, JSON.stringify(profileError))
-    redirect('/auth/logout')
+    redirect('/auth/logout?reason=profile_missing')
   }
 
   // tenant_portal is a master kill-switch (see task discussion 2026-09-10):
