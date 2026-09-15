@@ -38,11 +38,16 @@ function LoginForm() {
     setLoading(true)
     setError('')
     const result = await signInAction(email, password, params.get('next') ?? undefined)
-    // Only reaches here if signInAction returned an error (redirect() throws, so it never returns on success)
     if (result?.error) {
       const msg = (result.error && result.error !== '{}' && result.error !== '{ }') ? result.error : T.error
       setError(msg)
       setLoading(false)
+      return
+    }
+    // Full navigation (not router.push) so the browser re-requests with the
+    // session cookie the server action just set on its own response.
+    if (result?.dest) {
+      window.location.href = result.dest
     }
   }
 
