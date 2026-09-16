@@ -5,21 +5,27 @@ import { Download, Loader2 } from 'lucide-react'
 export type PnLRow = {
   branch: string
   status: string
+  currency: string   // branch's own currency — revenue/expenses/net/hqShare are all in this currency
   revenue: number
   expenses: number
   net: number
   hqShare: number
-  licenseFee: number
+  licenseFee: number  // always OMR
   units: number
   occupancy: number  // 0-100
 }
 
+export type PnLCurrencyTotals = {
+  currency: string
+  revenue: number
+  expenses: number
+  net: number
+  share: number
+}
+
 export type PnLSummary = {
-  totRevenue: number
-  totExpenses: number
-  totNet: number
-  totShare: number
-  totLicense: number
+  byCurrency: PnLCurrencyTotals[]  // never blended across currencies
+  totLicense: number               // always OMR
   totUnits: number
   totOccupied: number
 }
@@ -118,36 +124,38 @@ async function exportExcel(rows: PnLRow[], summary: PnLSummary, dateStr: string)
   }
 
   const fmt3 = (n: number) => n.toFixed(3)
-  const COLS = 9
+  const ALL_COLS = [2,3,4,5,6,7,8,9,10]
 
   // ── Title ──────────────────────────────────────────────────────────────────
-  xmlRows.push(`<row r="${r}" ht="24" customHeight="1">${sCell(1, 'GetSuitel HQ — Cross-Branch P&L Summary', 1)}${[2,3,4,5,6,7,8,9].map(c => eCell(c, 0)).join('')}</row>`); r++
-  xmlRows.push(`<row r="${r}">${sCell(1, `Generated: ${dateStr}`, 2)}${[2,3,4,5,6,7,8,9].map(c => eCell(c, 0)).join('')}</row>`); r++
+  xmlRows.push(`<row r="${r}" ht="24" customHeight="1">${sCell(1, 'GetSuitel HQ — Cross-Branch P&L Summary', 1)}${ALL_COLS.map(c => eCell(c, 0)).join('')}</row>`); r++
+  xmlRows.push(`<row r="${r}">${sCell(1, `Generated: ${dateStr}`, 2)}${ALL_COLS.map(c => eCell(c, 0)).join('')}</row>`); r++
   r++ // blank row
 
-  // ── Platform Summary ───────────────────────────────────────────────────────
-  const totOccPct = summary.totUnits > 0 ? `${Math.round((summary.totOccupied / summary.totUnits) * 100)}%` : '0%'
-  xmlRows.push(`<row r="${r}">${sCell(1, 'PLATFORM SUMMARY', 1)}${[2,3,4,5,6,7,8,9].map(c => eCell(c, 0)).join('')}</row>`); r++
+  // ── Platform Summary — one block per currency, never blended ──────────────
+  xmlRows.push(`<row r="${r}">${sCell(1, 'PLATFORM SUMMARY (by currency)', 1)}${ALL_COLS.map(c => eCell(c, 0)).join('')}</row>`); r++
 
-  const summaryItems = [
-    ['Total Revenue (OMR)', fmt3(summary.totRevenue)],
-    ['Total Expenses (OMR)', fmt3(summary.totExpenses)],
-    ['Net Income (OMR)', fmt3(summary.totNet)],
-    ['HQ Share (OMR)', fmt3(summary.totShare)],
-    ['License Fees (OMR)', fmt3(summary.totLicense)],
-    ['Platform Occupancy', totOccPct],
-    [`Units: ${summary.totOccupied} of ${summary.totUnits} occupied`, ''],
-  ]
+  const summaryItems: [string, string][] = []
+  for (const c of summary.byCurrency) {
+    summaryItems.push([`Total Revenue (${c.currency})`, fmt3(c.revenue)])
+    summaryItems.push([`Total Expenses (${c.currency})`, fmt3(c.expenses)])
+    summaryItems.push([`Net Income (${c.currency})`, fmt3(c.net)])
+    summaryItems.push([`HQ Share (${c.currency})`, fmt3(c.share)])
+  }
+  summaryItems.push(['License Fees (OMR)', fmt3(summary.totLicense)])
+  const totOccPct = summary.totUnits > 0 ? `${Math.round((summary.totOccupied / summary.totUnits) * 100)}%` : '0%'
+  summaryItems.push(['Platform Occupancy', totOccPct])
+  summaryItems.push([`Units: ${summary.totOccupied} of ${summary.totUnits} occupied`, ''])
+
   for (const [label, val] of summaryItems) {
-    xmlRows.push(`<row r="${r}">${sCell(1, label, 7)}${sCell(2, val, 8)}${[3,4,5,6,7,8,9].map(c => eCell(c, 0)).join('')}</row>`); r++
+    xmlRows.push(`<row r="${r}">${sCell(1, label, 7)}${sCell(2, val, 8)}${[3,4,5,6,7,8,9,10].map(c => eCell(c, 0)).join('')}</row>`); r++
   }
   r++ // blank
 
   // ── Column headers ─────────────────────────────────────────────────────────
-  const headers = ['Branch', 'Status', 'Revenue (OMR)', 'Expenses (OMR)', 'Net Income (OMR)', 'HQ Share (OMR)', 'License Fee (OMR)', 'Units', 'Occupancy %']
+  const headers = ['Branch', 'Status', 'Currency', 'Revenue', 'Expenses', 'Net Income', 'HQ Share', 'License Fee (OMR)', 'Units', 'Occupancy %']
   xmlRows.push(`<row r="${r}" ht="18" customHeight="1">${headers.map((h, i) => sCell(i + 1, h, i === 0 ? 3 : 4)).join('')}</row>`); r++
 
-  // ── Data rows ─────────────────────────────────────────────────────────────
+  // ── Data rows — Revenue/Expenses/Net/HQ Share are in the branch's own currency ──
   rows.forEach((row, idx) => {
     const even = idx % 2 === 0
     const lS = even ? 5 : 7    // left string cell style
@@ -158,31 +166,31 @@ async function exportExcel(rows: PnLRow[], summary: PnLSummary, dateStr: string)
       `<row r="${r}" ht="15" customHeight="1">` +
       sCell(1, row.branch, lS) +
       sCell(2, row.status, lS) +
-      nCell(3, row.revenue, nS) +
-      nCell(4, row.expenses, nS) +
-      sCell(5, fmt3(row.net), netS) +
-      nCell(6, row.hqShare, nS) +
-      nCell(7, row.licenseFee, nS) +
-      nCell(8, row.units, nS) +
-      sCell(9, `${row.occupancy}%`, cS) +
+      sCell(3, row.currency, lS) +
+      nCell(4, row.revenue, nS) +
+      nCell(5, row.expenses, nS) +
+      sCell(6, fmt3(row.net), netS) +
+      nCell(7, row.hqShare, nS) +
+      nCell(8, row.licenseFee, nS) +
+      nCell(9, row.units, nS) +
+      sCell(10, `${row.occupancy}%`, cS) +
       `</row>`
     )
     r++
   })
 
-  // ── Totals row ─────────────────────────────────────────────────────────────
+  // ── Totals row — Revenue/Expenses/Net/Share are per currency (see summary above);
+  // only License Fee (always OMR) and Occupancy are safe to sum across branches. ──
   const totOccRow = summary.totUnits > 0 ? Math.round((summary.totOccupied / summary.totUnits) * 100) : 0
   xmlRows.push(
     `<row r="${r}" ht="18" customHeight="1">` +
     sCell(1, 'Platform Total', 9) +
     eCell(2, 9) +
-    nCell(3, summary.totRevenue, 10) +
-    nCell(4, summary.totExpenses, 10) +
-    sCell(5, fmt3(summary.totNet), summary.totNet >= 0 ? 11 : 12) +
-    nCell(6, summary.totShare, 10) +
-    nCell(7, summary.totLicense, 10) +
-    nCell(8, summary.totUnits, 10) +
-    sCell(9, `${totOccRow}%`, 9) +
+    sCell(3, 'see summary', 9) +
+    eCell(4, 9) + eCell(5, 9) + eCell(6, 9) + eCell(7, 9) +
+    nCell(8, summary.totLicense, 10) +
+    nCell(9, summary.totUnits, 10) +
+    sCell(10, `${totOccRow}%`, 9) +
     `</row>`
   )
 
@@ -190,15 +198,17 @@ async function exportExcel(rows: PnLRow[], summary: PnLSummary, dateStr: string)
   const colsXml = `<cols>
     <col min="1" max="1" width="32" customWidth="1"/>
     <col min="2" max="2" width="12" customWidth="1"/>
-    <col min="3" max="7" width="18" customWidth="1"/>
-    <col min="8" max="8" width="8"  customWidth="1"/>
-    <col min="9" max="9" width="12" customWidth="1"/>
+    <col min="3" max="3" width="10" customWidth="1"/>
+    <col min="4" max="7" width="16" customWidth="1"/>
+    <col min="8" max="8" width="16" customWidth="1"/>
+    <col min="9" max="9" width="8"  customWidth="1"/>
+    <col min="10" max="10" width="12" customWidth="1"/>
   </cols>`
 
   // ── Merge cells: title spans all cols ─────────────────────────────────────
   const mergesXml = `<mergeCells count="2">
-    <mergeCell ref="A1:I1"/>
-    <mergeCell ref="A2:I2"/>
+    <mergeCell ref="A1:J1"/>
+    <mergeCell ref="A2:J2"/>
   </mergeCells>`
 
   const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

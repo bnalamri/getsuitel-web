@@ -1,26 +1,19 @@
 import { Suspense } from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
 import OmrSymbol from '@/components/ui/OmrSymbol'
+import CurrencyAmount from '@/components/CurrencyAmount'
 import ExportPnLButton from './ExportPnLButton'
 import YearSelector from './YearSelector'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 function fmt(n: number) { return n.toFixed(3) }
 
-function NetBadge({ net }: { net: number }) {
-  if (net > 0) return (
-    <span className="inline-flex items-center gap-1 text-green-700 font-semibold">
-      <TrendingUp className="w-3.5 h-3.5" />{fmt(net)}
-    </span>
-  )
-  if (net < 0) return (
-    <span className="inline-flex items-center gap-1 text-red-600 font-semibold">
-      <TrendingDown className="w-3.5 h-3.5" />{fmt(net)}
-    </span>
-  )
+function NetBadge({ net, currency }: { net: number; currency: string }) {
+  const color = net > 0 ? 'text-green-700' : net < 0 ? 'text-red-600' : 'text-gray-400'
+  const Icon  = net > 0 ? TrendingUp : net < 0 ? TrendingDown : Minus
   return (
-    <span className="inline-flex items-center gap-1 text-gray-400">
-      <Minus className="w-3.5 h-3.5" />{fmt(net)}
+    <span className={`inline-flex items-center gap-1 font-semibold ${color}`}>
+      <Icon className="w-3.5 h-3.5" /><CurrencyAmount value={net} currency={currency} />
     </span>
   )
 }
@@ -57,13 +50,15 @@ export default async function HQPnLPage({
     { data: branches },
     { data: units },
   ] = await Promise.all([
-    // ── Revenue: paid OMR invoices by due_date (active orgs only) ──────────
+    // ── Revenue: paid invoices by due_date (active orgs only). Not filtered
+    // by currency — each org's invoices are already denominated in its own
+    // branch's currency (see 20260915l_branch_currency.sql), so summing them
+    // per branch below stays single-currency without needing a row-level check.
     activeOrgIds.length
       ? supabase
           .from('invoices')
           .select('amount, organization_id')
           .eq('status', 'paid')
-          .or('currency.is.null,currency.eq.OMR')
           .gte('due_date', yearStart)
           .lte('due_date', yearEnd)
           .in('organization_id', activeOrgIds)
@@ -99,7 +94,7 @@ export default async function HQPnLPage({
       .lte('month', yearEnd),
 
     // ── Branch list ─────────────────────────────────────────────────────────
-    supabase.from('branches').select('id, display_name, status').order('display_name'),
+    supabase.from('branches').select('id, display_name, status, currency').order('display_name'),
 
     // ── Units for occupancy (active orgs only) ───────────────────────────────
     activeOrgIds.length
@@ -108,6 +103,9 @@ export default async function HQPnLPage({
   ])
 
   // ── Aggregate per branch ─────────────────────────────────────────────────
+  // Never blend currencies (see 20260915l_branch_currency.sql): revenue,
+  // expenses, and share all travel in the branch's own currency. Only
+  // license_fee_omr is a flat HQ-set OMR fee, safe to sum across branches.
   type BranchStats = {
     revenue: number
     expenses: number
@@ -116,11 +114,12 @@ export default async function HQPnLPage({
     license: number
     units: number
     occupied: number
+    currency: string
   }
 
   const stats: Record<string, BranchStats> = {}
   ;(branches ?? []).forEach(b => {
-    stats[b.id] = { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
+    stats[b.id] = { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0, currency: b.currency || 'OMR' }
   })
 
   ;(invoices ?? []).forEach(inv => {
@@ -152,27 +151,35 @@ export default async function HQPnLPage({
     }
   })
 
-  // ── Platform totals ──────────────────────────────────────────────────────
-  let totRev = 0, totExp = 0, totMaint = 0, totShare = 0, totLicense = 0
-  let totUnits = 0, totOccupied = 0
+  // ── Platform totals — grouped by currency, never blended ─────────────────
+  const revenueByCurrency: Record<string, number> = {}
+  const expensesByCurrency: Record<string, number> = {}
+  const shareByCurrency: Record<string, number> = {}
+  let totLicense = 0, totUnits = 0, totOccupied = 0
   Object.values(stats).forEach(s => {
-    totRev     += s.revenue
-    totExp     += s.expenses + s.maintenance
-    totShare   += s.share
-    totLicense += s.license
-    totUnits   += s.units
-    totOccupied+= s.occupied
+    const c = s.currency
+    revenueByCurrency[c]  = (revenueByCurrency[c] ?? 0) + s.revenue
+    expensesByCurrency[c] = (expensesByCurrency[c] ?? 0) + s.expenses + s.maintenance
+    shareByCurrency[c]    = (shareByCurrency[c] ?? 0) + s.share
+    totLicense  += s.license
+    totUnits    += s.units
+    totOccupied += s.occupied
   })
-  const totNet = totRev - totExp
+  const currencies = Array.from(new Set([
+    ...Object.keys(revenueByCurrency), ...Object.keys(expensesByCurrency), ...Object.keys(shareByCurrency),
+  ])).sort((a, b) => (revenueByCurrency[b] ?? 0) - (revenueByCurrency[a] ?? 0))
+  const netByCurrency: Record<string, number> = {}
+  currencies.forEach(c => { netByCurrency[c] = (revenueByCurrency[c] ?? 0) - (expensesByCurrency[c] ?? 0) })
 
   // ── Excel export data ────────────────────────────────────────────────────
   const excelRows = (branches ?? []).map(b => {
-    const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
+    const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0, currency: 'OMR' }
     const exp = s.expenses + s.maintenance
     const occ = s.units > 0 ? Math.round((s.occupied / s.units) * 100) : 0
     return {
       branch: b.display_name,
       status: b.status,
+      currency: s.currency,
       revenue: s.revenue,
       expenses: exp,
       net: s.revenue - exp,
@@ -183,10 +190,13 @@ export default async function HQPnLPage({
     }
   })
   const excelSummary = {
-    totRevenue: totRev,
-    totExpenses: totExp,
-    totNet,
-    totShare,
+    byCurrency: currencies.map(c => ({
+      currency: c,
+      revenue: revenueByCurrency[c] ?? 0,
+      expenses: expensesByCurrency[c] ?? 0,
+      net: netByCurrency[c] ?? 0,
+      share: shareByCurrency[c] ?? 0,
+    })),
     totLicense,
     totUnits,
     totOccupied,
@@ -210,20 +220,20 @@ export default async function HQPnLPage({
         </div>
       </div>
 
-      {/* Platform summary cards */}
+      {/* Platform summary cards — grouped by currency, never blended (see 20260915l_branch_currency.sql) */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          { label: 'Total Revenue',  value: totRev,     color: 'text-yellow-700', bg: 'bg-yellow-50'  },
-          { label: 'Total Expenses', value: totExp,     color: 'text-red-600',   bg: 'bg-red-50'     },
-          { label: 'Net Income',     value: totNet,     color: totNet >= 0 ? 'text-green-700' : 'text-red-600', bg: totNet >= 0 ? 'bg-green-50' : 'bg-red-50' },
-          { label: 'HQ Share',       value: totShare,   color: 'text-blue-700',  bg: 'bg-blue-50'    },
-          { label: 'License Fees',   value: totLicense, color: 'text-purple-700', bg: 'bg-purple-50'  },
-        ].map(c => (
-          <div key={c.label} className={`${c.bg} rounded-xl border border-gray-200 p-4`}>
+        {currencies.flatMap(c => [
+          { label: `Total Revenue (${c})`,  value: revenueByCurrency[c] ?? 0,  currency: c, color: 'text-yellow-700', bg: 'bg-yellow-50'  },
+          { label: `Total Expenses (${c})`, value: expensesByCurrency[c] ?? 0, currency: c, color: 'text-red-600',   bg: 'bg-red-50'     },
+          { label: `Net Income (${c})`,     value: netByCurrency[c] ?? 0,      currency: c, color: (netByCurrency[c] ?? 0) >= 0 ? 'text-green-700' : 'text-red-600', bg: (netByCurrency[c] ?? 0) >= 0 ? 'bg-green-50' : 'bg-red-50' },
+          { label: `HQ Share (${c})`,       value: shareByCurrency[c] ?? 0,    currency: c, color: 'text-blue-700',  bg: 'bg-blue-50'    },
+        ]).concat([
+          { label: 'License Fees (OMR)', value: totLicense, currency: 'OMR', color: 'text-purple-700', bg: 'bg-purple-50' },
+        ]).map((c, i) => (
+          <div key={`${c.label}-${i}`} className={`${c.bg} rounded-xl border border-gray-200 p-4`}>
             <p className="text-xs text-gray-500 mb-1">{c.label}</p>
             <p className={`text-2xl font-bold ${c.color} flex items-center gap-1`}>
-              <OmrSymbol variant="dark" size={18} />
-              {fmt(c.value)}
+              <CurrencyAmount value={c.value} currency={c.currency} />
             </p>
           </div>
         ))}
@@ -257,18 +267,11 @@ export default async function HQPnLPage({
             <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
               <tr>
                 <th className="px-5 py-3 text-left">Branch</th>
-                <th className="px-5 py-3 text-right">
-                  <span className="flex items-center justify-end gap-1">Revenue <OmrSymbol variant="dark" size={12} /></span>
-                </th>
-                <th className="px-5 py-3 text-right">
-                  <span className="flex items-center justify-end gap-1">Expenses <OmrSymbol variant="dark" size={12} /></span>
-                </th>
-                <th className="px-5 py-3 text-right">
-                  <span className="flex items-center justify-end gap-1">Net Income <OmrSymbol variant="dark" size={12} /></span>
-                </th>
-                <th className="px-5 py-3 text-right">
-                  <span className="flex items-center justify-end gap-1">HQ Share <OmrSymbol variant="dark" size={12} /></span>
-                </th>
+                {/* Revenue/Expenses/Net/Share vary by the branch's own currency — no fixed OMR icon in the header */}
+                <th className="px-5 py-3 text-right">Revenue</th>
+                <th className="px-5 py-3 text-right">Expenses</th>
+                <th className="px-5 py-3 text-right">Net Income</th>
+                <th className="px-5 py-3 text-right">HQ Share</th>
                 <th className="px-5 py-3 text-right">
                   <span className="flex items-center justify-end gap-1">License Fee <OmrSymbol variant="dark" size={12} /></span>
                 </th>
@@ -279,7 +282,7 @@ export default async function HQPnLPage({
               {!(branches ?? []).length ? (
                 <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">No branches found</td></tr>
               ) : (branches ?? []).map(b => {
-                const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0 }
+                const s   = stats[b.id] ?? { revenue: 0, expenses: 0, maintenance: 0, share: 0, license: 0, units: 0, occupied: 0, currency: 'OMR' }
                 const exp = s.expenses + s.maintenance
                 const net = s.revenue - exp
                 const occ = s.units > 0 ? Math.round((s.occupied / s.units) * 100) : 0
@@ -293,10 +296,10 @@ export default async function HQPnLPage({
                         'bg-gray-100 text-gray-500'
                       }`}>{b.status}</span>
                     </td>
-                    <td className="px-5 py-3 text-right text-gray-700">{fmt(s.revenue)}</td>
-                    <td className="px-5 py-3 text-right text-gray-700">{fmt(exp)}</td>
-                    <td className="px-5 py-3 text-right"><NetBadge net={net} /></td>
-                    <td className="px-5 py-3 text-right text-blue-700 font-medium">{fmt(s.share)}</td>
+                    <td className="px-5 py-3 text-right text-gray-700"><CurrencyAmount value={s.revenue} currency={s.currency} /></td>
+                    <td className="px-5 py-3 text-right text-gray-700"><CurrencyAmount value={exp} currency={s.currency} /></td>
+                    <td className="px-5 py-3 text-right"><NetBadge net={net} currency={s.currency} /></td>
+                    <td className="px-5 py-3 text-right text-blue-700 font-medium"><CurrencyAmount value={s.share} currency={s.currency} /></td>
                     <td className="px-5 py-3 text-right text-purple-700 font-medium">{fmt(s.license)}</td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -310,15 +313,13 @@ export default async function HQPnLPage({
                 )
               })}
             </tbody>
-            {/* Totals row */}
+            {/* Totals row — Revenue/Expenses/Net/Share are per-currency (see summary cards above);
+                a single blended figure here would be exactly the bug this page was fixed for. */}
             {(branches ?? []).length > 0 && (
               <tfoot>
                 <tr className="bg-gray-50 border-t-2 border-gray-200 font-semibold text-gray-800">
                   <td className="px-5 py-3">Platform Total</td>
-                  <td className="px-5 py-3 text-right">{fmt(totRev)}</td>
-                  <td className="px-5 py-3 text-right">{fmt(totExp)}</td>
-                  <td className="px-5 py-3 text-right"><NetBadge net={totNet} /></td>
-                  <td className="px-5 py-3 text-right text-blue-700">{fmt(totShare)}</td>
+                  <td className="px-5 py-3 text-right text-xs text-gray-400" colSpan={4}>see per-currency totals above</td>
                   <td className="px-5 py-3 text-right text-purple-700">{fmt(totLicense)}</td>
                   <td className="px-5 py-3 text-right">
                     <span className="text-xs font-medium text-gray-600">
@@ -334,7 +335,7 @@ export default async function HQPnLPage({
 
       {/* Data note */}
       <p className="text-xs text-gray-400">
-        Revenue = paid OMR invoices by due date · Expenses = recorded expenses + owner-paid maintenance charges · HQ Share from billing records
+        Revenue = paid invoices by due date, in each branch&apos;s own currency · Expenses = recorded expenses + owner-paid maintenance charges (same currency) · HQ Share from billing records · License Fees are always OMR
       </p>
     </div>
   )

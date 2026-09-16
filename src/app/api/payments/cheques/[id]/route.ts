@@ -38,9 +38,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         paid_via:       'cheque',
       }).eq('id', cheque.invoice_id)
     } else if (cheque.unit_id) {
-      // Cheque not linked to invoice — find the rent invoice for this unit/month
-      const monthPrefix = (cheque.due_date ?? paidDate).slice(0, 7)
-      await supabase.from('invoices').update({
+      // Cheque not linked to invoice — find the rent invoice for this unit/month.
+      // Bug fixed 2026-09-16: this used to bound the range with a hardcoded
+      // `${monthPrefix}-31`, which Postgres rejects as an invalid date for any
+      // month with fewer than 31 days (Sep, Apr, Jun, Nov = 30; Feb = 28/29).
+      // The update call's error was never checked, so it failed silently —
+      // cheques clearing in a 31-day month (e.g. August) auto-paid the invoice
+      // fine, but the very next month (September) silently left it overdue.
+      // Fix: bound with the first day of the *next* month instead of a fixed "-31".
+      const [y, m] = (cheque.due_date ?? paidDate).slice(0, 7).split('-').map(Number)
+      const monthStart     = `${y}-${String(m).padStart(2, '0')}-01`
+      const nextMonthStart = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10) // m is 1-indexed, so Date.UTC(y, m, 1) lands on the 1st of the following month
+
+      const { error: invoiceError, data: updatedInvoices } = await supabase.from('invoices').update({
         status:         'paid',
         paid_date:      paidDate,
         payment_method: 'cheque',
@@ -48,9 +58,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       })
         .eq('unit_id', cheque.unit_id)
         .eq('type', 'rent')
-        .gte('due_date', `${monthPrefix}-01`)
-        .lte('due_date', `${monthPrefix}-31`)
+        .gte('due_date', monthStart)
+        .lt('due_date', nextMonthStart)
         .in('status', ['sent', 'overdue', 'draft'])
+        .select('id')
+
+      if (invoiceError) {
+        console.error('Cheque cleared but failed to auto-mark linked invoice as paid:', invoiceError, { chequeId: params.id, unitId: cheque.unit_id, monthStart, nextMonthStart })
+      } else if (!updatedInvoices || updatedInvoices.length === 0) {
+        console.warn('Cheque cleared but no matching rent invoice found to mark paid:', { chequeId: params.id, unitId: cheque.unit_id, monthStart, nextMonthStart })
+      }
     }
   }
 
