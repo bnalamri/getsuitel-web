@@ -134,7 +134,7 @@ export async function GET(req: Request) {
 
       // Create invoice — already overdue if today > due date
       const alreadyLate = todayStr > dueDate
-      await admin.from('invoices').insert({
+      const { data: newInvoice, error: insertErr } = await admin.from('invoices').insert({
         organization_id: contract.organization_id,
         tenant_id:       contract.tenant_id,
         unit_id:         contract.unit_id,
@@ -145,9 +145,37 @@ export async function GET(req: Request) {
         status:          alreadyLate ? 'overdue' : 'sent',
         payment_method:  contract.payment_method ?? 'cash',
         notes:           `Auto-generated — ${fmtMonth(year, month)}`,
-      })
+      }).select('id').single()
 
       invoicesCreated++
+
+      // Link a still-unlinked post-dated cheque for this unit/month, if one was
+      // registered ahead of time. Lets cheque-clearing logic (web + mobile) match
+      // this invoice exactly via invoice_id/cheque_number instead of guessing —
+      // see 20260916b_invoices_cheque_number.sql for the full rationale.
+      if (!insertErr && newInvoice?.id) {
+        try {
+          const { data: matchingCheque } = await admin
+            .from('cheques')
+            .select('id, cheque_number')
+            .eq('organization_id', contract.organization_id)
+            .eq('unit_id', contract.unit_id)
+            .is('invoice_id', null)
+            .eq('status', 'pending')
+            .gte('due_date', monthStart)
+            .lte('due_date', monthEnd)
+            .order('due_date')
+            .limit(1)
+            .maybeSingle()
+
+          if (matchingCheque) {
+            await admin.from('cheques').update({ invoice_id: newInvoice.id }).eq('id', matchingCheque.id)
+            await admin.from('invoices').update({ cheque_number: matchingCheque.cheque_number }).eq('id', newInvoice.id)
+          }
+        } catch (e) {
+          errors.push(`Cheque-invoice link for unit ${contract.unit_id}: ${e}`)
+        }
+      }
 
       // Notify tenant
       const tenant = contract.tenants as { full_name: string; email: string | null } | null
