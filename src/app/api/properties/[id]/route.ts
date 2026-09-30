@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 
 async function getProfileAndProperty(userId: string, propertyId: string) {
   const supabase = await createClient()
@@ -64,6 +65,17 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     .single()
   if (!property || property.organization_id !== profile.organization_id) {
     return NextResponse.json({ error: 'Property not found' }, { status: 404 })
+  }
+
+  // Property deletion is off by default platform-wide — a Super Admin or
+  // HQ must explicitly enable it for this branch/org via the Feature Flags
+  // settings before an owner can delete a property at all.
+  const canDelete = await isFeatureEnabled('property_deletion', profile.organization_id)
+  if (!canDelete) {
+    return NextResponse.json(
+      { error: 'Property deletion is not enabled for your account. Contact your Super Admin to request this permission.' },
+      { status: 403 }
+    )
   }
 
   // Block if property has units
