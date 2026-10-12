@@ -4,6 +4,7 @@ import TechSettingsForm from './TechSettingsForm'
 import ChangePasswordForm from './ChangePasswordForm'
 import LanguageSettingsForm from './LanguageSettingsForm'
 import PlatformInfoCard from './PlatformInfoCard'
+import TrustedDevicesCard from '@/components/TrustedDevicesCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -19,6 +20,7 @@ export default async function TechnicianSettingsPage() {
       <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
       <TechSettingsForm profile={profile} />
       <ChangePasswordForm />
+      <TrustedDevicesCard />
       <LanguageSettingsForm userId={user.id} />
       <PlatformInfoCard />
     </div>

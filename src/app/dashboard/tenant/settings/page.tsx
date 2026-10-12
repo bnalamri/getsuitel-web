@@ -4,6 +4,7 @@ import TenantSettingsForm from './TenantSettingsForm'
 import ChangePasswordForm from './ChangePasswordForm'
 import LanguageSettingsForm from './LanguageSettingsForm'
 import PlatformInfoCard from './PlatformInfoCard'
+import TrustedDevicesCard from '@/components/TrustedDevicesCard'
 
 export const metadata = { title: 'Settings' }
 
@@ -20,6 +21,7 @@ export default async function TenantSettingsPage() {
       <h2 className="text-2xl font-bold text-slate-900">Settings</h2>
       <TenantSettingsForm profile={profile} tenant={tenant} />
       <ChangePasswordForm />
+      <TrustedDevicesCard />
       <LanguageSettingsForm userId={user.id} />
       <PlatformInfoCard />
     </div>

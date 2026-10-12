@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Building2 } from 'lucide-react'
 import AdminSettingsForm from './AdminSettingsForm'
+import TrustedDevicesCard from '@/components/TrustedDevicesCard'
 
 export const metadata = { title: 'Admin Settings' }
 
@@ -51,6 +52,7 @@ export default async function AdminSettingsPage() {
       </div>
 
       <AdminSettingsForm profile={profile} branchDisplayName={branch?.display_name ?? null} />
+      <TrustedDevicesCard />
     </div>
   )
 }

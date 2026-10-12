@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { signInAction } from './actions'
+import { signInAction, verifyCodeAction, resendCodeAction } from './actions'
 
 const t = {
   en: {
@@ -12,6 +12,9 @@ const t = {
     signin: 'Sign In', noAccount: "Don't have an account?", register: 'Start free',
     lang: 'ع', error: 'Invalid email or password', loading: 'Signing in…',
     verified: 'Email verified! You can now sign in.',
+    codeTitle: 'Check your email', codeSub: 'We sent a 6-digit code to', code: 'Verification code',
+    trust: 'Trust this browser until I remove it', verify: 'Verify & Sign In', resend: 'Resend code',
+    resent: 'A new code was sent.', back: 'Back',
     // TEMP DIAGNOSTIC (2026-09-15 login outage): reason codes forwarded via
     // /auth/logout?reason=... so a forced-logout bounce shows something
     // instead of silently landing back here. Remove once confirmed stable.
@@ -23,6 +26,9 @@ const t = {
     signin: 'تسجيل الدخول', noAccount: 'ليس لديك حساب؟', register: 'ابدأ مجاناً',
     lang: 'EN', error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', loading: 'جاري الدخول…',
     verified: 'تم التحقق من بريدك! يمكنك الآن تسجيل الدخول.',
+    codeTitle: 'تحقق من بريدك الإلكتروني', codeSub: 'أرسلنا رمزاً من 6 أرقام إلى', code: 'رمز التحقق',
+    trust: 'الوثوق بهذا المتصفح حتى أقوم بإزالته', verify: 'تحقق وسجّل الدخول', resend: 'إعادة إرسال الرمز',
+    resent: 'تم إرسال رمز جديد.', back: 'رجوع',
     reason_profile_missing: 'تعذر تحميل ملفك الشخصي، فتم تسجيل خروجك. إذا استمرت المشكلة، تواصل مع الدعم.',
   },
 }
@@ -34,6 +40,10 @@ function LoginForm() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [step, setStep] = useState<'password' | 'code'>('password')
+  const [code, setCode] = useState('')
+  const [trust, setTrust] = useState(true)
+  const [info, setInfo] = useState('')
   const params = useSearchParams()
   const T = t[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
@@ -48,11 +58,19 @@ function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const result = await signInAction(email, password, params.get('next') ?? undefined)
+    setInfo('')
+    const next = params.get('next') ?? undefined
+    const result = step === 'password'
+      ? await signInAction(email, password, next, lang)
+      : await verifyCodeAction(email, password, code, trust, next)
     if (result?.error) {
       const msg = (result.error && result.error !== '{}' && result.error !== '{ }') ? result.error : T.error
       setError(msg)
       setLoading(false)
+      return
+    }
+    if (result?.needsCode) {
+      setStep('code'); setCode(''); setLoading(false)
       return
     }
     // Full navigation (not router.push) so the browser re-requests with the
@@ -60,6 +78,12 @@ function LoginForm() {
     if (result?.dest) {
       window.location.href = result.dest
     }
+  }
+
+  async function handleResend() {
+    setError(''); setInfo('')
+    const r = await resendCodeAction(email, password, lang)
+    if (r?.error) setError(r.error); else setInfo(T.resent)
   }
 
   return (
@@ -96,6 +120,24 @@ function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {step === 'code' ? (
+              <>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">{T.codeTitle}</h2>
+                  <p className="text-slate-500 text-sm mt-1">{T.codeSub} <span className="font-medium text-slate-700">{email}</span></p>
+                </div>
+                <input
+                  inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus
+                  value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                  className="input text-center text-2xl tracking-[0.5em] font-mono" placeholder="••••••" aria-label={T.code}
+                />
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" checked={trust} onChange={e => setTrust(e.target.checked)} />
+                  {T.trust}
+                </label>
+                {info && <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-3 py-2.5 rounded-lg">{info}</div>}
+              </>
+            ) : (<>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{T.email}</label>
               <input
@@ -127,6 +169,7 @@ function LoginForm() {
                 </button>
               </div>
             </div>
+            </>)}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2.5 rounded-lg">
@@ -135,8 +178,14 @@ function LoginForm() {
             )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-              {loading ? <><Loader2 size={16} className="animate-spin"/>{T.loading}</> : T.signin}
+              {loading ? <><Loader2 size={16} className="animate-spin"/>{T.loading}</> : step === 'code' ? T.verify : T.signin}
             </button>
+            {step === 'code' && (
+              <div className="flex items-center justify-between text-sm">
+                <button type="button" onClick={() => { setStep('password'); setError(''); setInfo('') }} className="text-slate-500 hover:underline">{T.back}</button>
+                <button type="button" onClick={handleResend} className="text-navy-700 font-medium hover:underline">{T.resend}</button>
+              </div>
+            )}
           </form>
 
           <p className="text-center text-sm text-slate-500 mt-6">

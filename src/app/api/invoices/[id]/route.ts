@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { syncChequeOnInvoicePaid } from '@/lib/cheque-invoice-sync'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -51,17 +52,15 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Keep the Cheque Tracker in sync: if this edit just marked the invoice
-  // paid, and it has a linked cheque that isn't already cleared/bounced/
-  // cancelled, flip that cheque to "cleared" too. Without this, marking an
-  // invoice paid directly from the Invoices page (instead of via the Cheque
-  // Tracker's own "Update" action) silently leaves the cheque row showing
-  // its old status (e.g. still "deposited").
+  // paid, flip its cheque to "cleared" too — falling back to a
+  // cheque_number/unit+month match when it isn't directly linked yet (most
+  // cheques registered before today were never linked). Without this,
+  // marking an invoice paid directly from the Invoices page (instead of via
+  // the Cheque Tracker's own "Update" action) silently leaves the cheque
+  // row showing its old status (e.g. still "deposited"). See
+  // lib/cheque-invoice-sync.ts for the full matching order.
   if (status === 'paid' && before?.status !== 'paid') {
-    await admin
-      .from('cheques')
-      .update({ status: 'cleared', cleared_date: new Date().toISOString().split('T')[0] })
-      .eq('invoice_id', params.id)
-      .not('status', 'in', '("cleared","bounced","cancelled","replaced")')
+    await syncChequeOnInvoicePaid(admin, params.id, new Date().toISOString().split('T')[0])
   }
 
   return NextResponse.json({ ok: true })

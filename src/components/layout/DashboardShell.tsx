@@ -71,6 +71,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
+      { href:'/dashboard/owner/reports/cheques-in-hand', icon:CreditCard, en:'Cheques in Hand', ar:'الشيكات في اليد' },
     ]},
     { en:'Advanced Reports', ar:'تقارير متقدمة', items:[
       { href:'/dashboard/owner/reports/vacancy', icon:Building2, en:'Vacancy Duration', ar:'مدة الشغور' },
@@ -140,6 +141,7 @@ const NAV: Record<string, NavGroup[]> = {
       { href:'/dashboard/owner/reports/income', icon:TrendingUp, en:'Income Report', ar:'تقرير الإيرادات' },
       { href:'/dashboard/owner/reports/pnl', icon:Activity, en:'P&L Report', ar:'الأرباح والخسائر' },
       { href:'/dashboard/owner/reports/arrears', icon:AlertTriangle, en:'Arrears & Overdue', ar:'المتأخرات والمستحقات' },
+      { href:'/dashboard/owner/reports/cheques-in-hand', icon:CreditCard, en:'Cheques in Hand', ar:'الشيكات في اليد' },
       { href:'/dashboard/owner/reports/vacancy', icon:Building2, en:'Vacancy Duration', ar:'مدة الشغور' },
       { href:'/dashboard/owner/reports/lease-pipeline', icon:CalendarCheck, en:'Lease Renewal Pipeline', ar:'خط تجديد العقود' },
       { href:'/dashboard/owner/reports/tenant-retention', icon:Users, en:'Tenant Retention', ar:'الاحتفاظ بالمستأجرين' },

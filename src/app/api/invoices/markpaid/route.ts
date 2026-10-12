@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { syncChequeOnInvoicePaid } from '@/lib/cheque-invoice-sync'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -38,12 +39,11 @@ export async function POST(req: Request) {
 
   // Keep the Cheque Tracker in sync — see matching comment in
   // /api/invoices/[id]/route.ts. Marking an invoice paid here (Mark Paid
-  // button/modal) should also clear its linked cheque, if one exists.
-  await admin
-    .from('cheques')
-    .update({ status: 'cleared', cleared_date: update.paid_date })
-    .eq('invoice_id', invoiceId)
-    .not('status', 'in', '("cleared","bounced","cancelled","replaced")')
+  // button/modal) should also clear its linked cheque, if one exists —
+  // and fall back to a cheque_number/unit+month match when it isn't
+  // directly linked yet. See lib/cheque-invoice-sync.ts for the full
+  // rationale (bug fixed 2026-09-16).
+  await syncChequeOnInvoicePaid(admin, invoiceId, update.paid_date as string)
 
   return NextResponse.json({ ok: true })
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import HQSettingsClient from './HQSettingsClient'
+import TrustedDevicesCard from '@/components/TrustedDevicesCard'
 
 export default async function HQSettingsPage() {
   const supabase = await createClient()
@@ -10,5 +11,10 @@ export default async function HQSettingsPage() {
     supabase.from('platform_config').select('*').eq('id', 1).single(),
   ])
 
-  return <HQSettingsClient profile={profile} config={config} />
+  return (
+    <div className="space-y-6">
+      <HQSettingsClient profile={profile} config={config} />
+      <div className="max-w-2xl px-6 pb-8"><TrustedDevicesCard /></div>
+    </div>
+  )
 }
