@@ -271,7 +271,7 @@ function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin, disab
         {groups.map((group, gi) => {
           // A group stays open if it holds the current page, so you never lose your place
           const hasActive = group.items.some(i => pathname === i.href || pathname.startsWith(i.href + '/'))
-          const isClosed = !collapsed && closedGroups.includes(group.en) && !hasActive
+          const isClosed = !collapsed && closedGroups.includes(group.en)
           return (
           <div key={gi}>
             {!collapsed && (

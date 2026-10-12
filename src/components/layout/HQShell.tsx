@@ -101,7 +101,7 @@ export default function HQShell({ profile, children }: { profile: Profile; child
           const visibleItems = group.items.filter(item => !item.roles || item.roles.includes(role))
           if (visibleItems.length === 0) return null
           const hasActive = visibleItems.some(i => pathname === i.href || (i.href.length > 4 && pathname.startsWith(i.href + '/')))
-          const isClosed = open && closedGroups.includes(group.label) && !hasActive
+          const isClosed = open && closedGroups.includes(group.label)
           return (
           <div key={group.label}>
             {open && (
