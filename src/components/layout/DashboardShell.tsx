@@ -8,7 +8,7 @@ import type { Profile } from '@/types'
 import {
   LayoutDashboard, Building2, DoorOpen, Users, FileText, Receipt,
   CreditCard, Wrench, HardHat, BarChart2, TrendingUp, Settings, Bell,
-  LogOut, Menu, X, ChevronLeft, ChevronRight,
+  LogOut, Menu, X, ChevronLeft, ChevronRight, ChevronDown,
   ClipboardList, Calendar, Shield, AlertCircle, AlertTriangle, UserCog, Mail, Volume2, CalendarCheck, Activity, BookCheck,
   UserCheck, DollarSign, Zap, Database, Package, SlidersHorizontal,
 } from 'lucide-react'
@@ -196,6 +196,18 @@ function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin, disab
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  // Collapsible menu groups — remembered per browser (keyed by English group name)
+  const [closedGroups, setClosedGroups] = useState<string[]>([])
+  useEffect(() => {
+    try { setClosedGroups(JSON.parse(localStorage.getItem('gs_nav_closed') || '[]')) } catch { /* ignore */ }
+  }, [])
+  function toggleGroup(key: string) {
+    setClosedGroups(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+      try { localStorage.setItem('gs_nav_closed', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
   const rawGroups = NAV[profile.role] ?? NAV.owner
   // Hide Cron Monitor from branch superadmins — it's an HQ-only platform tool
   let groups = isBranchSuperadmin
@@ -256,14 +268,21 @@ function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin, disab
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
-        {groups.map((group, gi) => (
+        {groups.map((group, gi) => {
+          // A group stays open if it holds the current page, so you never lose your place
+          const hasActive = group.items.some(i => pathname === i.href || pathname.startsWith(i.href + '/'))
+          const isClosed = !collapsed && closedGroups.includes(group.en) && !hasActive
+          return (
           <div key={gi}>
             {!collapsed && (
-              <div className="px-2 mb-1.5 text-white/40 text-[10px] font-semibold uppercase tracking-widest">
-                {lang==='ar' ? group.ar : group.en}
-              </div>
+              <button type="button" onClick={() => toggleGroup(group.en)}
+                aria-expanded={!isClosed}
+                className="w-full flex items-center justify-between px-2 mb-1.5 text-white/40 hover:text-white/70 text-[10px] font-semibold uppercase tracking-widest transition-colors">
+                <span>{lang==='ar' ? group.ar : group.en}</span>
+                <ChevronDown size={12} className={`transition-transform duration-200 ${isClosed ? '-rotate-90' : ''}`} />
+              </button>
             )}
-            <div className="space-y-0.5">
+            <div className={`space-y-0.5 ${isClosed ? 'hidden' : ''}`}>
               {group.items.map(item => {
                 const staffRoles = ['property_manager', 'financial_manager']
                 const roleHome = profile.role === 'superadmin' ? '/dashboard/admin'
@@ -291,7 +310,8 @@ function Sidebar({ profile, lang, collapsed, onToggle, isBranchSuperadmin, disab
               })}
             </div>
           </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* Footer */}

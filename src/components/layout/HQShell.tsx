@@ -1,11 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Building2, CreditCard, BarChart2,
-  Settings, LogOut, Menu, X, ChevronLeft, ChevronRight,
+  Settings, LogOut, Menu, X, ChevronLeft, ChevronRight, ChevronDown,
   Globe, TrendingUp, Users, Bell, Wrench, ShieldAlert, ScrollText, DollarSign, SlidersHorizontal, Package,
 } from 'lucide-react'
 import OmrSymbol from '@/components/ui/OmrSymbol'
@@ -59,6 +59,18 @@ export default function HQShell({ profile, children }: { profile: Profile; child
   const router     = useRouter()
   const [open, setOpen]       = useState(true)
   const [mobileOpen, setMob]  = useState(false)
+  // Collapsible menu groups — remembered per browser
+  const [closedGroups, setClosedGroups] = useState<string[]>([])
+  useEffect(() => {
+    try { setClosedGroups(JSON.parse(localStorage.getItem('gs_hq_nav_closed') || '[]')) } catch { /* ignore */ }
+  }, [])
+  function toggleGroup(label: string) {
+    setClosedGroups(prev => {
+      const next = prev.includes(label) ? prev.filter(k => k !== label) : [...prev, label]
+      try { localStorage.setItem('gs_hq_nav_closed', JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
 
   async function handleLogout() {
     const supabase = createClient()
@@ -88,14 +100,18 @@ export default function HQShell({ profile, children }: { profile: Profile; child
         {NAV.filter(group => !group.roles || group.roles.includes(role)).map(group => {
           const visibleItems = group.items.filter(item => !item.roles || item.roles.includes(role))
           if (visibleItems.length === 0) return null
+          const hasActive = visibleItems.some(i => pathname === i.href || (i.href.length > 4 && pathname.startsWith(i.href + '/')))
+          const isClosed = open && closedGroups.includes(group.label) && !hasActive
           return (
           <div key={group.label}>
             {open && (
-              <p className="px-2 mb-1 text-xs font-semibold uppercase tracking-wider text-yellow-500/70">
-                {group.label}
-              </p>
+              <button type="button" onClick={() => toggleGroup(group.label)} aria-expanded={!isClosed}
+                className="w-full flex items-center justify-between px-2 mb-1 text-xs font-semibold uppercase tracking-wider text-yellow-500/70 hover:text-yellow-400 transition-colors">
+                <span>{group.label}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isClosed ? '-rotate-90' : ''}`} />
+              </button>
             )}
-            <div className="space-y-0.5">
+            <div className={`space-y-0.5 ${isClosed ? 'hidden' : ''}`}>
               {visibleItems.map(item => {
                 const allHrefs = NAV.flatMap(g => g.items.map(i => i.href))
                 const exactMatch = allHrefs.includes(pathname)
